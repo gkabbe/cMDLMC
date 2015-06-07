@@ -205,22 +205,25 @@ class MDMC:
     def __init__(self, **kwargs):
         self.logger = logging.getLogger("{}.{}".format(__name__, self.__class__.__name__))
         self.logger.info("Creating an instance of {}.{}".format(__name__, self.__class__.__name__))
-        self.get_gitversion()
+        try:
+            self.get_gitversion()
+        except git.InvalidGitRepositoryError:
+            print "# No Git repository found, so I cannot show any commit information"
         self.default_dict = create_default_dict()
         if "configfile" in kwargs.keys():
             file_kwargs = load_configfile(kwargs["configfile"])
             if ("verbose", True) in file_kwargs.viewitems():
-                print "#Config file specified. Loading settings from there."
+                print "# Config file specified. Loading settings from there."
             self.check_arguments(**file_kwargs)
 
             self.trajectory = BinDump.npload_atoms(self.filename, create_if_not_existing=True, remove_com=True, verbose=self.verbose)
 
             if self.clip_trajectory is not None:
                 if self.clip_trajectory >= self.trajectory.shape[0]:
-                    print "#Trying to clip trajectory to {} frames, but trajectory only has {} frames!".format(self.clip_trajectory, self.trajectory.shape[0])
+                    print "# Trying to clip trajectory to {} frames, but trajectory only has {} frames!".format(self.clip_trajectory, self.trajectory.shape[0])
                 else:
                     if self.verbose:
-                        print "#Clipping trajectory from frame 0 to frame {}".format(self.clip_trajectory)
+                        print "# Clipping trajectory from frame 0 to frame {}".format(self.clip_trajectory)
                     self.trajectory = self.trajectory[:self.clip_trajectory]
 
             self.O_trajectory = load_trajectory(self.trajectory, "O", verbose=self.verbose)
@@ -230,7 +233,7 @@ class MDMC:
 
     def get_gitversion(self):
         repo = git.Repo(script_path)
-        print "#Hello. I am from commit {}".format(repo.active_branch.commit.hexsha)
+        print "# Hello. I am from commit {}".format(repo.active_branch.commit.hexsha)
 
 
     def check_arguments(self, **kwargs):
@@ -545,7 +548,7 @@ class MDMC:
         if self.seed is not None:
             np.random.seed(self.seed)
         else:
-            self.seed = np.random.randint(np.iinfo(np.int).max)
+            self.seed = np.random.randint(2**32)
             np.random.seed(self.seed)
             #~ print "#Using seed {}".format(self.seed)
         self.oxygennumber = self.O_trajectory.shape[1]

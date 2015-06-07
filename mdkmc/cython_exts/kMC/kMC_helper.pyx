@@ -13,7 +13,7 @@ from libc.stdlib cimport malloc, free
 from libcpp.vector cimport vector
 from libcpp.map cimport map
 
-cimport cython_exts.atoms.numpyatom as cnpa
+cimport mdkmc.cython_exts.atoms.numpyatom as cnpa
 
 cdef extern from "math.h":
     double sqrt(double x) nogil

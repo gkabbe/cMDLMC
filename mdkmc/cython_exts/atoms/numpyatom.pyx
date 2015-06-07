@@ -6,11 +6,11 @@ import math
 import sys
 import cython
 
-from atoms.numpyatom import numpyprint, distance, get_acidic_proton_indices, angle_4, angle_rad, angle_4_rad, select_atoms, distance_pbc_nonortho
+from mdkmc.atoms.numpyatom import numpyprint, distance, get_acidic_proton_indices, angle_4, angle_rad, angle_4_rad, select_atoms, distance_pbc_nonortho
 
 from cython_gsl cimport round
 #~ cimport math_helper as mh
-from cython_exts.helper cimport math_helper as mh
+from mdkmc.cython_exts.helper cimport math_helper as mh
 from libcpp.vector cimport vector
 # from IO import pdbparser
 

@@ -46,7 +46,7 @@ for ext_path in cython_exts:
         extra_compile_args=["-O3", "-Wall"],
         language="c++",
         library_dirs=[cython_gsl.get_library_dir()],
-
+        include_dirs=[".", numpy.get_include(), cython_gsl.get_cython_include_dir()]
     ))
 
 
@@ -88,7 +88,7 @@ setup(name='mdkmc',
       scripts=["bin/MDMC.py"],
       include_package_data=True,
       zip_safe=False,
-      include_dirs=[numpy.get_include(), cython_gsl.get_cython_include_dir()],
+      # include_dirs=[numpy.get_include(), cython_gsl.get_cython_include_dir()],
       ext_modules=ext_modules,
       cmdclass = {'build_ext': build_ext}
       )
