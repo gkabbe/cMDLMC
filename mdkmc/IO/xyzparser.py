@@ -5,9 +5,9 @@ import os
 import ipdb
 import time
 
-from atoms import atomclass as ac
-from atoms import numpyatom as npa
-from misc.timer import TimeIt
+from mdkmc.atoms import atomclass as ac
+from mdkmc.atoms import numpyatom as npa
+from mdkmc.misc.timer import TimeIt
 
 class XYZFile(object):
 

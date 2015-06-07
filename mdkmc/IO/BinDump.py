@@ -11,11 +11,11 @@ import inspect
 
 script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 #~ sys.path.append(os.path.join(script_path, "../cython/atoms"))
-from cython_exts.atoms import numpyatom as cython_npa
-from IO.xyzparser import XYZFile
-from atoms import atomclass
-from atoms import numpyatom as npa
-from misc.timer import TimeIt
+from mdkmc.cython_exts.atoms import numpyatom as cython_npa
+from mdkmc.IO.xyzparser import XYZFile
+from mdkmc.atoms import atomclass
+from mdkmc.atoms import numpyatom as npa
+from mdkmc.misc.timer import TimeIt
 
 def get_acidHs(atoms, pbc):
 	Hs=[]

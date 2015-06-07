@@ -10,15 +10,15 @@ import re
 import ast
 
 import numpy as np
-import ipdb
+# import ipdb
 import git
 import inspect
 import argparse
 
-from IO import xyzparser
-from IO import BinDump
-from cython_exts.kMC import kMC_helper
-from cython_exts.atoms import numpyatom as npa
+from mdkmc.IO import xyzparser
+from mdkmc.IO import BinDump
+from mdkmc.cython_exts.kMC import kMC_helper
+from mdkmc.cython_exts.atoms import numpyatom as npa
 
 # -----------------------Determine Loglevel here----------------------------------------
 # Choose between info, warning, debug
@@ -604,7 +604,7 @@ class MDMC:
                                    jumprate_type=self.jumprate_type,
                                    seed=self.seed, verbose=self.verbose)
 
-        #Equilibration
+        # Equilibration
         for sweep in xrange(self.equilibration_sweeps):
             if sweep % 1000 == 0:
                 print >> self.output, "#Equilibration sweep {}/{}".format(sweep, self.equilibration_sweeps), "\r",
