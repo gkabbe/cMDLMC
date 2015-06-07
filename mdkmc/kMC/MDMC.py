@@ -647,7 +647,7 @@ class MDMC:
                     # print >> self.output, "neighbor_update at sweep", sweep
                     helper.determine_neighbors(Opos, self.cutoff_radius)
                 if self.po_angle:
-                    helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.jumprate_params_fs, self.cutoff_radius, self.angle_threshold)
+                    helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
                 else:
                     helper.calculate_transitions_new(Opos, self.jumprate_params_fs, self.cutoff_radius)
 

@@ -413,7 +413,7 @@ cdef class Helper:
     @cython.cdivision(True)
     @cython.wraparound(False)
     @cython.boundscheck(False)
-    def calculate_transitions_POOangle(self, double [:,::1] Os, double [:,::1] Ps, np.int64_t [:] P_neighbors, double [:] parameters, double r_cut, double angle_thresh):
+    def calculate_transitions_POOangle(self, double [:,::1] Os, double [:,::1] Ps, np.int64_t [:] P_neighbors, double r_cut, double angle_thresh):
         cdef:
             int i,j, index2
             double dist, PO_angle

@@ -17,21 +17,22 @@ The recommended way to install the mdkmc package, is by creating a [virtualenv](
 
     virtualenv ~/virtualenvs/mdkmc_env
 
+This creates an isolated Python environment for the MD/KMC algorithm. Packages installed there need no root permission, nor do they conflict
+with previous Python installations.
+
 Afterwards, type
 
     source ~/virtualenvs/mdkmc_env/bin/activate
 
+This sets all Python variables to the path in your virtual environment.
+
+Next, install some packages, the MD/KMC algorithm needs:
+
+    pip install cython numpy CythonGSL
+
 Now you can install the package via
 
     python setup.py install
-
-This will install the packages into ~/virtualenvs/mdkmc_env.
-
-At the moment, the first installation will fail with the error
-'ImportError: No module named cython_gsl'.
-
-Just run the installation again, and everything should work fine.
-
 
 Usage
 -----
