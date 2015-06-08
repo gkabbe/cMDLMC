@@ -405,7 +405,7 @@ cdef class Helper:
     @cython.cdivision(True)
     @cython.wraparound(False)
     @cython.boundscheck(False)
-    def calculate_transitions_new(self, double [:,::1] Os, double [:] parameters, double r_cut):
+    def calculate_transitions_new(self, double [:,::1] Os, double r_cut):
         cdef:
             int i,j
             double dist

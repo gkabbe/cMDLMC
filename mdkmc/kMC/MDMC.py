@@ -274,10 +274,26 @@ def extend_simulationbox(Opos, onumber, h, box_multiplier, nonortho=False):
                                             onumber)
 
 
+def calculate_displacement(proton_lattice, proton_pos_snapshot,
+                           Opos_new, displacement, pbc, wrap=True):
+    # ipdb.set_trace()
+    proton_pos_new = np.zeros(proton_pos_snapshot.shape)
+    for O_index, proton_index in enumerate(proton_lattice):
+        if proton_index > 0:
+            proton_pos_new[proton_index-1] = Opos_new[O_index]
+    if wrap:
+        kMC_helper.dist_numpy_all_inplace(displacement, proton_pos_new,
+                                  proton_pos_snapshot, pbc)
+    else:
+        displacement += kMC_helper.dist_numpy_all(proton_pos_new, proton_pos_snapshot, pbc)
+        proton_pos_snapshot[:] = proton_pos_new   # [:] is important (inplace operation)
+
+
 def calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot,
-                                    proton_pos_new, Opos_new, displacement,
+                                    Opos_new, displacement,
                                     h, h_inv):
     # ipdb.set_trace()
+    proton_pos_new = np.zeros(proton_pos_snapshot.shape)
     for O_index, proton_index in enumerate(proton_lattice):
         if proton_index > 0:
             proton_pos_new[proton_index-1] = Opos_new[O_index]
@@ -305,9 +321,8 @@ def calculate_transitionmatrix(transitionmatrix, atom_positions,
     for i in xrange(atom_positions.shape[0]):
         for j in xrange(atom_positions.shape[0]):
             if i != j and (nointra is False or (i/3 != j/3)):
-                transitionmatrix[i, j] = fermi(
-                    parameters[0], parameters[1], parameters[2],
-                    kMC_helper.dist(atom_positions[i], atom_positions[j], pbc))
+                transitionmatrix[i, j] = fermi(parameters[0], parameters[1], parameters[2],
+                                               kMC_helper.dist(atom_positions[i], atom_positions[j], pbc))
 
 
 class MDMC:
@@ -520,19 +535,6 @@ class MDMC:
                                 for i in xrange(onumber):
                                     Oview[x, y, z, i, :] = Oview[0, 0, 0, i] + pbc * [x, y, z]
 
-    def calculate_displacement(self, proton_lattice, proton_pos_snapshot,
-                               proton_pos_new, Opos_new, displacement, pbc, wrap=True):
-        # ipdb.set_trace()
-        for O_index, proton_index in enumerate(proton_lattice):
-            if proton_index > 0:
-                proton_pos_new[proton_index-1] = Opos_new[O_index]
-        if wrap:
-            kMC_helper.dist_numpy_all_inplace(displacement, proton_pos_new,
-                                      proton_pos_snapshot, self.pbc)
-        else:
-            displacement += kMC_helper.dist_numpy_all(proton_pos_new, proton_pos_snapshot, self.pbc)
-            proton_pos_snapshot[:] = proton_pos_new   # [:] is important (inplace operation)
-
     def get_average_transitionmatrix_reservoir(self, helper, O_trajectory,
                                                parameters, timestep, pbc,
                                                nointra=True, verbose=False):
@@ -677,7 +679,7 @@ class MDMC:
             if  sweep % self.print_freq == 0:
                 #~ self.remove_com_movement_frame(Opos)
                 if not self.nonortho:
-                    self.calculate_displacement(proton_lattice, proton_pos_snapshot, proton_pos_new, Opos, displacement, self.pbc)
+                    calculate_displacement(proton_lattice, proton_pos_snapshot, proton_pos_new, Opos, displacement, self.pbc)
                 else:
                     calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, proton_pos_new, Opos, displacement, self.h, self.h_inv)
 
