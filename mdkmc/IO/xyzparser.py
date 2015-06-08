@@ -137,8 +137,10 @@ class XYZFile(object):
         self.frame += 1
         return atoms
 
-    def get_atoms_numpy(self, atomnames=[]):
+    def get_atoms_numpy(self, atomnames=None):
         # pdb.set_trace()
+        if not atomnames:
+            atomnames = []
         if len(atomnames) == 0:
             atoms = np.zeros(self.atomnr, dtype = npa.xyzatom)
             line = self.datei.readline()
