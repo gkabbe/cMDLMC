@@ -37,7 +37,7 @@ class XYZFile(object):
             if atomname in atomdict.keys():
                 atomdict[atomname].add(index)
             else:
-                if verbose == True:
+                if verbose:
                     print "#adding", atomname, "to atomdict"
                 atomdict[atomname] = set([index])
         self.datei.seek(0)
@@ -72,7 +72,7 @@ class XYZFile(object):
             if line == "":
                 return frame
             if frame % 1000 == 0:
-                if verbose == True:
+                if verbose:
                     print "#Frame", frame,
                     print "\r",
             self.datei.readline()
@@ -82,7 +82,7 @@ class XYZFile(object):
                 if atom in self.atomdict[atomname]:
                     arr[frame, Oindex, :] = map(float, line.split()[1:])
                     Oindex += 1
-        if verbose == True:
+        if verbose:
             print ""
         return frames
 
@@ -182,9 +182,9 @@ class XYZFile(object):
             if verbose == True and counter % 100 == 0:
                 print "#Frame {}, ({:.2f} fps)".format(counter, float(counter)/(time.time()-start_time)), "\r",
             counter += 1
-        if verbose == True:
+        if verbose:
             print ""
-        if verbose == True:
+        if verbose:
             print "#Total time: {} sec".format(time.time() - start_time)
 
 
