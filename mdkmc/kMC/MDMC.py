@@ -141,6 +141,7 @@ def load_configfile(configfilename):
     parser_dict["shuffle"]              = lambda line: string2bool(line.split()[1])
     parser_dict["verbose"]              = lambda line: string2bool(line.split()[1])
     parser_dict["xyz_output"]           = lambda line: string2bool(line.split()[1])
+    parser_dict["periodic_wrap"]        = lambda line: string2bool(line.split()[1])
     parser_dict["box_multiplier"]       = lambda line: map(int, line.split()[1:])
     parser_dict["pbc"]                  = lambda line: np.array(map(float, line.split()[1:]))
     parser_dict["jumprate_params_fs"]   = get_jumprate_parameters
@@ -176,6 +177,7 @@ def create_default_dict():
     default_dict["po_angle"]             = False
     default_dict["shuffle"]              = False
     default_dict["xyz_output"]           = False
+    default_dict["periodic_wrap"]        = True
     default_dict["output"]               = sys.stdout
     default_dict["angle_threshold"]      = 1.57
     default_dict["o_neighbor"]           = "P"
@@ -392,7 +394,7 @@ class MDMC:
         com = frame.sum(axis=0)/float(frame.shape[0])
         frame -= com
 
-    def reset_observables(self, proton_pos_snapshot, protonlattice, Opos, helper):
+    def reset_observables(self, proton_pos_snapshot, protonlattice, displacement, Opos, helper):
         for i, site in enumerate(protonlattice):
             if site > 0:
                 proton_pos_snapshot[site-1] = Opos[i]
@@ -401,7 +403,10 @@ class MDMC:
 
         helper.reset_jumpcounter()
 
-        return protonlattice_snapshot, proton_pos_snapshot
+        if not self.periodic_wrap:
+            displacement[:] = 0
+
+        return protonlattice_snapshot, proton_pos_snapshot, displacement
 
     def print_observable_names(self):
         print >> self.output, "#{:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format(
@@ -476,12 +481,18 @@ class MDMC:
                                                 box_multiplier[2],
                                                 onumber)
 
-    def calculate_displacement(self, proton_lattice, proton_pos_snapshot, proton_pos_new, Opos_new, displacement, pbc):
+    def calculate_displacement(self, proton_lattice, proton_pos_snapshot,
+                               proton_pos_new, Opos_new, displacement, pbc, wrap=True):
         # ipdb.set_trace()
         for O_index, proton_index in enumerate(proton_lattice):
             if proton_index > 0:
                 proton_pos_new[proton_index-1] = Opos_new[O_index]
-            kMC_helper.dist_numpy_all(displacement, proton_pos_new, proton_pos_snapshot, self.pbc)
+        if wrap:
+            kMC_helper.dist_numpy_all_inplace(displacement, proton_pos_new,
+                                      proton_pos_snapshot, self.pbc)
+        else:
+            displacement += kMC_helper.dist_numpy_all(proton_pos_new, proton_pos_snapshot, self.pbc)
+            proton_pos_snapshot[:] = proton_pos_new   # [:] is important (inplace operation)
 
     def calculate_displacement_nonortho(self, proton_lattice, proton_pos_snapshot,
                                         proton_pos_new, Opos_new, displacement,
@@ -490,7 +501,7 @@ class MDMC:
         for O_index, proton_index in enumerate(proton_lattice):
             if proton_index > 0:
                 proton_pos_new[proton_index-1] = Opos_new[O_index]
-            kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_pos_snapshot, h, h_inv)
+        kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_pos_snapshot, h, h_inv)
 
     def calculate_autocorrelation(self, protonlattice_old, protonlattice_new):
         autocorrelation = 0
@@ -577,6 +588,7 @@ class MDMC:
             self.h_inv = np.array(np.linalg.inv(self.h), order="C")
             self.h_ext = np.array(self.pbc_extended.reshape((3,3)).T, order="C")
             self.h__ext_inv = np.array(np.linalg.inv(self.h_ext), order="C")
+
         displacement, MSD, proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
         #only update neighborlists after neighbor_freq position updates
         neighbor_update = self.neighbor_freq*(self.skip_frames+1)
@@ -652,8 +664,9 @@ class MDMC:
                     helper.calculate_transitions_new(Opos, self.jumprate_params_fs, self.cutoff_radius)
 
             if sweep % self.reset_freq == 0:
-                protonlattice_snapshot, proton_pos_snapshot = self.reset_observables(proton_pos_snapshot, proton_lattice, Opos, helper)
-                # kMC_helper.calculate_transitionmatrix_nointra(transitionmatrix, Opos, self.jumprate_params_fs, self.MD_timestep_fs, self.pbc)
+                protonlattice_snapshot, proton_pos_snapshot, displacement = \
+                    self.reset_observables(proton_pos_snapshot, proton_lattice,
+                                           displacement, Opos, helper)
             if  sweep % self.print_freq == 0:
                 #~ self.remove_com_movement_frame(Opos)
                 if not self.nonortho:

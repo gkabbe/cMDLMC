@@ -201,7 +201,8 @@ cpdef read_Opos(double [:, ::1] Oarr, datei, int atoms):
 
 @cython.wraparound(False)
 @cython.boundscheck(False)
-def dist_numpy_all(double [:, ::1] displacement, double [:, ::1] arr1, double [:, ::1] arr2, double [:] pbc):
+@cython.cdivision(True)
+def dist_numpy_all_inplace(double [:, ::1] displacement, double [:, ::1] arr1, double [:, ::1] arr2, double [:] pbc):
     cdef int i, j
     for i in xrange(arr1.shape[0]):
         for j in xrange(3):
@@ -210,6 +211,22 @@ def dist_numpy_all(double [:, ::1] displacement, double [:, ::1] arr1, double [:
                 displacement[i,j] -= pbc[j]
             while displacement[i,j] < -pbc[j]/2:
                 displacement[i,j] += pbc[j]
+
+@cython.wraparound(False)
+@cython.boundscheck(False)
+@cython.cdivision(True)
+def dist_numpy_all(double [:, ::1] arr1, double [:, ::1] arr2, double [:] pbc):
+    cdef:
+        int i, j
+        double [:, ::1] displacement = np.zeros((arr1.shape[0], 3))
+    for i in xrange(arr1.shape[0]):
+        for j in xrange(3):
+            displacement[i, j] = arr2[i,j] - arr1[i,j]
+            while displacement[i,j] > pbc[j]/2:
+                displacement[i,j] -= pbc[j]
+            while displacement[i,j] < -pbc[j]/2:
+                displacement[i,j] += pbc[j]
+    return displacement
 
 @cython.wraparound(False)
 @cython.boundscheck(False)
@@ -228,7 +245,6 @@ def list_to_vector(l):
             print v[i][j],
         print ""
 
-@cython.cdivision(True)
 @cython.wraparound(False)
 @cython.boundscheck(False)
 def extend_simulationbox_z(int zfac, double [:,::1] Opos, double pbc_z, int oxygennumber):
