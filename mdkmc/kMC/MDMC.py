@@ -203,12 +203,119 @@ def create_default_dict():
     #~ check_and_set("output", config_dict, sys.stdout, verbose)
     #~ check_and_set("shuffle", config_dict, False, verbose)
 
+def get_gitversion():
+    repo = git.Repo(script_path)
+    print "# Hello. I am from commit {}".format(repo.active_branch.commit.hexsha)
+
+
+def count_protons_and_oxygens(Opos, proton_lattice, O_counter, H_counter, bin_bounds):
+    for i in xrange(proton_lattice.shape[0]):
+        O_z = Opos[i,2]
+        O_index = np.searchsorted(bin_bounds, O_z)-1
+        O_counter[O_index] += 1
+        if proton_lattice[i] > 0:
+            H_counter[O_index] += 1
+
+#~
+#~ def read_trajectory(self, frames, oxygennumber, verbose=False):
+    #~ if verbose == True:
+        #~ print "#Reading trajectory..."
+#~
+    #~ self.xyz_file.rewind()
+    #~ O_trajectory = np.zeros((frames, oxygennumber, 3), np.float32)
+    #~ self.xyz_file.parse_frames_np_inplace(O_trajectory, "O", verbose)
+#~
+    #~ self.remove_com_movement(O_trajectory, verbose)
+#~
+    #~ if verbose == True:
+        #~ print "#Shape:", O_trajectory.shape
+    #~ return O_trajectory
+
+
+def remove_com_movement(trajectory, verbose):
+    if verbose:
+        print "#removing COM movement"
+    for i, frame in enumerate(trajectory):
+        if verbose is True and i % 1000 == 0:
+            print "#Frame", i,
+            print "\r",
+        com = frame.sum(axis=0)/float(frame.shape[0])
+        frame -= com
+    if verbose:
+        print ""
+
+
+def remove_com_movement_frame(frame):
+    com = frame.sum(axis=0)/float(frame.shape[0])
+    frame -= com
+
+
+def extend_simulationbox(Opos, onumber, h, box_multiplier, nonortho=False):
+    if True in [multiplier > 1 for multiplier in box_multiplier]:
+        if nonortho:
+            v1 = h[:, 0]
+            v2 = h[:, 1]
+            v3 = h[:, 2]
+            Oview = Opos.view()
+            Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], onumber, 3)
+            for x in xrange(box_multiplier[0]):
+                for y in xrange(box_multiplier[1]):
+                    for z in xrange(box_multiplier[2]):
+                        if x+y+z != 0:
+                            for i in xrange(onumber):
+                                Oview[x, y, z, i, :] = Oview[0, 0, 0, i] + x * v1 + y * v2 + z * v3
+        else:
+            Oview = Opos.view()
+            Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], onumber, 3)
+            kMC_helper.extend_simulationbox(Oview, h,
+                                            box_multiplier[0],
+                                            box_multiplier[1],
+                                            box_multiplier[2],
+                                            onumber)
+
+
+def calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot,
+                                    proton_pos_new, Opos_new, displacement,
+                                    h, h_inv):
+    # ipdb.set_trace()
+    for O_index, proton_index in enumerate(proton_lattice):
+        if proton_index > 0:
+            proton_pos_new[proton_index-1] = Opos_new[O_index]
+    kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_pos_snapshot, h, h_inv)
+
+
+def calculate_autocorrelation(protonlattice_old, protonlattice_new):
+    autocorrelation = 0
+    for i in xrange(protonlattice_new.size):
+        if protonlattice_old[i] == protonlattice_new[i] != 0:
+            autocorrelation += 1
+    return autocorrelation
+
+
+def calculate_MSD(MSD, displacement):
+    MSD *= 0
+    for d in displacement:
+        MSD += d*d
+    MSD /= displacement.shape[0]
+
+
+def calculate_transitionmatrix(transitionmatrix, atom_positions,
+                               parameters, timestep, pbc, nointra=True):
+    # ipdb.set_trace()
+    for i in xrange(atom_positions.shape[0]):
+        for j in xrange(atom_positions.shape[0]):
+            if i != j and (nointra is False or (i/3 != j/3)):
+                transitionmatrix[i, j] = fermi(
+                    parameters[0], parameters[1], parameters[2],
+                    kMC_helper.dist(atom_positions[i], atom_positions[j], pbc))
+
+
 class MDMC:
     def __init__(self, **kwargs):
         self.logger = logging.getLogger("{}.{}".format(__name__, self.__class__.__name__))
         self.logger.info("Creating an instance of {}.{}".format(__name__, self.__class__.__name__))
         try:
-            self.get_gitversion()
+            get_gitversion()
         except git.InvalidGitRepositoryError:
             print "# No Git repository found, so I cannot show any commit information"
         self.default_dict = create_default_dict()
@@ -231,12 +338,6 @@ class MDMC:
             self.O_trajectory = load_trajectory(self.trajectory, "O", verbose=self.verbose)
         else:
             pass
-
-
-    def get_gitversion(self):
-        repo = git.Repo(script_path)
-        print "# Hello. I am from commit {}".format(repo.active_branch.commit.hexsha)
-
 
     def check_arguments(self, **kwargs):
         def check_if_correct(key, value):
@@ -271,8 +372,8 @@ class MDMC:
         Ps = np.zeros((self.phosphorusnumber_extended, 3))
         Os[:self.oxygennumber] = self.O_trajectory[0]
         Ps[:self.phosphorusnumber] = self.P_trajectory[0]
-        self.extend_simulationbox(Ps, self.phosphorusnumber, self.h, self.box_multiplier)
-        self.extend_simulationbox(Os, self.oxygennumber, self.h, self.box_multiplier)
+        extend_simulationbox(Ps, self.phosphorusnumber, self.h, self.box_multiplier)
+        extend_simulationbox(Os, self.oxygennumber, self.h, self.box_multiplier)
 
         if self.nonortho:
             for i in xrange(Os.shape[0]):
@@ -355,45 +456,6 @@ class MDMC:
 
         return r, O_counter, H_counter, bin_bounds
 
-    def count_protons_and_oxygens(self, Opos, proton_lattice, O_counter, H_counter, bin_bounds):
-        for i in xrange(proton_lattice.shape[0]):
-            O_z = Opos[i,2]
-            O_index = np.searchsorted(bin_bounds, O_z)-1
-            O_counter[O_index] += 1
-            if proton_lattice[i] > 0:
-                H_counter[O_index] += 1
-
-#~
-    #~ def read_trajectory(self, frames, oxygennumber, verbose=False):
-        #~ if verbose == True:
-            #~ print "#Reading trajectory..."
-#~
-        #~ self.xyz_file.rewind()
-        #~ O_trajectory = np.zeros((frames, oxygennumber, 3), np.float32)
-        #~ self.xyz_file.parse_frames_np_inplace(O_trajectory, "O", verbose)
-#~
-        #~ self.remove_com_movement(O_trajectory, verbose)
-#~
-        #~ if verbose == True:
-            #~ print "#Shape:", O_trajectory.shape
-        #~ return O_trajectory
-
-    def remove_com_movement(self, trajectory, verbose):
-        if verbose:
-            print "#removing COM movement"
-        for i, frame in enumerate(trajectory):
-            if verbose is True and i % 1000 == 0:
-                print "#Frame", i,
-                print "\r",
-            com = frame.sum(axis=0)/float(frame.shape[0])
-            frame -= com
-        if verbose:
-            print ""
-
-    def remove_com_movement_frame(self, frame):
-        com = frame.sum(axis=0)/float(frame.shape[0])
-        frame -= com
-
     def reset_observables(self, proton_pos_snapshot, protonlattice, displacement, Opos, helper):
         for i, site in enumerate(protonlattice):
             if site > 0:
@@ -458,29 +520,6 @@ class MDMC:
                                 for i in xrange(onumber):
                                     Oview[x, y, z, i, :] = Oview[0, 0, 0, i] + pbc * [x, y, z]
 
-    def extend_simulationbox(self, Opos, onumber, h, box_multiplier, nonortho=False):
-        if True in [multiplier > 1 for multiplier in box_multiplier]:
-            if nonortho:
-                v1 = h[:, 0]
-                v2 = h[:, 1]
-                v3 = h[:, 2]
-                Oview = Opos.view()
-                Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], onumber, 3)
-                for x in xrange(box_multiplier[0]):
-                    for y in xrange(box_multiplier[1]):
-                        for z in xrange(box_multiplier[2]):
-                            if x+y+z != 0:
-                                for i in xrange(onumber):
-                                    Oview[x, y, z, i, :] = Oview[0, 0, 0, i] + x * v1 + y * v2 + z * v3
-            else:
-                Oview = Opos.view()
-                Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], onumber, 3)
-                kMC_helper.extend_simulationbox(Oview, h,
-                                                box_multiplier[0],
-                                                box_multiplier[1],
-                                                box_multiplier[2],
-                                                onumber)
-
     def calculate_displacement(self, proton_lattice, proton_pos_snapshot,
                                proton_pos_new, Opos_new, displacement, pbc, wrap=True):
         # ipdb.set_trace()
@@ -493,38 +532,6 @@ class MDMC:
         else:
             displacement += kMC_helper.dist_numpy_all(proton_pos_new, proton_pos_snapshot, self.pbc)
             proton_pos_snapshot[:] = proton_pos_new   # [:] is important (inplace operation)
-
-    def calculate_displacement_nonortho(self, proton_lattice, proton_pos_snapshot,
-                                        proton_pos_new, Opos_new, displacement,
-                                        h, h_inv):
-        # ipdb.set_trace()
-        for O_index, proton_index in enumerate(proton_lattice):
-            if proton_index > 0:
-                proton_pos_new[proton_index-1] = Opos_new[O_index]
-        kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_pos_snapshot, h, h_inv)
-
-    def calculate_autocorrelation(self, protonlattice_old, protonlattice_new):
-        autocorrelation = 0
-        for i in xrange(protonlattice_new.size):
-            if protonlattice_old[i] == protonlattice_new[i] != 0:
-                autocorrelation += 1
-        return autocorrelation
-
-    def calculate_MSD(self, MSD, displacement):
-        MSD *= 0
-        for d in displacement:
-            MSD += d*d
-        MSD /= displacement.shape[0]
-
-    def calculate_transitionmatrix(self, transitionmatrix, atom_positions,
-                                   parameters, timestep, pbc, nointra=True):
-        # ipdb.set_trace()
-        for i in xrange(atom_positions.shape[0]):
-            for j in xrange(atom_positions.shape[0]):
-                if i != j and (nointra is False or (i/3 != j/3)):
-                    transitionmatrix[i, j] = fermi(
-                        parameters[0], parameters[1], parameters[2],
-                        kMC_helper.dist(atom_positions[i], atom_positions[j], pbc))
 
     def get_average_transitionmatrix_reservoir(self, helper, O_trajectory,
                                                parameters, timestep, pbc,
@@ -628,10 +635,10 @@ class MDMC:
                     Opos[:self.oxygennumber] = self.O_trajectory[sweep%self.O_trajectory.shape[0]]
                 else:
                     Opos[:self.oxygennumber] = self.O_trajectory[np.random.randint(self.O_trajectory.shape[0])]
-                self.extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
+                extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
                 if self.po_angle:
                     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep%self.P_trajectory.shape[0]]
-                    self.extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
+                    extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
                 if sweep % neighbor_update == 0:
                     helper.determine_neighbors(Opos, self.cutoff_radius)
                 if self.po_angle:
@@ -651,10 +658,10 @@ class MDMC:
                     Opos[:self.oxygennumber] = self.O_trajectory[sweep%self.O_trajectory.shape[0]]
                 else:
                     Opos[:self.oxygennumber] = self.O_trajectory[np.random.randint(self.O_trajectory.shape[0])]
-                self.extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
+                extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
                 if self.po_angle:
                     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep%self.P_trajectory.shape[0]]
-                    self.extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
+                    extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
                 if sweep % neighbor_update == 0:
                     # print >> self.output, "neighbor_update at sweep", sweep
                     helper.determine_neighbors(Opos, self.cutoff_radius)
@@ -672,10 +679,10 @@ class MDMC:
                 if not self.nonortho:
                     self.calculate_displacement(proton_lattice, proton_pos_snapshot, proton_pos_new, Opos, displacement, self.pbc)
                 else:
-                    self.calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, proton_pos_new, Opos, displacement, self.h, self.h_inv)
+                    calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, proton_pos_new, Opos, displacement, self.h, self.h_inv)
 
-                self.calculate_MSD(MSD, displacement)
-                autocorrelation = self.calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
+                calculate_MSD(MSD, displacement)
+                autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
                 if not self.xyz_output:
                     self.print_observables(sweep, autocorrelation, helper, self.md_timestep_fs, start_time, MSD)
                 else:

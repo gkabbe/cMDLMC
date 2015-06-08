@@ -2,10 +2,12 @@
 
 import numpy as np
 import os
+import ipdb
 import time
 
 from mdkmc.atoms import atomclass as ac
 from mdkmc.atoms import numpyatom as npa
+from mdkmc.misc.timer import TimeIt
 
 
 class XYZFile(object):
@@ -103,7 +105,7 @@ class XYZFile(object):
                 elif index in Hinds:
                     Hs.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
             self.frame += 1
-            return Os, Hs
+            return (Os, Hs)
 
         else:
             self.datei.readline()
@@ -115,7 +117,7 @@ class XYZFile(object):
                 elif "H" in line:
                     Hs.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
             self.frame += 1
-            return Os, Hs
+            return (Os, Hs)
 
     def get_atoms(self, *atomnames):
         # pdb.set_trace()

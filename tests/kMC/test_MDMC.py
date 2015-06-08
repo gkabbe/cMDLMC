@@ -17,7 +17,7 @@ class TestMDMC(unittest.TestCase):
         h[0,0] = pbc[0]
         h[1,1] = pbc[1]
         h[2,2] = pbc[2]
-        mdmc = MDMC.MDMC()
+        mdmc = MDMC
         for direction in ["x", "y", "z"]:
             Os = np.zeros((303, 3), float)
             if direction == "x":
@@ -45,6 +45,9 @@ class TestMDMC(unittest.TestCase):
                 transition_matrix[s,d] = p
             #Check if Transitions matrix looks as expected (each atom connected to its predecessor and successor)
             self.assertTrue(np.allclose(transition_matrix, matrix_as_it_should_be), "Extending in direction {} failed".format(direction))
+
+    def test_calculate_displacement(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()
