@@ -2,15 +2,13 @@
 
 import numpy as np
 import os
-import ipdb
 import time
 
 from mdkmc.atoms import atomclass as ac
 from mdkmc.atoms import numpyatom as npa
-from mdkmc.misc.timer import TimeIt
+
 
 class XYZFile(object):
-
     def __init__(self, filename, framenumber=None, verbose=False):
         self.filename = filename
         self.datei = open(self.filename, "r")
@@ -45,19 +43,19 @@ class XYZFile(object):
         return atomdict
 
     def parse_frame_Os(self):
-        Os=[]
+        Os = []
         self.datei.readline()
         self.datei.readline()
         for index in xrange(self.atomnr):
             line = self.datei.readline()
             if index in self.atomdict["O"]:
-                Os.append(ac.Atom(line.split()[0],map(float,line.split()[1:4]),index))
+                Os.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
         return Os
 
     def parse_frame_Os_np(self, pos_array):
         self.datei.readline()
         self.datei.readline()
-        i=0
+        i = 0
         for index in xrange(self.atomnr):
             line = self.datei.readline()
             if index in self.atomdict["O"]:
@@ -101,11 +99,11 @@ class XYZFile(object):
             for index in xrange(self.atomnr):
                 line = self.datei.readline()
                 if index in Oinds:
-                    Os.append(ac.Atom(line.split()[0],map(float,line.split()[1:4]),index))
+                    Os.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
                 elif index in Hinds:
-                    Hs.append(ac.Atom(line.split()[0],map(float,line.split()[1:4]),index))
+                    Hs.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
             self.frame += 1
-            return (Os,Hs)
+            return Os, Hs
 
         else:
             self.datei.readline()
@@ -113,11 +111,11 @@ class XYZFile(object):
             for index in xrange(self.atomnr):
                 line = self.datei.readline()
                 if "O" in line:
-                    Os.append(ac.Atom(line.split()[0],map(float,line.split()[1:4]),index))
+                    Os.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
                 elif "H" in line:
-                    Hs.append(ac.Atom(line.split()[0],map(float,line.split()[1:4]),index))
+                    Hs.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
             self.frame += 1
-            return (Os,Hs)
+            return Os, Hs
 
     def get_atoms(self, *atomnames):
         # pdb.set_trace()
@@ -142,7 +140,7 @@ class XYZFile(object):
         if not atomnames:
             atomnames = []
         if len(atomnames) == 0:
-            atoms = np.zeros(self.atomnr, dtype = npa.xyzatom)
+            atoms = np.zeros(self.atomnr, dtype=npa.xyzatom)
             line = self.datei.readline()
             if line == "":
                 raise EOFError
@@ -153,12 +151,12 @@ class XYZFile(object):
                 atoms[index]["pos"][:] = map(float, line.split()[1:4])
         else:
             atomnr = sum([len(self.atomdict[atomname]) for atomname in atomnames])
-            atoms = np.zeros(atomnr, dtype = npa.xyzatom)
+            atoms = np.zeros(atomnr, dtype=npa.xyzatom)
             line = self.datei.readline()
             if line == "":
                 raise EOFError
             self.datei.readline()
-            j=0
+            j = 0
             for index in xrange(self.atomnr):
                 line = self.datei.readline()
                 # name = line.split()[0]
@@ -173,7 +171,7 @@ class XYZFile(object):
 
     def get_trajectory_numpy(self, atomnames=[], acidic_protons=False, verbose=False):
         # pdb.set_trace()
-        start_time=time.time()
+        start_time = time.time()
         traj = []
         counter = 0
         while 1:
@@ -181,19 +179,18 @@ class XYZFile(object):
                 traj.append(self.get_atoms_numpy(atomnames))
             except EOFError:
                 break
-            if verbose == True and counter % 100 == 0:
-                print "#Frame {}, ({:.2f} fps)".format(counter, float(counter)/(time.time()-start_time)), "\r",
+            if verbose and counter % 100 == 0:
+                print "# Frame {}, ({:.2f} fps)".format(counter, float(counter) / (time.time() - start_time)), "\r",
             counter += 1
         if verbose:
             print ""
         if verbose:
-            print "#Total time: {} sec".format(time.time() - start_time)
-
+            print "# Total time: {} sec".format(time.time()-start_time)
 
         return np.array(traj, dtype=npa.xyzatom)
 
     def print_frame(self):
-        for i in xrange(self.atomnr+2):
+        for i in xrange(self.atomnr + 2):
             print self.datei.readline()[:-1]
 
     def print_selection(self, selection):
@@ -210,27 +207,27 @@ class XYZFile(object):
             if line.split()[0] in selection:
                 print line[:-1]
 
-    def seek_frame(self,n):
+    def seek_frame(self, n):
         self.datei.seek(0)
         if n == 0:
             pass
         else:
             i = 1
-            while i % ((self.atomnr+2)*n + 1) != 0:
-                    self.datei.readline()
-                    i += 1
+            while i % ((self.atomnr + 2) * n + 1) != 0:
+                self.datei.readline()
+                i += 1
         self.frame = n
 
     def framejump(self, n):
-        for i in xrange((self.atomnr + 2)*n):
+        for i in xrange((self.atomnr + 2) * n):
             self.datei.readline()
 
     def get_framenumber(self, verbose=False):
-        if self.framenumber != None:
+        if self.framenumber is not None:
             return self.framenumber
         else:
-            linenumber = int(os.popen("wc -l "+self.filename).read().split()[0])
-            framenumber = linenumber/(self.atomnr+2)
+            linenumber = int(os.popen("wc -l " + self.filename).read().split()[0])
+            framenumber = linenumber / (self.atomnr + 2)
             if verbose:
                 print "#{} frames".format(framenumber)
             return framenumber
