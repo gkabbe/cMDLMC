@@ -126,18 +126,18 @@ cdef double angle_ptr(double *a1, double *a2, double *a3, double *a4, double* pb
 
 #~ cdef double angle(float_or_double_array_1d O1, float_or_double_array_1d P1, float_or_double_array_1d O2, float_or_double_array_1d P2, double [:] pbc):
 
-def angle_test():
-    cdef:
-        double *pbc = [100, 100, 100]
-        double *O1 = [1, 0, 0]
-        double *P1 = [0, 0, 0]
-        double O2[3]
-
-    for i in xrange(100):
-        O2[0] = cos(2*np.pi/100*i)
-        O2[1] = sin(2*np.pi/100*i)
-        O2[2] = 0
-        print angle_ptr(&O1[0], &P1[0], &O2[0], &P1[0], &pbc[0])
+# def angle_test():
+#     cdef:
+#         double *pbc = [100, 100, 100]
+#         double *O1 = [1, 0, 0]
+#         double *P1 = [0, 0, 0]
+#         double O2[3]
+#
+#     for i in xrange(100):
+#         O2[0] = cos(2*np.pi/100*i)
+#         O2[1] = sin(2*np.pi/100*i)
+#         O2[2] = 0
+#         print angle_ptr(&O1[0], &P1[0], &O2[0], &P1[0], &pbc[0])
 
 
 
@@ -449,8 +449,8 @@ cdef class Helper:
 #~ 					if dist == 0:
 #~ 						print "dist=0 for i=", i, ",j=", index2
                     if self.nonortho == 0:
-#~ 						POO_angle = cnpa.angle(Os[i], Ps[P_neighbors[i]], Os[i], Os[index2], self.pbc)
-                        POO_angle = cnpa.angle(Os[i], Ps[P_neighbors[i]], Os[i], Os[index2], self.pbc)
+                        # POO_angle = cnpa.angle(Os[i], Ps[P_neighbors[i]], Os[i], Os[index2], self.pbc)
+                        POO_angle = cnpa.angle_ptr(&Os[i, 0], &Ps[P_neighbors[i], 0], &Os[i, 0], &Os[index2, 0], &(self.pbc)[0])
                     else:
 #~ 						POO_angle = cnpa.angle_nonortho(Os[i], Ps[P_neighbors[i]], Os[i], Os[index2], self.h, self.h_inv)
                         POO_angle = cnpa.angle_nonortho(Os[i], Ps[P_neighbors[i]], Os[i], Os[index2], self.h, self.h_inv)

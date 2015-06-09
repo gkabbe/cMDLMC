@@ -101,26 +101,27 @@ def npload_atoms(filename, arg = "arr_0", atomnames_list=[], remove_com=True, cr
 
 	if filename[-4:] == ".xyz":
 		binfiles = find_binfiles(filename)
-		if verbose == True:
+		if verbose:
 			print "#Found following binfiles: {}".format(binfiles)
 		if len(binfiles) > 0:
 			traj = np.load(binfiles[0])
 			if binfiles[0][-4:] == ".npz" and arg in traj.keys():
 				traj = traj[arg]
+			
 		else:
-			if verbose == True:
+			if verbose:
 				print "#Loading from file {}".format(filename)
 			xyz_file = XYZFile(filename, verbose=verbose)
 			traj = xyz_file.get_trajectory_numpy(atomnames_list, verbose=verbose)
-			if remove_com == True:
+			if remove_com:
 				npa.remove_com_movement_traj(traj, verbose=verbose)
-			if create_if_not_existing == True:
+			if create_if_not_existing:
 				npsave_atoms(filename, traj, verbose=verbose)
 	else:
 		if filename[-4:] == ".npy":
 			traj = np.load(filename)
 		elif filename[-4:] == ".npz":
-			if verbose == True:
+			if verbose:
 				print "#Compressed binary file archive. Loading {}.".format(arg)
 			traj = np.load(filename)[arg]
 
