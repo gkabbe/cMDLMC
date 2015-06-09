@@ -171,7 +171,7 @@ def create_default_dict():
     default_dict["jumprate_type"]        = "no_default"
 
     default_dict["cutoff_radius"]        = 4.0
-    default_dict["box_multiplier"]       = [1,1,1]
+    default_dict["box_multiplier"]       = [1, 1, 1]
     default_dict["framenumber"]          = None
     default_dict["verbose"]              = False
     default_dict["po_angle"]             = False
@@ -679,7 +679,9 @@ class MDMC:
             if  sweep % self.print_freq == 0:
                 #~ self.remove_com_movement_frame(Opos)
                 if not self.nonortho:
-                    calculate_displacement(proton_lattice, proton_pos_snapshot, proton_pos_new, Opos, displacement, self.pbc)
+                    calculate_displacement(proton_lattice, proton_pos_snapshot,
+                                           Opos, displacement, self.pbc,
+                                           wrap=self.periodic_wrap)
                 else:
                     calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, proton_pos_new, Opos, displacement, self.h, self.h_inv)
 
