@@ -59,7 +59,7 @@ specified. It looks like this:
     mode ASEP
     sweeps 75000 
     equilibration_sweeps 2500000
-    md_timestep_fs 0.4
+    md_timestep_fs 0.4   # The timestep of the trajectory on which the KMC will run
     skip_frames 0
     print_freq 75
     reset_freq 25000
