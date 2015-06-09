@@ -42,21 +42,38 @@ class TestMDMC(unittest.TestCase):
             for s,d,p in sdp:
                 transition_matrix[s,d] = p
             #Check if Transitions matrix looks as expected (each atom connected to its predecessor and successor)
-            self.assertTrue(np.allclose(transition_matrix, matrix_as_it_should_be), "Extending in direction {} failed".format(direction))
+            self.assertTrue(np.allclose(transition_matrix, matrix_as_it_should_be),
+                            "Extending in direction {} failed".format(direction))
 
     def test_calculate_displacement(self):
         oxy_positions = np.array([[1.0*i, 0, 0] for i in range(10)])
         initial_proton_pos = np.zeros((1,3))
         pbc = np.array([10., 0, 0])
-        displacement = np.zeros(3)
+        displacement = np.zeros((1,3))
 
+        # Test unwrapped case
         for i in xrange(100):
             oxy_lattice = np.zeros(10, int)
-            oxy_lattice[i] = 1
+            oxy_lattice[i % 10] = 1
             MDMC.calculate_displacement(oxy_lattice, initial_proton_pos,
                                         oxy_positions, displacement, pbc, wrap=False)
-            print "displacement:", displacement
-        self.assertTrue(1==1)
+            print "Unwrapped displacement:", displacement
+            print np.linalg.norm(displacement[0]), i
+            self.assertTrue(np.linalg.norm(displacement[0])==i)
+
+        initial_proton_pos[:] = 0
+        # Test wrapped case
+        for i in xrange(100):
+            oxy_lattice = np.zeros(10, int)
+            oxy_lattice[i % 10] = 1
+            MDMC.calculate_displacement(oxy_lattice, initial_proton_pos,
+                                        oxy_positions, displacement, pbc, wrap=True)
+            dist_target = i % 10
+            dist_target = min(abs(dist_target), 10-abs(dist_target))
+            print "Wrapped displacement:", displacement, dist_target
+            print np.linalg.norm(displacement[0]),
+            self.assertTrue(np.allclose(np.linalg.norm(displacement[0]), dist_target),
+                            "{} {}".format(np.linalg.norm(displacement[0]), dist_target))
 
 
 

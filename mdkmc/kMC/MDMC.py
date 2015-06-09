@@ -22,7 +22,7 @@ from mdkmc.cython_exts.atoms import numpyatom as npa
 
 # -----------------------Determine Loglevel here----------------------------------------
 # Choose between info, warning, debug
-loglevel = logging.INFO
+loglevel = logging.WARNING
 logger = logging.getLogger(__name__)
 logger.setLevel(loglevel)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -168,7 +168,7 @@ def create_default_dict():
     default_dict["md_timestep_fs"]       = "no_default"
     default_dict["pbc"]                  = "no_default"
     default_dict["jumprate_params_fs"]   = "no_default"
-    default_dict["jumprate_type"]         = "no_default"
+    default_dict["jumprate_type"]        = "no_default"
 
     default_dict["cutoff_radius"]        = 4.0
     default_dict["box_multiplier"]       = [1,1,1]
