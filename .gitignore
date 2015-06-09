@@ -3,6 +3,9 @@
 *.o
 *.so
 *.cpp
+*.log
+.idea
 mdkmc.egg-info/
 build
 dist
+
