@@ -37,11 +37,11 @@ ch.setLevel(logging.WARNING)
 ch.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
-#~ logger.addHandler(ch)
-#--------------------------------------------------------------------------------------
+# logger.addHandler(ch)
+# --------------------------------------------------------------------------------------
 
 script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-#~ print "#", os.path.join(script_path,"../cython/kMC")
+# print "#", os.path.join(script_path,"../cython/kMC")
 
 
 class InputError(Exception):
@@ -51,8 +51,8 @@ class InputError(Exception):
     def __str__(self):
         return repr(self.value)
 
+
 def load_trajectory(traj, atomname, verbose=False):
-    #~ traj = traj = BinDump.npload_atoms(traj_fname, create_if_not_existing=True, verbose=verbose)
     atom_number = traj[0][traj[0]["name"] == atomname].size
     atom_traj = (traj[traj["name"] == atomname]).reshape((traj.shape[0], atom_number))
     return np.array(atom_traj["pos"], order="C")
@@ -98,7 +98,6 @@ def print_frame(*args):
 def load_configfile(configfilename):
     def get_jumprate_parameters(line):
         dict_string = re.findall("\{.*\}|dict\s*\(.*\)", line)[0]
-        print "param dict:", dict_string
         param_dict = eval(dict_string)
         return param_dict
 
@@ -133,10 +132,8 @@ def load_configfile(configfilename):
     parser_dict["clip_trajectory"]      = parse_int
     parser_dict["seed"]                 = parse_int
     parser_dict["md_timestep_fs"]       = parse_float
-    #~ parser_dict["threshold"]            = parse_float
     parser_dict["angle_threshold"]      = parse_float
     parser_dict["cutoff_radius"]        = parse_float
-    #~ parser_dict["dump_trajectory"]      = lambda line: string2bool(line.split()[1])
     parser_dict["po_angle"]             = lambda line: string2bool(line.split()[1])
     parser_dict["shuffle"]              = lambda line: string2bool(line.split()[1])
     parser_dict["verbose"]              = lambda line: string2bool(line.split()[1])
@@ -154,6 +151,7 @@ def load_configfile(configfilename):
                     config_dict[line.split()[0].lower()] = parser_dict[line.split()[0].lower()](line)
 
     return config_dict
+
 
 def create_default_dict():
     default_dict = OrderedDict()
@@ -187,21 +185,6 @@ def create_default_dict():
 
     return default_dict
 
-#~ def set_default_values(config_dict, verbose=False):
-    #~ def check_and_set(key, conf_dict, default_value, verbose):
-        #~ if not key in config_dict.keys():
-            #~ if verbose == True:
-                #~ print "No specification of {} found. Using default {}".format(key, default_value)
-            #~ config_dict[key] = default_value
-        #~ elif verbose == True:
-            #~ print "Value of {} was specified as {}".format(key, config_dict[key])
-        #~
-    #~ check_and_set("box_multiplier", config_dict, [1,1,1], verbose)
-    #~ check_and_set("framenumber", config_dict, None, verbose)
-    #~ check_and_set("verbose", config_dict, False, verbose)
-    #~ check_and_set("po_angle", config_dict, False, verbose)
-    #~ check_and_set("output", config_dict, sys.stdout, verbose)
-    #~ check_and_set("shuffle", config_dict, False, verbose)
 
 def get_gitversion():
     repo = git.Repo(script_path)
@@ -210,26 +193,11 @@ def get_gitversion():
 
 def count_protons_and_oxygens(Opos, proton_lattice, O_counter, H_counter, bin_bounds):
     for i in xrange(proton_lattice.shape[0]):
-        O_z = Opos[i,2]
+        O_z = Opos[i, 2]
         O_index = np.searchsorted(bin_bounds, O_z)-1
         O_counter[O_index] += 1
         if proton_lattice[i] > 0:
             H_counter[O_index] += 1
-
-#~
-#~ def read_trajectory(self, frames, oxygennumber, verbose=False):
-    #~ if verbose == True:
-        #~ print "#Reading trajectory..."
-#~
-    #~ self.xyz_file.rewind()
-    #~ O_trajectory = np.zeros((frames, oxygennumber, 3), np.float32)
-    #~ self.xyz_file.parse_frames_np_inplace(O_trajectory, "O", verbose)
-#~
-    #~ self.remove_com_movement(O_trajectory, verbose)
-#~
-    #~ if verbose == True:
-        #~ print "#Shape:", O_trajectory.shape
-    #~ return O_trajectory
 
 
 def remove_com_movement(trajectory, verbose):
@@ -283,7 +251,7 @@ def calculate_displacement(proton_lattice, proton_pos_snapshot,
             proton_pos_new[proton_index-1] = Opos_new[O_index]
     if wrap:
         kMC_helper.dist_numpy_all_inplace(displacement, proton_pos_new,
-                                  proton_pos_snapshot, pbc)
+                                          proton_pos_snapshot, pbc)
     else:
         displacement += kMC_helper.dist_numpy_all(proton_pos_new, proton_pos_snapshot, pbc)
         proton_pos_snapshot[:] = proton_pos_new   # [:] is important (inplace operation)
@@ -340,11 +308,13 @@ class MDMC:
                 print "# Config file specified. Loading settings from there."
             self.check_arguments(**file_kwargs)
 
-            self.trajectory = BinDump.npload_atoms(self.filename, create_if_not_existing=True, remove_com=True, verbose=self.verbose)
+            self.trajectory = BinDump.npload_atoms(self.filename, create_if_not_existing=True,
+                                                   remove_com=True, verbose=self.verbose)
 
             if self.clip_trajectory is not None:
                 if self.clip_trajectory >= self.trajectory.shape[0]:
-                    print "# Trying to clip trajectory to {} frames, but trajectory only has {} frames!".format(self.clip_trajectory, self.trajectory.shape[0])
+                    print "# Trying to clip trajectory to {} frames, but trajectory only has {} frames!"\
+                        .format(self.clip_trajectory, self.trajectory.shape[0])
                 else:
                     if self.verbose:
                         print "# Clipping trajectory from frame 0 to frame {}".format(self.clip_trajectory)
@@ -367,18 +337,18 @@ class MDMC:
             except KeyError:
                 if self.default_dict[arg] != "no_default":
                     if ("verbose", True) in kwargs.viewitems():
-                        print "#Missing value for argument {}".format(arg)
-                        print "#Using default value {}".format(self.default_dict[arg])
+                        print "# Missing value for argument {}".format(arg)
+                        print "# Using default value {}".format(self.default_dict[arg])
                     self.__dict__[arg] = self.default_dict[arg]
                 else:
                     if ("verbose", True) in kwargs.viewitems():
-                        print "#No value specified for {}, no default value found.".format(arg)
-                        print "#Exiting"
+                        print "# No value specified for {}, no default value found.".format(arg)
+                        print "# Exiting"
                         sys.exit(1)
 
         for key in kwargs.keys():
             if key not in self.default_dict.keys() and key != "default_dict":
-                print "#Ignoring unknown argument {}".format(key)
+                print "# Ignoring unknown argument {}".format(key)
 
 
     def determine_PO_pairs(self):
@@ -405,7 +375,7 @@ class MDMC:
             for i in xrange(O_frame.shape[0]):
                 for j in xrange(i):
                     if i != j and npa.length_nonortho_bruteforce(O_frame[i], O_frame[j], self.h, self.h_inv) < self.cutoff_radius:
-                        angles[i,j] = npa.angle_nonortho(O_frame[i], P_frame[P_neighbors[i]], O_frame[j], P_frame[P_neighbors[j]], self.h, self.h_inv)
+                        angles[i, j] = npa.angle_nonortho(O_frame[i], P_frame[P_neighbors[i]], O_frame[j], P_frame[P_neighbors[j]], self.h, self.h_inv)
         else:
             for i in xrange(O_frame.shape[0]):
                 for j in xrange(i):
@@ -416,7 +386,7 @@ class MDMC:
 
 #TODO print_settings fertig!
     def print_settings(self):
-        print "#I'm using the following settings:"
+        print "# I'm using the following settings:"
         for k, v in self.__dict__.iteritems():
             if "trajectory" in k:
                 pass
@@ -435,14 +405,7 @@ class MDMC:
                 print "#         {} {} {}".format(*v[1])
                 print "#         {} {} {}".format(*v[2])
             else:
-                print "#{:20} {:>20}".format(k, v)
-            #~ elif k == "default_dict":
-                #~ print "#Default Dict Values:"
-                #~ for key, value in v.iteritems():
-                    #~ print "#", key, value
-    #~ def print_settings(self, sweeps, equilibration_sweeps, MD_timestep_fs, skip_frames, print_freq, reset_freq, dump_trajectory, box_multiplier, neighbor_freq, verbose=False):
-        #~ print "#Parameters used for jump rate function : {} (fs^-1) {} (Angstroem) {}".format(*self.jumprate_params_fs)
-        #~ print "#Total number of sweeps: {}, reset of MSD and autocorrelation after {} sweeps".format()
+                print "# {:20} {:>20}".format(k, v)
 
     def init_proton_lattice(self, box_multiplier):
         proton_lattice = np.zeros(self.oxygennumber*box_multiplier[0]*box_multiplier[1]*box_multiplier[2], np.uint8)
@@ -461,7 +424,7 @@ class MDMC:
 
     def init_observables_protons_variable(self, O_trajectory, zfac, bins):
         r = np.zeros(3, np.float32)
-        zmin = O_trajectory[:, :,2].min()
+        zmin = O_trajectory[:, :, 2].min()
         zmax = O_trajectory[:, :, 2].max()
         zmax += (zfac-1)*self.pbc[2]
 
@@ -486,7 +449,7 @@ class MDMC:
         return protonlattice_snapshot, proton_pos_snapshot, displacement
 
     def print_observable_names(self):
-        print >> self.output, "#{:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format(
+        print >> self.output, "# {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format(
             "Sweeps", "Time", "MSD_x", "MSD_y", "MSD_z", "Autocorr", "Jumps", "Sweeps/Sec", "Remaining Time/Min")
 
     def print_observables(self, sweep, autocorrelation, helper, timestep_fs, start_time, MSD):
@@ -583,19 +546,19 @@ class MDMC:
         if len(self.pbc) == 3:
             self.nonortho = False
             self.pbc_extended = self.pbc * self.box_multiplier
-            self.h = np.zeros((3,3))
-            self.h[0,0] = self.pbc[0]
-            self.h[1,1] = self.pbc[1]
-            self.h[2,2] = self.pbc[2]
+            self.h = np.zeros((3, 3))
+            self.h[0, 0] = self.pbc[0]
+            self.h[1, 1] = self.pbc[1]
+            self.h[2, 2] = self.pbc[2]
         else:
             self.pbc_extended = np.copy(self.pbc)
             self.pbc_extended[0:3] *= self.box_multiplier[0]
             self.pbc_extended[3:6] *= self.box_multiplier[1]
             self.pbc_extended[6:9] *= self.box_multiplier[2]
             self.nonortho = True
-            self.h = np.array(self.pbc.reshape((3,3)).T, order="C")
+            self.h = np.array(self.pbc.reshape((3, 3)).T, order="C")
             self.h_inv = np.array(np.linalg.inv(self.h), order="C")
-            self.h_ext = np.array(self.pbc_extended.reshape((3,3)).T, order="C")
+            self.h_ext = np.array(self.pbc_extended.reshape((3, 3)).T, order="C")
             self.h__ext_inv = np.array(np.linalg.inv(self.h_ext), order="C")
 
         displacement, MSD, proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
@@ -611,7 +574,7 @@ class MDMC:
             #~ self.determine_PO_angles(self.O_trajectory[0], self.P_trajectory[0], self.P_neighbors, self.angles)
 
         if self.verbose:
-            print >> self.output, "#sweeps:", self.sweeps
+            print >> self.output, "# sweeps:", self.sweeps
         self.print_settings()
 
         Opos = np.zeros((self.box_multiplier[0]*self.box_multiplier[1]*self.box_multiplier[2]*self.oxygennumber, 3), np.float64)
@@ -631,15 +594,15 @@ class MDMC:
         # Equilibration
         for sweep in xrange(self.equilibration_sweeps):
             if sweep % 1000 == 0:
-                print >> self.output, "#Equilibration sweep {}/{}".format(sweep, self.equilibration_sweeps), "\r",
+                print >> self.output, "# Equilibration sweep {}/{}".format(sweep, self.equilibration_sweeps), "\r",
             if sweep % (self.skip_frames+1) == 0:
                 if not self.shuffle:
-                    Opos[:self.oxygennumber] = self.O_trajectory[sweep%self.O_trajectory.shape[0]]
+                    Opos[:self.oxygennumber] = self.O_trajectory[sweep % self.O_trajectory.shape[0]]
                 else:
                     Opos[:self.oxygennumber] = self.O_trajectory[np.random.randint(self.O_trajectory.shape[0])]
                 extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
                 if self.po_angle:
-                    Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep%self.P_trajectory.shape[0]]
+                    Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep % self.P_trajectory.shape[0]]
                     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
                 if sweep % neighbor_update == 0:
                     helper.determine_neighbors(Opos, self.cutoff_radius)
