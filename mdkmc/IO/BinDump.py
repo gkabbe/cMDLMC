@@ -109,6 +109,7 @@ def npload_atoms(filename, arg = "arr_0", atomnames_list=[], remove_com=True, cr
                 traj = traj[arg]
             if len(atomnames_list) > 0:
                 selection = None
+                atomnumber = 0
                 for atomname in atomnames_list:
                     if selection is None:
                         selection = traj["name"] == atomname

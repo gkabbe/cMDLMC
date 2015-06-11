@@ -25,3 +25,5 @@ cdef double angle_ptr(double * a1, double * a2, double * a3, double * a4, double
 cpdef double angle_nonortho(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:,::1] h, double [:,::1] h_inv)
 
 cdef double angle_ptr_nonortho(double * a1, double * a2, double * a3, double * a4, double * h, double * h_inv) nogil
+
+cpdef double sqdist(double [:] a1_pos, double [:] a2_pos, double [:] pbc)
