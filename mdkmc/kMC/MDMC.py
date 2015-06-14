@@ -102,7 +102,10 @@ def load_configfile(configfilename):
         return param_dict
 
     def parse_int(line):
-        return int(line.split()[1])
+        try:
+            return int(line.split()[1])
+        except ValueError:
+            return int(float(line.split()[1]))
 
     def parse_float(line):
         return float(line.split()[1])
