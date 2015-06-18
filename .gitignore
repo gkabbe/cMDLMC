@@ -3,6 +3,8 @@
 *.o
 *.so
 *.cpp
+*.c
+*.html
 *.log
 .idea
 mdkmc.egg-info/

@@ -1,3 +1,4 @@
+#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False, initializedcheck=False
 import cython
 cimport numpy as cnp
 
@@ -10,9 +11,8 @@ cdef extern from "math.h":
 #~ cdef extern from "<cmath>":
 #~ 	double round(double x) nogil
 
-@cython.cdivision(True)
 cdef double dot_product(double* a1, double* a2, int length) nogil:
-	cdef: 
+	cdef:
 		int i
 		double result = 0
 
@@ -21,9 +21,6 @@ cdef double dot_product(double* a1, double* a2, int length) nogil:
 	return result
 
 #only valid for 3d!!
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef void matrix_mult(double [:,::1] mat, double [:] vec) nogil:
 	cdef:
 		int i, j
@@ -32,16 +29,13 @@ cdef void matrix_mult(double [:,::1] mat, double [:] vec) nogil:
 	for i in range(3):
 		for j in range(3):
 			resultvec[i] += mat[i,j] * vec[j]
-	
+
 	for i in range(3):
 		vec[i] = resultvec[i]
 
 def round_test(double x):
 	return round(x)
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef void matrix_mult_ptr(double * mat, double * vec) nogil:
 	cdef:
 		int i, j

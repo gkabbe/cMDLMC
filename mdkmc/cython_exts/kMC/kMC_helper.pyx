@@ -1,4 +1,5 @@
 #cython: profile=False
+#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False, initializedcheck=False
 # TODO: Cleanup
 import time
 import numpy as np
@@ -29,21 +30,18 @@ ctypedef np.int_t DTYPE_t
 
 cdef double PI = np.pi
 
-@cython.cdivision(True)
+
+cdef double R = 1.9872041e-3   # universal gas constant in kcal/mol/K
+
+
 cdef double reservoir_function(double x, double width) nogil:
     return 0.5*(1+cos(x/width*PI))
 
-@cython.cdivision(True)
+
 cdef double dotprod_ptr(double* v1, double* v2) nogil:
     return v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]
 
-#~ @cython.cdivision(True)
-#~ cdef double dotprod(double_array_1d v1, double_array_1d v2):
-#~ 	return v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef double cdist(double [:] v1, double [:] v2, double [:] pbc) nogil:
     cdef int i
     cdef double *posdiff = [v2[0]-v1[0], v2[1]-v1[1], v2[2]-v1[2]]
@@ -54,9 +52,7 @@ cdef double cdist(double [:] v1, double [:] v2, double [:] pbc) nogil:
             posdiff[i] += pbc[i]
     return sqrt(posdiff[0]*posdiff[0] + posdiff[1]*posdiff[1] + posdiff[2]*posdiff[2])
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef double cdist_no_z(double [:] v1, double [:] v2, double [:] pbc) nogil:
     cdef int i
     cdef double *posdiff = [v2[0]-v1[0], v2[1]-v1[1], v2[2]-v1[2]]
@@ -67,9 +63,7 @@ cdef double cdist_no_z(double [:] v1, double [:] v2, double [:] pbc) nogil:
             posdiff[i] += pbc[i]
     return sqrt(posdiff[0]*posdiff[0] + posdiff[1]*posdiff[1] + posdiff[2]*posdiff[2])
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef posdiff_no_z(vector[double] &posdiff, double [:] v1, double [:] v2, double [:] pbc):
     cdef int i
     for i in range(3):
@@ -79,30 +73,7 @@ cdef posdiff_no_z(vector[double] &posdiff, double [:] v1, double [:] v2, double 
         while posdiff[i] < -pbc[i]/2:
             posdiff[i] += pbc[i]
 
-#~ cdef double angle(float *O1, float *P1, float *O2, float *P2, double* pbc):
-#~ 	cdef:
-#~ 		double v1[3]
-#~ 		double v2[3]
-#~ 		int i
-#~ 	
-#~ 	for i in range(3):
-#~ 		v1[i] = O1[i] - P1[i]
-#~ 		v2[i] = O2[i] - P2[i]
-#~ 		
-#~ 		while v1[i] > pbc[i]/2:
-#~ 			v1[i] -= pbc[i]
-#~ 		while v1[i] < -pbc[i]/2:
-#~ 			v1[i] += pbc[i]
-#~ 			
-#~ 		while v2[i] > pbc[i]/2:
-#~ 			v2[i] -= pbc[i]
-#~ 		while v2[i] < -pbc[i]/2:
-#~ 			v2[i] += pbc[i]
-#~ 	return acos(dotprod(v1, v2)/dotprod(v1, v1)/dotprod(v2, v2))
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef double angle_ptr(double *a1, double *a2, double *a3, double *a4, double* pbc) nogil:
     cdef:
         double v1[3]
@@ -124,22 +95,6 @@ cdef double angle_ptr(double *a1, double *a2, double *a3, double *a4, double* pb
             v2[i] += pbc[i]
     return acos(dotprod_ptr(v1, v2)/sqrt(dotprod_ptr(v1, v1))/sqrt(dotprod_ptr(v2, v2)))
 
-#~ cdef double angle(float_or_double_array_1d O1, float_or_double_array_1d P1, float_or_double_array_1d O2, float_or_double_array_1d P2, double [:] pbc):
-
-# def angle_test():
-#     cdef:
-#         double *pbc = [100, 100, 100]
-#         double *O1 = [1, 0, 0]
-#         double *P1 = [0, 0, 0]
-#         double O2[3]
-#
-#     for i in xrange(100):
-#         O2[0] = cos(2*np.pi/100*i)
-#         O2[1] = sin(2*np.pi/100*i)
-#         O2[2] = 0
-#         print angle_ptr(&O1[0], &P1[0], &O2[0], &P1[0], &pbc[0])
-
-
 
 cdef double angle_factor(double angle):
     if angle > PI/2:
@@ -147,9 +102,6 @@ cdef double angle_factor(double angle):
     else:
         return 0
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 def dist(double [:] v1, double [:] v2, double [:] pbc):
     cdef int i
     cdef double *posdiff = [v2[0]-v1[0], v2[1]-v1[1], v2[2]-v1[2]]
@@ -160,31 +112,7 @@ def dist(double [:] v1, double [:] v2, double [:] pbc):
             posdiff[i] += pbc[i]
     return sqrt(posdiff[0]*posdiff[0] + posdiff[1]*posdiff[1] + posdiff[2]*posdiff[2])
 
-#~ @cython.cdivision(True)
-#~ @cython.wraparound(False)
-#~ @cython.boundscheck(False)
-#~ def cget_ratesum_nointra(double [:, ::1] Opos, double [:] pbc, double a, double b, double c, double threshold=1e-8):
-#~ 	cdef int i,j
-#~ 	cdef double omega_framesum = 0
-#~ 	cdef double om
-#~ 	for i in range(Opos.shape[0]):
-#~ 		for j in range(Opos.shape[0]):
-#~ 			if i/3 != j/3:
-#~ 				om = fermi(a, b, c, dist(Opos[i,:], Opos[j,:], pbc))
-#~ 				if om >= threshold:
-#~ 					omega_framesum += om
-#~ 	return omega_framesum
 
-#~ def calculate_transitionmatrix_nointra(double [:, ::1] transitionmatrix, double [:,::1] atom_positions, double[:] parameters, double timestep, double [:] pbc):
-#~ 	cdef int i,j 
-#~ 	cdef double a = parameters[0] * timestep
-#~ 	for i in xrange(atom_positions.shape[0]):
-#~ 		for j in xrange(atom_positions.shape[0]):
-#~ 			if i/3 != j/3:
-#~ 				transitionmatrix[i,j] = fermi(a, parameters[1], parameters[2], cdist(atom_positions[i], atom_positions[j], pbc))
-
-@cython.wraparound(False)
-@cython.boundscheck(False)
 cpdef read_Opos(double [:, ::1] Oarr, datei, int atoms):
     datei.readline()
     datei.readline()
@@ -199,9 +127,7 @@ cpdef read_Opos(double [:, ::1] Oarr, datei, int atoms):
             Oarr[index, 2] = float(line.split()[3])
             index = index + 1
 
-@cython.wraparound(False)
-@cython.boundscheck(False)
-@cython.cdivision(True)
+
 def dist_numpy_all_inplace(double [:, ::1] displacement, double [:, ::1] arr1, double [:, ::1] arr2, double [:] pbc):
     cdef int i, j
     for i in xrange(arr1.shape[0]):
@@ -212,9 +138,7 @@ def dist_numpy_all_inplace(double [:, ::1] displacement, double [:, ::1] arr1, d
             while displacement[i,j] < -pbc[j]/2:
                 displacement[i,j] += pbc[j]
 
-@cython.wraparound(False)
-@cython.boundscheck(False)
-@cython.cdivision(True)
+
 def dist_numpy_all(double [:, ::1] arr1, double [:, ::1] arr2, double [:] pbc):
     cdef:
         int i, j
@@ -228,12 +152,12 @@ def dist_numpy_all(double [:, ::1] arr1, double [:, ::1] arr2, double [:] pbc):
                 displacement[i,j] += pbc[j]
     return displacement
 
-@cython.wraparound(False)
-@cython.boundscheck(False)
+
 def dist_numpy_all_nonortho(double [:, ::1] displacement, double [:, ::1] arr1, double [:, ::1] arr2, double [:,::1] h, double [:,::1] h_inv):
     cdef int i, j
     for i in xrange(arr1.shape[0]):
         cnpa.diff_ptr_nonortho(&arr1[i,0], &arr2[i,0], &displacement[i,0], &h[0,0], &h_inv[0,0])
+
 
 def list_to_vector(l):
     cdef vector[vector[int]] v
@@ -245,8 +169,7 @@ def list_to_vector(l):
             print v[i][j],
         print ""
 
-@cython.wraparound(False)
-@cython.boundscheck(False)
+
 def extend_simulationbox_z(int zfac, double [:,::1] Opos, double pbc_z, int oxygennumber):
     cdef int i,j,z
     for z in xrange(1, zfac):
@@ -255,9 +178,7 @@ def extend_simulationbox_z(int zfac, double [:,::1] Opos, double pbc_z, int oxyg
             Opos[z*oxygennumber+i, 1] = Opos[i, 1]
             Opos[z*oxygennumber+i, 2] = Opos[i, 2] + pbc_z*z
 
-@cython.cdivision(True)
-@cython.wraparound(False)
-@cython.boundscheck(False)
+
 def extend_simulationbox(double [:, :, :, :, ::1] Opos, double [:,::1] h, int multx, int multy, int multz, int initial_oxynumber):
     cdef int x,y,z,i,j
     for x in range(multx):
@@ -267,6 +188,7 @@ def extend_simulationbox(double [:, :, :, :, ::1] Opos, double [:,::1] h, int mu
                     for i in range(initial_oxynumber):
                         for j in range(3):
                             Opos[x, y, z, i, j] = Opos[0, 0, 0, i, j] + x * h[0,j] + y * h[1,j] + z * h[2,j]
+
 
 def count_protons_and_oxygens(double[:,::1] Opos, np.uint8_t [:] proton_lattice, np.int64_t [:] O_counter, np.int64_t [:] H_counter, double [:] bin_bounds):
     cdef:
@@ -280,10 +202,12 @@ def count_protons_and_oxygens(double[:,::1] Opos, np.uint8_t [:] proton_lattice,
         if proton_lattice[i] > 0:
             H_counter[O_index] += 1
 
+
 #Define Function Objects. These can later be substituted easily by kMC_helper
 cdef class Function:
     cdef double evaluate(self, double x):
         return 0
+
 
 cdef class FermiFunction(Function):
     cdef:
@@ -293,26 +217,30 @@ cdef class FermiFunction(Function):
         self.b = b
         self.c = c
 
-    @cython.cdivision(True)
     cdef double evaluate(self, double x):
         return self.a/(1+exp((x-self.b)/self.c))
 
+
 cdef class AEFunction(Function):
     cdef:
-        double A, a, x0, xint
-    def __cinit__(self, double A, double a, double x0, double xint):
+        double A, a, x0, xint, T
+
+    def __cinit__(self, double A, double a, double x0, double xint, T):
         self.a = a
         self.x0 = x0
         self.xint = xint
+        self.T = T
 
-    @cython.cdivision(True)
     cdef double evaluate(self, double x):
+        cdef double E
         if x <= self.x0:
-            return 0
+            E = 0
         elif self.x0 < x < self.xint:
-            return self.a*(x-self.x0)*(x-self.x0)
+            E = self.a*(x-self.x0)*(x-self.x0)
         else:
-            return 2*self.a*(self.xint-self.x0)*(x-self.xint) + self.a*(self.xint-self.x0)*(self.xint-self.x0)
+            E = 2*self.a*(self.xint-self.x0)*(x-self.xint) + self.a*(self.xint-self.x0)*(self.xint-self.x0)
+        return exp(-E/(R*self.T))
+
 
 cdef class Helper:
     cdef:
@@ -332,7 +260,7 @@ cdef class Helper:
         object logger
         Function jumprate
 
-    def __cinit__(self, np.ndarray [np.double_t, ndim=1] pbc, int nonortho,
+    def __cinit__(self, double [:] pbc, int nonortho,
                   jumprate_parameter_dict, jumprate_type="MD_rates",
                   seed=None, verbose=False):
         self.logger = logging.getLogger("{}.{}.{}".format("__main__.MDMC",
@@ -368,7 +296,8 @@ cdef class Helper:
             a = jumprate_parameter_dict["a"]
             x0 = jumprate_parameter_dict["x0"]
             xint = jumprate_parameter_dict["xint"]
-            self.jumprate = AEFunction(A, a, x0, xint)
+            T = jumprate_parameter_dict["T"]
+            self.jumprate = AEFunction(A, a, x0, xint, T)
         else:
             raise Exception("Jumprate type unknown. Please choose between "
                             "MD_rates and AE_rates")
@@ -402,9 +331,6 @@ cdef class Helper:
                             a.push_back(j)
                 self.neighbors.push_back(a)
 
-    @cython.cdivision(True)
-    @cython.wraparound(False)
-    @cython.boundscheck(False)
     def calculate_transitions_new(self, double [:,::1] Os, double r_cut):
         cdef:
             int i,j
@@ -426,9 +352,6 @@ cdef class Helper:
                     # self.prob.push_back(fermi(parameters[0], parameters[1], parameters[2], dist))
                     self.prob.push_back(self.jumprate.evaluate(dist))
 
-    @cython.cdivision(True)
-    @cython.wraparound(False)
-    @cython.boundscheck(False)
     def calculate_transitions_POOangle(self, double [:,::1] Os, double [:,::1] Ps, np.int64_t [:] P_neighbors, double r_cut, double angle_thresh):
         cdef:
             int i,j, index2
@@ -462,110 +385,6 @@ cdef class Helper:
                     else:
                         self.prob.push_back(0)
 
-#use only for hexaphenyl!
-#~ 	@cython.cdivision(True)
-#~ 	@cython.wraparound(False)
-#~ 	@cython.boundscheck(False)
-#~ 	def calculate_transitions_reservoir(self, double [:,::1] Os, double [:] parameters, double [:] pbc, double r_cut, double res_width):
-#~ 		cdef:
-#~ 			int i,j,k
-#~ 			double dist, zmin, zmax
-#~ 			vector[double] posdiff
-#~ 
-#~ 		self.start.clear()
-#~ 		self.dest.clear()
-#~ 		self.prob.clear()
-#~ 		self.jumpdists.clear()
-#~ 		zmin = 1e10
-#~ 		zmax = -1e10
-#~ 
-#~ 		for i in range(Os.shape[0]):
-#~ 			# print i
-#~ 			if Os[i,2] > zmax:
-#~ 				zmax = Os[i,2]
-#~ 			if Os[i,2] < zmin:
-#~ 				zmin = Os[i,2]
-#~ 		# print "zmin:", zmin, "zmax:", zmax
-#~ 
-#~ 		for i in range(Os.shape[0]):
-#~ 			for j in range(self.neighbors[i].size()):
-#~ 				if i/3 != self.neighbors[i][j]/3:
-#~ 					dist = cdist_no_z(Os[i,:], Os[self.neighbors[i][j],:], pbc)
-#~ 					# print dist, i, self.neighbors[i][j]
-#~ 					if dist < r_cut:
-#~ 						# print "bond", i, self.neighbors[i][j]
-#~ 						posdiff.clear()
-#~ 						self.start.push_back(i)
-#~ 						self.dest.push_back(self.neighbors[i][j])
-#~ 						self.prob.push_back(fermi(parameters[0], parameters[1], parameters[2], dist))
-#~ 						# print "posdiff_no_z"
-#~ 						posdiff_no_z(posdiff, Os[i,:], Os[self.neighbors[i][j],:], pbc)
-#~ 						self.jumpdists.push_back(posdiff)
-#~ 
-#~ 			if Os[i,2] - zmin <= res_width:
-#~ 				# print "source"
-#~ 				posdiff.clear()
-#~ 				self.start.push_back(-1)
-#~ 				self.dest.push_back(i)
-#~ 				self.prob.push_back(reservoir_function(Os[i,2] - zmin, res_width))
-#~ 				
-#~ 				posdiff.resize(3,0)
-#~ 				
-#~ 				self.jumpdists.push_back(posdiff)
-#~ 
-#~ 			if zmax - Os[i,2] <= res_width:
-#~ 				# print "drain"
-#~ 				posdiff.clear()
-#~ 				self.start.push_back(i)
-#~ 				self.dest.push_back(-1)
-#~ 				self.prob.push_back(reservoir_function(zmax - Os[i,2], res_width))
-#~ 		
-#~ 				posdiff.resize(3,0)
-#~ 				
-#~ 				self.jumpdists.push_back(posdiff)
-
-
-#~ 	def print_transitions(self):
-#~ 		cdef int i
-#~ 		for i in range(self.start.size()):
-#~ 			print self.start[i], self.dest[i], self.prob[i], self.jumpdists[i]
-
-#~ 	@cython.cdivision(True)
-#~ 	@cython.wraparound(False)
-#~ 	@cython.boundscheck(False)
-#~ 	def calculate_transitionsmatrix_reservoir(self, double [:,::1] tm, double [:,::1] Os, double [:] parameters, double [:] pbc, double r_cut, double res_width):
-#~ 		cdef:
-#~ 			int i,j,k
-#~ 			double dist, zmin, zmax
-#~ 
-#~ 		zmin = 1e10
-#~ 		zmax = -1e10
-#~ 
-#~ 		for i in range(Os.shape[0]):
-#~ 			# print i
-#~ 			if Os[i,2] > zmax:
-#~ 				zmax = Os[i,2]
-#~ 			if Os[i,2] < zmin:
-#~ 				zmin = Os[i,2]
-#~ 		# print "zmin:", zmin, "zmax:", zmax
-#~ 
-#~ 		for i in range(Os.shape[0]):
-#~ 			for j in range(Os.shape[0]):
-#~ 				if i/3 != j/3:
-#~ 					dist = cdist_no_z(Os[i,:], Os[j,:], pbc)
-#~ 					# print dist, i, self.neighbors[i][j]
-#~ 					if dist < r_cut:
-#~ 						tm[i+1,j+1] += fermi(parameters[0], parameters[1], parameters[2], dist)
-#~ 
-#~ 			if Os[i,2] - zmin <= res_width:
-#~ 				tm[0,i+1] += reservoir_function(Os[i,2] - zmin, res_width)
-#~ 			
-#~ 			if zmax - Os[i,2] <= res_width:
-#~ 				tm[i+1,tm.shape[1]-1] += reservoir_function(zmax - Os[i,2], res_width)
-
-    @cython.cdivision(True)
-    @cython.wraparound(False)
-    @cython.boundscheck(False)
     def calculate_transitions_avg(self, double [:,::1] tm, double [:,::1] Opos_avg):
         cdef:
             int i,j
@@ -604,45 +423,6 @@ cdef class Helper:
                 self.dest.push_back(-1)
                 self.prob.push_back(tm[i,tm.shape[0]-1])
 
-
-
-#~ 	@cython.cdivision(True)
-#~ 	@cython.wraparound(False)
-#~ 	@cython.boundscheck(False)
-#~ 	def calculate_transitionsmatrix_old(self, double [:,::1] Os, double [:, ::1] tm, double [:] parameters, double [:] pbc, double r_cut):
-#~ 		cdef:
-#~ 			int i,j
-#~ 			double dist
-#~ 		for i in range(Os.shape[0]):
-#~ 			for j in range(Os.shape[0]):
-#~ 				if i != j:
-#~ 					dist = cdist(Os[i], Os[j], pbc)
-#~ 					if dist < r_cut:
-#~ 						tm[i,j] += fermi(parameters[0], parameters[1], parameters[2], dist)
-#~ 
-#~ 	@cython.cdivision(True)
-#~ 	@cython.wraparound(False)
-#~ 	@cython.boundscheck(False)
-#~ 	def calculate_transitionsmatrix_new(self, double [:,::1] Os, double [:, ::1] tm, double [:] parameters, double [:] pbc, double r_cut):
-#~ 		cdef:
-#~ 			int i,j,k
-#~ 			double dist
-#~ 		for i in range(Os.shape[0]):
-#~ 			for j in range(self.neighbors[i].size()):
-#~ 				if i/3 != j/3:
-#~ 					k = self.neighbors[i][j]
-#~ 					dist = cdist(Os[i,:], Os[k,:], pbc)
-#~ 					if dist < r_cut:
-#~ 						tm[i, k] += fermi(parameters[0], parameters[1], parameters[2], dist)
-
-     # @cython.cdivision(True)
-     # @cython.wraparound(False)
-     # @cython.boundscheck(False)
-     # def fermi_test(self, double [:] values, double [:] parameters):
-     #     cdef int i
-     #     for i in range(values.size):
-     #         print fermi(parameters[0], parameters[1], parameters[2], values[i])
-
     def jumprate_test(self, double x):
         return self.jumprate.evaluate(x)
 
@@ -655,9 +435,6 @@ cdef class Helper:
     def return_transitions(self):
         return self.start, self.dest, self.prob
 
-    @cython.cdivision(True)
-    @cython.wraparound(False)
-    @cython.boundscheck(False)
     def sweep_gsl(self, np.uint8_t [:] proton_lattice, double [:,::1] transitionmatrix):
         cdef:
             int i,j, index_origin, index_destin
@@ -673,9 +450,6 @@ cdef class Helper:
                         self.jumps += 1
         return self.jumps
 
-    @cython.cdivision(True)
-    @cython.wraparound(False)
-    @cython.boundscheck(False)
     def sweep_list(self, np.uint8_t [:] proton_lattice):
         cdef:
             int i,j, index_origin, index_destin
@@ -691,9 +465,6 @@ cdef class Helper:
                     self.jumps += 1
         return self.jumps
 
-    @cython.cdivision(True)
-    @cython.wraparound(False)
-    @cython.boundscheck(False)
     def sweep_list_jumpmat(self, np.uint8_t [:] proton_lattice, np.int64_t [:,::1] jumpmat):
         cdef:
             int i,j, index_origin, index_destin
@@ -710,9 +481,6 @@ cdef class Helper:
                     self.jumps += 1
         return self.jumps
 
-    @cython.cdivision(True)
-    @cython.wraparound(False)
-    @cython.boundscheck(False)
     def sweep_list_reservoir(self, np.uint8_t [:] proton_lattice, double [:] r):
         cdef:
             int i,j, k, index_origin, index_destin
@@ -740,8 +508,6 @@ cdef class Helper:
                             # print "r +=", self.jumpdists[i]
                             for k in range(3):
                                 r[k] += self.jumpdists[i][k]
-
-
         return self.jumps
 
     def reset_jumpcounter(self):

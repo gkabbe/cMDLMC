@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False, initializedcheck=False
 # TODO: Cleanup
 import numpy as np
 cimport numpy as np
@@ -20,13 +20,14 @@ cdef extern from "math.h":
     double cos(double x) nogil
     double acos(double x) nogil
 
+
 xyzatom = np.dtype([("name", np.str_, 1), ("pos", np.float64, (3,))])
+
+
 pdbatom = np.dtype([("rec", np.str_, 4), ("serialnr", np.int32), ("name", np.str_, 4), ("locind", np.str_, 1), ("resname", np.str_, 3), ("chainid", np.str_, 1), ("rsn", np.int32),\
  ("rescode", np.str_, 1), ("pos", np.float64, (3,)), ("occ", np.float64), ("tempfac", np.float64), ("segment", np.str_, 4), ("element", np.str_, 2), ("charge", np.str_, 2)]) 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef void diff(double [:] a1_pos, double [:] a2_pos, double [:] pbc, double [:] diffvec):
     cdef:
         int i
@@ -37,9 +38,7 @@ cdef void diff(double [:] a1_pos, double [:] a2_pos, double [:] pbc, double [:] 
         while diffvec[i] > pbc[i]/2:
             diffvec[i] -= pbc[i]
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef void diff_ptr(double *a1_pos, double *a2_pos, double *pbc, double *diffvec) nogil:
     cdef:
         int i
@@ -50,32 +49,8 @@ cdef void diff_ptr(double *a1_pos, double *a2_pos, double *pbc, double *diffvec)
             diffvec[i] += pbc[i]
         while diffvec[i] > pbc[i]/2:
             diffvec[i] -= pbc[i]
-    #print "diffvec:",diffvec[0], diffvec[1], diffvec[2]
 
-#~ @cython.cdivision(True)
-#~ @cython.boundscheck(False)
-#~ @cython.wraparound(False)
-#~ cdef diff_ptr_nonortho(double *a1_pos, double *a2_pos, double *pbc, double *diffvec):
-    #~ cdef:
-        #~ int i
-        #~
-    #~ for i in range(3):
-        #~ diffvec[i] = a2_pos[i] - a1_pos[i]
-#~ 
-    #~ for i in xrange(3):
-        #~ while dot_product(&diffvec[0], &pbc[3*i], 3)/sqrt(dot_product(&pbc[3*i], &pbc[3*i], 3)) > sqrt(dot_product(&pbc[3*i], &pbc[3*i], 3))/2:
-            #~ diffvec[0] -= pbc[3*i]
-            #~ diffvec[1] -= pbc[3*i+1]
-            #~ diffvec[2] -= pbc[3*i+2]
-        #~ while dot_product(&diffvec[0], &pbc[3*i], 3)/sqrt(dot_product(&pbc[3*i], &pbc[3*i], 3)) < - sqrt(dot_product(&pbc[3*i], &pbc[3*i], 3))/2:
-            #~ diffvec[0] += pbc[3*i]
-            #~ diffvec[1] += pbc[3*i+1]
-            #~ diffvec[2] += pbc[3*i+2]
-    #~
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef void diff_nonortho(double [:] a1_pos, double [:] a2_pos, double [:] diffvec, double [:,::1] h, double [:,::1] h_inv) nogil:
     cdef:
         int i
@@ -91,9 +66,6 @@ cdef void diff_nonortho(double [:] a1_pos, double [:] a2_pos, double [:] diffvec
     mh.matrix_mult(h, diffvec)
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef void diff_ptr_nonortho(double  *a1_pos, double *a2_pos, double *diffvec, double * h, double * h_inv) nogil:
     cdef:
         int i
@@ -108,9 +80,7 @@ cdef void diff_ptr_nonortho(double  *a1_pos, double *a2_pos, double *diffvec, do
 
     mh.matrix_mult_ptr(h, diffvec)
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cpdef double length_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:,::1] h, double [:,::1] h_inv):
     cdef:
         double diffvec[3]
@@ -136,9 +106,7 @@ cpdef double length_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, do
             mindist = dist
     return sqrt(mindist)
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 cdef double length_nonortho_bruteforce_ptr(double * a1_pos, double * a2_pos, double * h, double * h_inv):
     cdef:
         double diffvec[3]
@@ -164,9 +132,7 @@ cdef double length_nonortho_bruteforce_ptr(double * a1_pos, double * a2_pos, dou
             mindist = dist
     return sqrt(mindist)
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
+
 #~ cdef double distance_nonortho_bruteforce(double *a1_pos, double *a2_pos, double * h, double * h_inv) nogil:
 cdef diff_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:] diffvec, double [:,::1] h, double [:,::1] h_inv):
     cdef:
@@ -196,6 +162,7 @@ cdef diff_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:] d
     diffvec[1] = dists[index][1]
     diffvec[2] = dists[index][2]
 
+
 def bruteforce_test(double [:] a1_pos, double [:] a2_pos, double [:,::1] h, double [:,::1] h_inv):
     diffvec = np.zeros(3)
     l1 = length_nonortho_bruteforce(a1_pos, a2_pos, h, h_inv)
@@ -204,9 +171,6 @@ def bruteforce_test(double [:] a1_pos, double [:] a2_pos, double [:,::1] h, doub
     print l1, np.linalg.norm(diffvec)
 
 
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cpdef double length(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
     cdef:
         #~ double *dist = [0,0,0]
@@ -217,38 +181,7 @@ cpdef double length(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
 
     return sqrt(dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2])
 
-#@cython.cdivision(True)
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
-#cpdef double length_nonortho(double [:] a1_pos, double [:] a2_pos, double [:,::1] h, double [:,::1] h_inv):
-#	cdef: 
-#		#~ double *dist = [0,0,0]
-#		#~ np.ndarray[np.float_t, ndim=1] dist = np.zeros(3, float)
-#		double dist[3]
-#		int i
-#	
-#	diff_ptr_nonortho(&a1_pos[0], &a2_pos[0],&dist[0], &h[0,0], &h_inv[0,0])
-#
-#	return sqrt(dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2])
 
-#@cython.cdivision(True)
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
-#cdef double length_ptr_nonortho(double * a1_pos, double * a2_pos, double * h, double * h_inv):
-#	cdef: 
-#		#~ double *dist = [0,0,0]
-#		#~ np.ndarray[np.float_t, ndim=1] dist = np.zeros(3, float)
-#		double dist[3]
-#		int i
-#
-#	diff_ptr_nonortho(a1_pos, a2_pos, dist, h, h_inv)
-#
-#	return sqrt(dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2])
-
-
-@cython.cdivision(True)
-@cython.boundscheck(False)
-@cython.wraparound(False)
 cdef double length_ptr(double *a1_pos, double *a2_pos, double *pbc) nogil:
     cdef:
         double *dist = [0,0,0]
@@ -258,6 +191,7 @@ cdef double length_ptr(double *a1_pos, double *a2_pos, double *pbc) nogil:
 
     return sqrt(dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2])
         
+
 cpdef double sqdist(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
     cdef:
         double *dist = [0,0,0]
@@ -265,6 +199,7 @@ cpdef double sqdist(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
     diff_ptr(&a1_pos[0], &a2_pos[0], &pbc[0], dist)
 
     return dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2]
+
 
 def nextNeighbor(double [:] a1_pos, double [:, ::1] atoms_pos, double [:] pbc, exclude_identical_position=False):
     "search for nearest neighbor and return its index and distance"
@@ -280,6 +215,7 @@ def nextNeighbor(double [:] a1_pos, double [:, ::1] atoms_pos, double [:] pbc, e
             mindist = dist
             minind = i
     return minind, mindist
+
 
 def nextNeighbor_nonortho(double [:] a1_pos, double [:, ::1] atoms_pos, double [:,::1] h, double [:,::1] h_inv):
     "search for nearest neighbor and return its index and distance. For nonorthogonal boxes"
@@ -297,6 +233,7 @@ def nextNeighbor_nonortho(double [:] a1_pos, double [:, ::1] atoms_pos, double [
             mindist = dist
             minind = i
     return minind, mindist
+
 
 cdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:] pbc):
     cdef:
@@ -319,6 +256,7 @@ cdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, do
             v2[i] += pbc[i]
     return acos(mh.dot_product(v1, v2, 3)/sqrt(mh.dot_product(v1, v1, 3))/sqrt(mh.dot_product(v2, v2, 3)))
 
+
 cdef double angle_ptr(double * a1, double * a2, double * a3, double * a4, double * pbc) nogil:
     cdef:
         double v1[3]
@@ -339,6 +277,7 @@ cdef double angle_ptr(double * a1, double * a2, double * a3, double * a4, double
         while v2[i] < -pbc[i]/2:
             v2[i] += pbc[i]
     return acos(mh.dot_product(v1, v2, 3)/sqrt(mh.dot_product(v1, v1, 3))/sqrt(mh.dot_product(v2, v2, 3)))
+
 
 cpdef double angle_nonortho(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:,::1] h, double [:,::1] h_inv):
     cdef:
