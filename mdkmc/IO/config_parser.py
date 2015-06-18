@@ -17,11 +17,14 @@ def parse_int(line):
 def parse_float(line):
     return float(line.split()[1])
 
+
 def parse_string(line):
     return line.split()[1]
 
+
 def string2file(line, flag="w"):
     return open(line.split()[1], flag)
+
 
 def parse_bool(s):
     if s.upper() == "TRUE":
@@ -187,6 +190,15 @@ CONFIG_DICT = {
             "default": "no_default",
             "help": "Set the periodic boundary conditions of the MD trajectory."
         }
-    # "jumprate_params_fs":
-
+    "jumprate_params_fs":
+        {
+            "parse_fct": get_jumprate_parameters,
+            "default": "no_default",
+            "help": "Specify the parameters used for the calculation of the distance dependent jumprate. If the"
+                    "jumprate type is \"MD_rates\", a dict containing values for a, b, and c is expected (parameters"
+                    "for a fermi like step function f(d) = a/(1+exp((x-b)/c) ). If the jumprate type is \"AE_rates\","
+                    "the expected parameters are A, a, x0, xint and T. a, x0 and xint are fit parameters for the "
+                    "function describing the activation energy over the oxygen distance, whereas A and T are parameters"
+                    "of the Arrhenius equation, which converts the activation energy to a jumprate."
+        }
 }

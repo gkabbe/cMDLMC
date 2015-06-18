@@ -17,6 +17,7 @@ import argparse
 
 from mdkmc.IO import xyzparser
 from mdkmc.IO import BinDump
+from mdkmc.IO import config_parser
 from mdkmc.cython_exts.kMC import kMC_helper
 from mdkmc.cython_exts.atoms import numpyatom as npa
 
@@ -155,6 +156,20 @@ def load_configfile(configfilename):
 
     return config_dict
 
+
+def load_configfile_new():
+    parser_dict = config_parser.CONFIG_DICT
+    config_dict = dict()
+    with open(configfilename, "r") as f:
+        for line in f:
+            if line[0] != "#":
+                if len(line.split()) > 1 and line.split()[0] in parser_dict.keys():
+                    config_dict[line.split()[0].lower()] = parser_dict[line.split()[0].lower()]["parse_fct"](line)
+    # Check for missing options, and look if they have a default argument
+    for key, value in parser_dict.iterkeys():
+        if key not in config_dict:
+            if value["default"] == "no_default":
+                raise RuntimeError("Missing value for {}".format(key))
 
 def create_default_dict():
     default_dict = OrderedDict()
