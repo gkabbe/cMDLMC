@@ -10,11 +10,7 @@ cimport cython
 
 from libcpp.vector cimport vector
 
-# from mdkmc.cython_exts.kMC.kMC_helper cimport fermi# float_or_double_array_1d, float_or_double
 from mdkmc.cython_exts.atoms cimport numpyatom as cnpa
-
-
-from libc.math cimport sqrt, exp
 
 cdef extern from "math.h":
     double sqrt(double x) nogil

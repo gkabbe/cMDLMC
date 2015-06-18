@@ -12,7 +12,7 @@ import inspect
 script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 #~ sys.path.append(os.path.join(script_path, "../cython/atoms"))
 from mdkmc.cython_exts.atoms import numpyatom as cython_npa
-from mdkmc.IO.xyzparser import XYZFile
+from mdkmc.IO.xyz_parser import XYZFile
 from mdkmc.atoms import atomclass
 from mdkmc.atoms import numpyatom as npa
 from mdkmc.misc.timer import TimeIt
