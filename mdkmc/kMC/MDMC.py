@@ -14,6 +14,7 @@ import numpy as np
 import git
 import inspect
 import argparse
+from textwrap import wrap
 
 from mdkmc.IO import xyzparser
 from mdkmc.IO import BinDump
@@ -96,68 +97,7 @@ def print_frame(*args):
         print "{:>2} {: 20.10f} {: 20.10f} {: 20.10f}".format("O", *atom_selection[j])
 
 
-def load_configfile(configfilename):
-    def get_jumprate_parameters(line):
-        dict_string = re.findall("\{.*\}|dict\s*\(.*\)", line)[0]
-        param_dict = eval(dict_string)
-        return param_dict
-
-    def parse_int(line):
-        try:
-            return int(line.split()[1])
-        except ValueError:
-            return int(float(line.split()[1]))
-
-    def parse_float(line):
-        return float(line.split()[1])
-
-    def string2bool(s):
-        if s.upper() == "TRUE":
-            return True
-        elif s.upper() == "FALSE":
-            return False
-        else:
-            print s
-            raise(ValueError("Unknown value. Please use True or False"))
-
-    parser_dict = dict()
-    parser_dict["filename"]             = lambda line: line.split()[1]
-    parser_dict["output"]               = lambda line: open(line.split()[1], "w")
-    parser_dict["o_neighbor"]           = lambda line: line.split()[1].upper()
-    parser_dict["jumprate_type"]        = lambda line: line.split()[1]
-    parser_dict["sweeps"]               = parse_int
-    parser_dict["equilibration_sweeps"] = parse_int
-    parser_dict["skip_frames"]          = parse_int
-    parser_dict["print_freq"]           = parse_int
-    parser_dict["reset_freq"]           = parse_int
-    parser_dict["neighbor_freq"]        = parse_int
-    parser_dict["framenumber"]          = parse_int
-    parser_dict["proton_number"]        = parse_int
-    parser_dict["clip_trajectory"]      = parse_int
-    parser_dict["seed"]                 = parse_int
-    parser_dict["md_timestep_fs"]       = parse_float
-    parser_dict["angle_threshold"]      = parse_float
-    parser_dict["cutoff_radius"]        = parse_float
-    parser_dict["po_angle"]             = lambda line: string2bool(line.split()[1])
-    parser_dict["shuffle"]              = lambda line: string2bool(line.split()[1])
-    parser_dict["verbose"]              = lambda line: string2bool(line.split()[1])
-    parser_dict["xyz_output"]           = lambda line: string2bool(line.split()[1])
-    parser_dict["periodic_wrap"]        = lambda line: string2bool(line.split()[1])
-    parser_dict["box_multiplier"]       = lambda line: map(int, line.split()[1:])
-    parser_dict["pbc"]                  = lambda line: np.array(map(float, line.split()[1:]))
-    parser_dict["jumprate_params_fs"]   = get_jumprate_parameters
-
-    config_dict = dict()
-    with open(configfilename, "r") as f:
-        for line in f:
-            if line[0] != "#":
-                if len(line.split()) > 1 and line.split()[0] in parser_dict.keys():
-                    config_dict[line.split()[0].lower()] = parser_dict[line.split()[0].lower()](line)
-
-    return config_dict
-
-
-def load_configfile_new():
+def load_configfile_new(configfilename, verbose=False):
     parser_dict = config_parser.CONFIG_DICT
     config_dict = dict()
     with open(configfilename, "r") as f:
@@ -166,42 +106,33 @@ def load_configfile_new():
                 if len(line.split()) > 1 and line.split()[0] in parser_dict.keys():
                     config_dict[line.split()[0].lower()] = parser_dict[line.split()[0].lower()]["parse_fct"](line)
     # Check for missing options, and look if they have a default argument
-    for key, value in parser_dict.iterkeys():
+    for key, value in parser_dict.iteritems():
         if key not in config_dict:
             if value["default"] == "no_default":
                 raise RuntimeError("Missing value for {}".format(key))
+            else:
+                if verbose:
+                    print "# Found no value for {} in config file".format(key)
+                    print "# Will use default value: {}".format(value["default"])
+                config_dict[key] = value["default"]
 
-def create_default_dict():
-    default_dict = OrderedDict()
+    return config_dict
 
-    default_dict["filename"]             = "no_default"
-    default_dict["equilibration_sweeps"] = "no_default"
-    default_dict["skip_frames"]          = "no_default"
-    default_dict["print_freq"]           = "no_default"
-    default_dict["reset_freq"]           = "no_default"
-    default_dict["neighbor_freq"]        = "no_default"
-    default_dict["proton_number"]        = "no_default"
-    default_dict["md_timestep_fs"]       = "no_default"
-    default_dict["pbc"]                  = "no_default"
-    default_dict["jumprate_params_fs"]   = "no_default"
-    default_dict["jumprate_type"]        = "no_default"
 
-    default_dict["cutoff_radius"]        = 4.0
-    default_dict["box_multiplier"]       = [1, 1, 1]
-    default_dict["framenumber"]          = None
-    default_dict["verbose"]              = False
-    default_dict["po_angle"]             = False
-    default_dict["shuffle"]              = False
-    default_dict["xyz_output"]           = False
-    default_dict["periodic_wrap"]        = True
-    default_dict["output"]               = sys.stdout
-    default_dict["angle_threshold"]      = 1.57
-    default_dict["o_neighbor"]           = "P"
-    default_dict["sweeps"]               = "no_default"
-    default_dict["clip_trajectory"]      = None
-    default_dict["seed"]                 = None
-
-    return default_dict
+def print_confighelp():
+    text_width = 80
+    parser_dict = config_parser.CONFIG_DICT
+    for k, v in parser_dict.iteritems():
+        keylen = len(k)
+        delim_len = (text_width-2-keylen) / 2
+        print "{delim} {keyword} {delim}".format(keyword=k.upper(), delim=delim_len*"-")
+        print ""
+        print "\n".join(wrap(v["help"], width=text_width))
+        print ""
+        print "Default:", v["default"]
+        print text_width * "-"
+        print ""
+        print ""
 
 
 def get_gitversion():
@@ -313,18 +244,21 @@ def calculate_transitionmatrix(transitionmatrix, atom_positions,
 
 class MDMC:
     def __init__(self, **kwargs):
+        # Create Loggers
         self.logger = logging.getLogger("{}.{}".format(__name__, self.__class__.__name__))
         self.logger.info("Creating an instance of {}.{}".format(__name__, self.__class__.__name__))
         try:
             get_gitversion()
         except git.InvalidGitRepositoryError:
             print "# No Git repository found, so I cannot show any commit information"
-        self.default_dict = create_default_dict()
         if "configfile" in kwargs.keys():
-            file_kwargs = load_configfile(kwargs["configfile"])
+            # Load settings from config file
+            file_kwargs = load_configfile_new(kwargs["configfile"], verbose=True)
             if ("verbose", True) in file_kwargs.viewitems():
                 print "# Config file specified. Loading settings from there."
-            self.check_arguments(**file_kwargs)
+
+            # Save settings as object variable
+            self.__dict__.update(file_kwargs)
 
             self.trajectory = BinDump.npload_atoms(self.filename, create_if_not_existing=True,
                                                    remove_com=True, verbose=self.verbose)
@@ -341,32 +275,6 @@ class MDMC:
             self.O_trajectory = load_trajectory(self.trajectory, "O", verbose=self.verbose)
         else:
             pass
-
-    def check_arguments(self, **kwargs):
-        def check_if_correct(key, value):
-            if key == "pbc":
-                if len(value) not in [3, 9]:
-                    raise InputError("Wrong input length for {}: {}".format(key, value))
-
-        for arg in self.default_dict.keys():
-            try:
-                check_if_correct(arg, kwargs[arg])
-                self.__dict__[arg] = kwargs[arg]
-            except KeyError:
-                if self.default_dict[arg] != "no_default":
-                    if ("verbose", True) in kwargs.viewitems():
-                        print "# Missing value for argument {}".format(arg)
-                        print "# Using default value {}".format(self.default_dict[arg])
-                    self.__dict__[arg] = self.default_dict[arg]
-                else:
-                    if ("verbose", True) in kwargs.viewitems():
-                        print "# No value specified for {}, no default value found.".format(arg)
-                        print "# Exiting"
-                        sys.exit(1)
-
-        for key in kwargs.keys():
-            if key not in self.default_dict.keys() and key != "default_dict":
-                print "# Ignoring unknown argument {}".format(key)
 
 
     def determine_PO_pairs(self):
@@ -682,7 +590,13 @@ class MDMC:
 def main(*args):
     parser=argparse.ArgumentParser(description="MDMC Test", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("configfile", help="config file")
+    parser.add_argument("--confighelp", "-c", action="store_true", help="config file help")
     args = parser.parse_args()
+
+    if args.confighelp:
+        print_confighelp()
+        sys.exit(0)
+
     md_mc = MDMC(configfile=args.configfile)
     # md_mc.print_settings()
     start_time = time.time()

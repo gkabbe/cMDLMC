@@ -1,10 +1,22 @@
 from collections import namedtuple
 from math import pi as PI
+import re
+import sys
+import numpy as np
+
+
 # Functions which parse the input from the config file
 def get_jumprate_parameters(line):
     dict_string = re.findall("\{.*\}|dict\s*\(.*\)", line)[0]
     param_dict = eval(dict_string)
     return param_dict
+
+def get_pbc(line):
+    pbc = np.array(map(float, line.split()[1:]))
+    if len(pbc) != 3 and len(pbc) != 9:
+        raise ValueError("pbc length should be either 3 or 9")
+    else:
+        return pbc
 
 
 def parse_int(line):
@@ -26,13 +38,14 @@ def string2file(line, flag="w"):
     return open(line.split()[1], flag)
 
 
-def parse_bool(s):
-    if s.upper() == "TRUE":
+def parse_bool(line):
+    val = line.split()[1]
+    if val.upper() == "TRUE":
         return True
-    elif s.upper() == "FALSE":
+    elif val.upper() == "FALSE":
         return False
     else:
-        print s
+        print val
         raise(ValueError("Unknown value. Please use True or False"))
 
 
@@ -48,29 +61,29 @@ CONFIG_DICT = {
     "output":
         {
             "parse_fct": string2file,
-            "default": "no_default",
+            "default": sys.stdout,
             "help": "Name of the output file"
         },
     "o_neighbor":
         {
             "parse_fct": parse_string,
             "default": "P",
-            "help": "Name of the heavy atoms the oxygens are bonded to. "
-                    "Needed for the calculation of angle dependent jump rates."
+            "help": "Name of the heavy atoms the oxygens are bonded to."
+                    " Needed for the calculation of angle dependent jump rates."
         },
     "jumprate_type":
         {
             "parse_fct": parse_string,
             "default": "no_default",
             "help": "Choose between jumprates determined from static DFT activation energy calculations (AE_rates) "
-                  "and jumprates determined from AIMD simulations (MD_rates)."
+                    "and jumprates determined from AIMD simulations (MD_rates)."
         },
     "sweeps":
         {
             "parse_fct": parse_int,
             "default": "no_default",
             "help": "Number of sweeps for the production run. A sweep is the number of single proton jump attempts, "
-                  "after which (on average) each oxygen bond has been selected once."
+                    "after which (on average) each oxygen bond has been selected once."
         },
     "equilibration_sweeps":
         {
@@ -140,56 +153,56 @@ CONFIG_DICT = {
                     "jumprates will be set to zero. Theta is the angle between the vector connecting an oxygen and its "
                     "nearest heavy atom neighbor (whose type can be defined via \"o_neighbor\") and the vector "
                     "connecting the two oxygens between which the jumprate is determined. Default is ninety degrees."
-        }
+        },
     "cutoff_radius":
         {
             "parse_fct": parse_float,
             "default": 4.0,
             "help": "Cutoff radius for the determination of jumprates. If two oxygens have a larger distance, the "
                     "jumprate will be set to zero."
-        }
+        },
     "po_angle":
         {
             "parse_fct": parse_bool,
             "default": True,
             "help": "Whether to use angle_dependent jumprates or not."
-        }
+        },
     "shuffle":
         {
             "parse_fct": parse_bool,
             "default": False,
             "help": "Whether to use shuffle mode, where frames from the trajectory are chosen randomly."
-        }
+        },
     "verbose":
         {
             "parse_fct": parse_bool,
             "default": False,
             "help": "Turn verbosity on or off."
-        }
+        },
     "xyz_output":
         {
             "parse_fct": parse_bool,
             "default": False,
             "help": "Print xyz output."
-        }
+        },
     "periodic_wrap":
         {
             "parse_fct": parse_bool,
             "default": True,
             "help": "If true, proton motion will be wrapped into the periodic box."
-        }
+        },
     "box_multiplier":
         {
             "parse_fct": lambda line: map(int, line.split()[1:]),
             "default": [1, 1, 1],
             "help": "Extend the KMC box along one or more dimensions."
-        }
+        },
     "pbc":
         {
-            "parse_fct": lambda line: np.array(map(float, line.split()[1:])),
+            "parse_fct": get_pbc,
             "default": "no_default",
             "help": "Set the periodic boundary conditions of the MD trajectory."
-        }
+        },
     "jumprate_params_fs":
         {
             "parse_fct": get_jumprate_parameters,

@@ -76,6 +76,17 @@ class TestMDMC(unittest.TestCase):
                             "{} {}".format(np.linalg.norm(displacement[0]), dist_target))
 
 
+    def test_load_configfile_new(self):
+        testfile1 = "config1.cfg"
+        config_dict1 = MDMC.load_configfile_new(testfile1)
+        print config_dict1
+
+
+    def test_print_confighelp(self):
+        MDMC.print_confighelp()
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
