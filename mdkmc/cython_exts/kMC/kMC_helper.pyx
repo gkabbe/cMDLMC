@@ -385,6 +385,9 @@ cdef class Helper:
                     else:
                         self.prob.push_back(0)
 
+    def get_transition_number(self):
+        return self.start.size()
+
     def calculate_transitions_avg(self, double [:,::1] tm, double [:,::1] Opos_avg):
         cdef:
             int i,j

@@ -103,8 +103,13 @@ def load_configfile_new(configfilename, verbose=False):
     with open(configfilename, "r") as f:
         for line in f:
             if line[0] != "#":
-                if len(line.split()) > 1 and line.split()[0] in parser_dict.keys():
-                    config_dict[line.split()[0].lower()] = parser_dict[line.split()[0].lower()]["parse_fct"](line)
+                if len(line.split()) > 1:
+                    keyword = line.split()[0]
+                    if keyword in parser_dict.keys():
+                        config_dict[keyword.lower()] = parser_dict[keyword.lower()]["parse_fct"](line)
+                    else:
+                        raise RuntimeError("Unknown keyword {}. Please remove it.".format(keyword))
+
     # Check for missing options, and look if they have a default argument
     for key, value in parser_dict.iteritems():
         if key not in config_dict:
@@ -232,16 +237,6 @@ def calculate_MSD(MSD, displacement):
     MSD /= displacement.shape[0]
 
 
-def calculate_transitionmatrix(transitionmatrix, atom_positions,
-                               parameters, timestep, pbc, nointra=True):
-    # ipdb.set_trace()
-    for i in xrange(atom_positions.shape[0]):
-        for j in xrange(atom_positions.shape[0]):
-            if i != j and (nointra is False or (i/3 != j/3)):
-                transitionmatrix[i, j] = fermi(parameters[0], parameters[1], parameters[2],
-                                               kMC_helper.dist(atom_positions[i], atom_positions[j], pbc))
-
-
 class MDMC:
     def __init__(self, **kwargs):
         # Create Loggers
@@ -275,7 +270,6 @@ class MDMC:
             self.O_trajectory = load_trajectory(self.trajectory, "O", verbose=self.verbose)
         else:
             pass
-
 
     def determine_PO_pairs(self):
         P_neighbors = np.zeros(self.oxygennumber_extended, int)

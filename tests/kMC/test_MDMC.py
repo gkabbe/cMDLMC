@@ -86,7 +86,5 @@ class TestMDMC(unittest.TestCase):
         MDMC.print_confighelp()
 
 
-
-
 if __name__ == "__main__":
     unittest.main()

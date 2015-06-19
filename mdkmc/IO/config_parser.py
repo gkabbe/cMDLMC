@@ -49,8 +49,6 @@ def parse_bool(line):
         raise(ValueError("Unknown value. Please use True or False"))
 
 
-KeywordInfo = namedtuple("KeywordInfo", ["parse_fct", "default", "help"])
-
 CONFIG_DICT = {
     "filename":
         {
