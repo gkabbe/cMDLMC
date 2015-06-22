@@ -210,8 +210,8 @@ cdef class Function:
 
 
 cdef class FermiFunction(Function):
-    cdef:
-        double a, b, c
+    # cdef:
+    #     double a, b, c
     def __cinit__(self, double a, double b, double c):
         self.a = a
         self.b = b
@@ -222,8 +222,6 @@ cdef class FermiFunction(Function):
 
 
 cdef class AEFunction(Function):
-    cdef:
-        double A, a, x0, xint, T
 
     def __cinit__(self, double A, double a, double x0, double xint, T):
         self.a = a

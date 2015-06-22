@@ -150,8 +150,8 @@ class XYZFile(object):
                 atoms[index]["name"] = line.split()[0]
                 atoms[index]["pos"][:] = map(float, line.split()[1:4])
         else:
-            atomnr = sum([len(self.atomdict[atomname]) for atomname in atomnames])
-            atoms = np.zeros(atomnr, dtype=npa.xyzatom)
+            atomnr_selection = sum([len(self.atomdict[atomname]) for atomname in atomnames])
+            atoms = np.zeros(atomnr_selection, dtype=npa.xyzatom)
             line = self.datei.readline()
             if line == "":
                 raise EOFError
@@ -161,7 +161,7 @@ class XYZFile(object):
                 line = self.datei.readline()
                 # name = line.split()[0]
                 for atomname, atom_indices in self.atomdict.iteritems():
-                    if index in atom_indices:
+                    if atomname in atomnames and index in atom_indices:
                         atoms[j]["name"] = atomname
                         atoms[j]["pos"][:] = map(float, line.split()[1:4])
                         j += 1
