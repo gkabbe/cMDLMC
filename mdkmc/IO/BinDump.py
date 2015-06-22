@@ -94,7 +94,7 @@ def npsave_atoms(np_filename, trajectory, overwrite=False, compressed=False, nob
         np.save(np_filename, trajectory)
 
 
-def npload_atoms(filename, arg="arr_0", atomnames_list=[], remove_com=True, create_if_not_existing=False, verbose=False):
+def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, create_if_not_existing=False, verbose=False):
     def find_binfiles(filename):
         binfiles = []
         for ending in [".npy", ".npz"]:
@@ -111,7 +111,7 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=[], remove_com=True, crea
             traj = np.load(binfiles[0])
             if binfiles[0][-4:] == ".npz" and arg in traj.keys():
                 traj = traj[arg]
-            if len(atomnames_list) > 0:
+            if atomnames_list is not None:
                 selection = None
                 atomnumber = 0
                 for atomname in atomnames_list:

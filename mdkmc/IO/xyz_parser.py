@@ -139,9 +139,7 @@ class XYZFile(object):
 
     def get_atoms_numpy(self, atomnames=None):
         # pdb.set_trace()
-        if not atomnames:
-            atomnames = []
-        if len(atomnames) == 0:
+        if atomnames is None:
             atoms = np.zeros(self.atomnr, dtype=npa.xyzatom)
             line = self.datei.readline()
             if line == "":
@@ -171,7 +169,7 @@ class XYZFile(object):
 
         return atoms
 
-    def get_trajectory_numpy(self, atomnames=[], acidic_protons=False, verbose=False):
+    def get_trajectory_numpy(self, atomnames=None, acidic_protons=False, verbose=False):
         # pdb.set_trace()
         start_time = time.time()
         traj = []
