@@ -224,6 +224,7 @@ cdef class FermiFunction(Function):
 cdef class AEFunction(Function):
 
     def __cinit__(self, double A, double a, double x0, double xint, T):
+        self.A = A
         self.a = a
         self.x0 = x0
         self.xint = xint
@@ -234,10 +235,10 @@ cdef class AEFunction(Function):
         if x <= self.x0:
             E = 0
         elif self.x0 < x < self.xint:
-            E = self.a*(x-self.x0)*(x-self.x0)
+            E = self.a * (x-self.x0) * (x-self.x0)
         else:
-            E = 2*self.a*(self.xint-self.x0)*(x-self.xint) + self.a*(self.xint-self.x0)*(self.xint-self.x0)
-        return exp(-E/(R*self.T))
+            E = 2*self.a * (self.xint-self.x0)*(x-self.xint) + self.a*(self.xint-self.x0)*(self.xint-self.x0)
+        return self.A * exp(-E/(R*self.T))
 
 
 cdef class Helper:
