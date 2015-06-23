@@ -1,4 +1,4 @@
-#cython: profile=True
+#cython: profile=False
 #cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False, initializedcheck=False
 # TODO: Cleanup
 import time
