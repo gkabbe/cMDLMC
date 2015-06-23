@@ -74,26 +74,26 @@ cdef posdiff_no_z(vector[double] &posdiff, double [:] v1, double [:] v2, double 
             posdiff[i] += pbc[i]
 
 
-cdef double angle_ptr(double *a1, double *a2, double *a3, double *a4, double* pbc) nogil:
-    cdef:
-        double v1[3]
-        double v2[3]
-        int i
-
-    for i in range(3):
-        v1[i] = a2[i] - a1[i]
-        v2[i] = a4[i] - a3[i]
-
-        while v1[i] > pbc[i]/2:
-            v1[i] -= pbc[i]
-        while v1[i] < -pbc[i]/2:
-            v1[i] += pbc[i]
-
-        while v2[i] > pbc[i]/2:
-            v2[i] -= pbc[i]
-        while v2[i] < -pbc[i]/2:
-            v2[i] += pbc[i]
-    return acos(dotprod_ptr(v1, v2)/sqrt(dotprod_ptr(v1, v1))/sqrt(dotprod_ptr(v2, v2)))
+# cdef double angle_ptr(double *a1, double *a2, double *a3, double *a4, double* pbc) nogil:
+#     cdef:
+#         double v1[3]
+#         double v2[3]
+#         int i
+#
+#     for i in range(3):
+#         v1[i] = a2[i] - a1[i]
+#         v2[i] = a4[i] - a3[i]
+#
+#         while v1[i] > pbc[i]/2:
+#             v1[i] -= pbc[i]
+#         while v1[i] < -pbc[i]/2:
+#             v1[i] += pbc[i]
+#
+#         while v2[i] > pbc[i]/2:
+#             v2[i] -= pbc[i]
+#         while v2[i] < -pbc[i]/2:
+#             v2[i] += pbc[i]
+#     return acos(dotprod_ptr(v1, v2)/sqrt(dotprod_ptr(v1, v1))/sqrt(dotprod_ptr(v2, v2)))
 
 
 cdef double angle_factor(double angle):
@@ -240,6 +240,9 @@ cdef class AEFunction(Function):
             E = 2*self.a * (self.xint-self.x0)*(x-self.xint) + self.a*(self.xint-self.x0)*(self.xint-self.x0)
         return self.A * exp(-E/(R*self.T))
 
+cdef class AtomBox:
+
+    cdef
 
 cdef class Helper:
     cdef:
@@ -247,17 +250,24 @@ cdef class Helper:
         int jumps
         int matlen
         int nonortho
-        vector[int] start
-        vector[int] dest
-        vector[double] prob
-        vector[vector[double]] jumpdists
+        # Create containers for the oxygen index from which the proton jump start, for the index of
+        # the destination oxygen, and for the jump probability of the oxygen connection
+        # The _tmp vectors hold the information for a single frame, whereas the nested vectors hold
+        # the indices and probabilities for the whole trajectory
+        vector[vector[int]] start
+        vector[vector[int]] destination
+        vector[vector[double]] jump_probability
+        vector[int] start_tmp
+        vector[int] destination_tmp
+        vector[double] jump_probability_tmp
+        # vector[vector[double]] jumpdists
         vector[vector[int]] neighbors
         double [:] pbc
         double [:,::1] pbc_nonortho
         double [:,::1] h
         double [:,::1] h_inv
         object logger
-        Function jumprate
+        Function jumprate_fct
 
     def __cinit__(self, double [:] pbc, int nonortho,
                   jumprate_parameter_dict, jumprate_type="MD_rates",
@@ -288,7 +298,7 @@ cdef class Helper:
             a = jumprate_parameter_dict["a"]
             b = jumprate_parameter_dict["b"]
             c = jumprate_parameter_dict["c"]
-            self.jumprate = FermiFunction(a, b, c)
+            self.jumprate_fct = FermiFunction(a, b, c)
 
         elif jumprate_type == "AE_rates":
             A = jumprate_parameter_dict["A"]
@@ -296,7 +306,7 @@ cdef class Helper:
             x0 = jumprate_parameter_dict["x0"]
             xint = jumprate_parameter_dict["xint"]
             T = jumprate_parameter_dict["T"]
-            self.jumprate = AEFunction(A, a, x0, xint, T)
+            self.jumprate_fct = AEFunction(A, a, x0, xint, T)
         else:
             raise Exception("Jumprate type unknown. Please choose between "
                             "MD_rates and AE_rates")
@@ -335,9 +345,9 @@ cdef class Helper:
             int i,j
             double dist
 
-        self.start.clear()
-        self.dest.clear()
-        self.prob.clear()
+        self.start_tmp.clear()
+        self.destination_tmp.clear()
+        self.jump_probability_tmp.clear()
         for i in range(Os.shape[0]):
             for j in range(self.neighbors[i].size()):
                 # if i/3 != self.neighbors[i][j]/3: #only for hexaphenylbenzene (forbids jumps within phosphonic group)
@@ -346,170 +356,69 @@ cdef class Helper:
                 if dist < r_cut:
 #~ 					prob = fermi(parameters[0], parameters[1], parameters[2], dist)
 #~ 					self.logger.debug("Adding Transition {}-{} with distance {:.4f} and probability {:.4f}".format(i,self.neighbors[i][j],dist,prob))
-                    self.start.push_back(i)
-                    self.dest.push_back(self.neighbors[i][j])
+                    self.start_tmp.push_back(i)
+                    self.destination_tmp.push_back(self.neighbors[i][j])
                     # self.prob.push_back(fermi(parameters[0], parameters[1], parameters[2], dist))
-                    self.prob.push_back(self.jumprate.evaluate(dist))
+                    self.jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist))
 
     def calculate_transitions_POOangle(self, double [:,::1] Os, double [:,::1] Ps, np.int64_t [:] P_neighbors, double r_cut, double angle_thresh):
         cdef:
             int i,j, index2
             double dist, PO_angle
-        self.start.clear()
-        self.dest.clear()
-        self.prob.clear()
+        self.start_tmp.clear()
+        self.destination_tmp.clear()
+        self.jump_probability_tmp.clear()
         for i in range(Os.shape[0]):
             for j in range(self.neighbors[i].size()):
                 index2 = self.neighbors[i][j]
                 if self.nonortho == 0:
                     dist = cnpa.length_ptr(&Os[i,0], &Os[index2,0], &self.pbc[0])
-#~ 					dist = cnpa.length(Os[i], Os[self.neighbors[i][j]], self.pbc)
                 else:
-#~ 					dist = cnpa.length_nonortho_bruteforce_ptr(&Os[i,0], &Os[index2,0], &self.h[0,0], &self.h_inv[0,0])
                     dist = cnpa.length_nonortho_bruteforce(Os[i], Os[index2], self.h, self.h_inv)
                 if dist < r_cut:
-#~ 					if dist == 0:
-#~ 						print "dist=0 for i=", i, ",j=", index2
                     if self.nonortho == 0:
-                        # POO_angle = cnpa.angle(Os[i], Ps[P_neighbors[i]], Os[i], Os[index2], self.pbc)
                         POO_angle = cnpa.angle_ptr(&Os[i, 0], &Ps[P_neighbors[i], 0], &Os[i, 0], &Os[index2, 0], &(self.pbc)[0])
                     else:
-#~ 						POO_angle = cnpa.angle_nonortho(Os[i], Ps[P_neighbors[i]], Os[i], Os[index2], self.h, self.h_inv)
                         POO_angle = cnpa.angle_nonortho(Os[i], Ps[P_neighbors[i]], Os[i], Os[index2], self.h, self.h_inv)
-                    self.start.push_back(i)
-                    self.dest.push_back(self.neighbors[i][j])
+                    self.start_tmp.push_back(i)
+                    self.destination_tmp.push_back(self.neighbors[i][j])
                     if POO_angle >= angle_thresh:
-                        # self.prob.push_back(fermi(parameters[0], parameters[1], parameters[2], dist))
-                        self.prob.push_back(self.jumprate.evaluate(dist))
+                        self.jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist))
                     else:
-                        self.prob.push_back(0)
+                        self.jump_probability_tmp.push_back(0)
+
+        self.start.push_back(self.start_tmp)
+        self.destination.push_back(self.destination_tmp)
+        self.jump_probability.push_back(self.jump_probability_tmp)
 
     def get_transition_number(self):
-        return self.start.size()
-
-    def calculate_transitions_avg(self, double [:,::1] tm, double [:,::1] Opos_avg):
-        cdef:
-            int i,j
-            vector[double] posdiff
-        self.start.clear()
-        self.dest.clear()
-        self.prob.clear()
-        self.jumpdists.clear()
-
-        for i in range(1, tm.shape[0]-1):
-            for j in range(1,tm.shape[1]-1):
-                if tm[i,j] > 1e-8:
-                    # print i,j
-                    posdiff.clear()
-                    self.start.push_back(i-1)
-                    self.dest.push_back(j-1)
-                    self.prob.push_back(tm[i,j])
-                    posdiff_no_z(posdiff, Opos_avg[i-1,:], Opos_avg[j-1,:], self.pbc)
-                    self.jumpdists.push_back(posdiff)
-        #reservoir
-        for i in range(1,tm.shape[0]-1):
-            if tm[0,i] > 1e-8:
-                # print "source",i
-                for j in range(3):
-                    posdiff.push_back(0)
-                self.jumpdists.push_back(posdiff)
-                self.start.push_back(-1)
-                self.dest.push_back(i-1)
-                self.prob.push_back(tm[0,i])
-            if tm[i,tm.shape[0]-1] > 1e-8:
-                # print "drain", i
-                for j in range(3):
-                    posdiff.push_back(0)
-                self.jumpdists.push_back(posdiff)
-                self.start.push_back(i-1)
-                self.dest.push_back(-1)
-                self.prob.push_back(tm[i,tm.shape[0]-1])
+        return self.start_tmp.size()
 
     def jumprate_test(self, double x):
-        return self.jumprate.evaluate(x)
+        return self.jumprate_fct.evaluate(x)
 
     def print_transitions(self):
         cdef int i
-        for i in range(self.start.size()):
-            print self.start[i], self.dest[i], self.prob[i]
-        print "In total", self.start.size(), "connections"
+        for i in range(self.start_tmp.size()):
+            print self.start_tmp[i], self.destination_tmp[i], self.jump_probability_tmp[i]
+        print "In total", self.start_tmp.size(), "connections"
 
     def return_transitions(self):
-        return self.start, self.dest, self.prob
-
-    def sweep_gsl(self, np.uint8_t [:] proton_lattice, double [:,::1] transitionmatrix):
-        cdef:
-            int i,j, index_origin, index_destin
-            int matlen = transitionmatrix.shape[0]
-        for i in xrange(matlen):
-            for j in xrange(matlen):
-                index_origin = gsl_rng_uniform_int(self.r, matlen)
-                index_destin = gsl_rng_uniform_int(self.r, matlen)
-                if proton_lattice[index_origin] > 0 and proton_lattice[index_destin] == 0:
-                    if gsl_rng_uniform(self.r) < transitionmatrix[index_origin,index_destin]:
-                        proton_lattice[index_destin] = proton_lattice[index_origin]
-                        proton_lattice[index_origin] = 0
-                        self.jumps += 1
-        return self.jumps
+        return self.start_tmp, self.destination_tmp, self.jump_probability_tmp
 
     def sweep_list(self, np.uint8_t [:] proton_lattice):
         cdef:
             int i,j, index_origin, index_destin
-            int steps = self.start.size()
+            int steps = self.start_tmp.size()
         for j in xrange(steps):
             i = gsl_rng_uniform_int(self.r, steps)
-            index_origin = self.start[i]
-            index_destin = self.dest[i]
+            index_origin = self.start_tmp[i]
+            index_destin = self.destination_tmp[i]
             if proton_lattice[index_origin] > 0 and proton_lattice[index_destin] == 0:
-                if gsl_rng_uniform(self.r) < self.prob[i]:
+                if gsl_rng_uniform(self.r) < self.jump_probability_tmp[i]:
                     proton_lattice[index_destin] = proton_lattice[index_origin]
                     proton_lattice[index_origin] = 0
                     self.jumps += 1
-        return self.jumps
-
-    def sweep_list_jumpmat(self, np.uint8_t [:] proton_lattice, np.int64_t [:,::1] jumpmat):
-        cdef:
-            int i,j, index_origin, index_destin
-            int steps = self.start.size()
-        for j in xrange(steps):
-            i = gsl_rng_uniform_int(self.r, steps)
-            index_origin = self.start[i]
-            index_destin = self.dest[i]
-            if proton_lattice[index_origin] > 0 and proton_lattice[index_destin] == 0:
-                if gsl_rng_uniform(self.r) < self.prob[i]:
-                    proton_lattice[index_destin] = proton_lattice[index_origin]
-                    proton_lattice[index_origin] = 0
-                    jumpmat[index_destin, index_origin] += 1
-                    self.jumps += 1
-        return self.jumps
-
-    def sweep_list_reservoir(self, np.uint8_t [:] proton_lattice, double [:] r):
-        cdef:
-            int i,j, k, index_origin, index_destin
-            int steps = self.start.size()
-
-        for j in xrange(steps):
-            i = gsl_rng_uniform_int(self.r, steps)
-            index_origin = self.start[i]
-            index_destin = self.dest[i]
-
-            if index_origin < 0 and gsl_rng_uniform(self.r) < self.prob[i]:
-                # print "jump from source"
-                proton_lattice[index_destin] = 1
-            else:
-                if index_destin < 0 and gsl_rng_uniform(self.r) < self.prob[i]:
-                    # print "jump from", index_origin, "to drain"
-                    proton_lattice[index_origin] = 0
-                else:
-                    if proton_lattice[index_origin] > 0 and proton_lattice[index_destin] == 0:
-                        # print "jump from", index_origin, "to", index_destin
-                        if gsl_rng_uniform(self.r) < self.prob[i]:
-                            proton_lattice[index_destin] = proton_lattice[index_origin]
-                            proton_lattice[index_origin] = 0
-                            self.jumps += 1
-                            # print "r +=", self.jumpdists[i]
-                            for k in range(3):
-                                r[k] += self.jumpdists[i][k]
         return self.jumps
 
     def reset_jumpcounter(self):

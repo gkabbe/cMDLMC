@@ -14,6 +14,10 @@ ctypedef fused float_or_double:
     float
     double
 
+cdef class AtomBox:
+    cdef:
+        double [:] periodic_boundaries
+
 cdef class Function:
     cdef double evaluate(self, double x)
 

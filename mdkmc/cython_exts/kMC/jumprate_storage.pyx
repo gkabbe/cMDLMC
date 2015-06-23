@@ -78,5 +78,8 @@ cdef class JumprateStorage:
             for i in range(self.start.size()):
                 print self.start[framenumber][i], self.destination[framenumber][i], self.jump_probability[framenumber][i]
 
+    def int_test(self):
+        np.int8_t i = 3
+        print i
 
 
