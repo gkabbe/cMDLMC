@@ -1,4 +1,4 @@
-#cython: profile=False
+#cython: profile=True
 #cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False, initializedcheck=False
 # TODO: Cleanup
 import time
@@ -259,7 +259,7 @@ cdef class AtomBox_Cubic(AtomBox):
         return cnpa.length_ptr(atompos_1, atompos_2, &self.periodic_boundaries[0])
 
     cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
-        return cnpa.angle_ptr(atompos_1, atompos_2, atompos_2, atompos_3, &self.periodic_boundaries[0])
+        return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3, &self.periodic_boundaries[0])
 
 cdef class AtomBox_Monoclin(AtomBox):
     """Subclass of AtomBox, which takes care of monoclinic periodic MD boxes"""
@@ -278,7 +278,7 @@ cdef class AtomBox_Monoclin(AtomBox):
         return cnpa.length_nonortho_bruteforce_ptr(atompos_1, atompos_2, &self.h[0, 0], &self.h_inv[0, 0])
 
     cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
-        return cnpa.angle_ptr(atompos_1, atompos_2, atompos_2, atompos_3, &self.periodic_boundaries[0])
+        return cnpa.angle_ptr_nonortho(atompos_2, atompos_1, atompos_2, atompos_3, &self.h[0, 0], &self.h_inv[0, 0])
 
 cdef class Helper:
     cdef:
@@ -298,12 +298,9 @@ cdef class Helper:
         vector[double] jump_probability_tmp
         # vector[vector[double]] jumpdists
         vector[vector[int]] neighbors
-        double [:] pbc
-        double [:,::1] pbc_nonortho
-        double [:,::1] h
-        double [:,::1] h_inv
         object logger
         Function jumprate_fct
+        AtomBox atom_box
 
     def __cinit__(self, double [:] pbc, int nonortho,
                   jumprate_parameter_dict, jumprate_type="MD_rates",
@@ -318,11 +315,9 @@ cdef class Helper:
         self.jumps = 0
         self.nonortho = nonortho
         if nonortho == 0:
-            self.pbc = pbc
+            self.atom_box = AtomBox_Cubic(pbc)
         else:
-            self.pbc_nonortho = pbc.reshape((3,3))
-            self.h = np.array(pbc.reshape((3,3)).T, order="C")
-            self.h_inv = np.array(np.linalg.inv(self.h), order="C")
+            self.atom_box = AtomBox_Monoclin(pbc)
 
         if type(seed) != types.IntType:
             seed = time.time()
@@ -356,46 +351,35 @@ cdef class Helper:
             double dist
             vector[int] a
         self.neighbors.clear()
-        if self.nonortho == 0:
-            for i in xrange(Opos_large.shape[0]):
-                a.clear()
-                for j in xrange(Opos_large.shape[0]):
-                    if i != j:
-                        dist = cnpa.length_ptr(&Opos_large[i,0], &Opos_large[j,0], &self.pbc[0])
-                        if dist < r_cut:
-                            a.push_back(j)
-                self.neighbors.push_back(a)
-        else:
-            for i in xrange(Opos_large.shape[0]):
-                a.clear()
-                for j in xrange(Opos_large.shape[0]):
-                    if i != j:
-                        dist = cnpa.length_nonortho_bruteforce_ptr(&Opos_large[i,0], &Opos_large[j,0],
-                                                                   &self.h[0,0], &self.h_inv[0,0])
-                        if dist < r_cut:
-                            a.push_back(j)
-                self.neighbors.push_back(a)
+        for i in xrange(Opos_large.shape[0]):
+            a.clear()
+            for j in xrange(Opos_large.shape[0]):
+                if i != j:
+                    dist = self.atom_box.distance(&Opos_large[i,0], &Opos_large[j,0])
+                    if dist < r_cut:
+                        a.push_back(j)
+            self.neighbors.push_back(a)
 
-    def calculate_transitions_new(self, double [:,::1] Os, double r_cut):
-        cdef:
-            int i,j
-            double dist
-
-        self.start_tmp.clear()
-        self.destination_tmp.clear()
-        self.jump_probability_tmp.clear()
-        for i in range(Os.shape[0]):
-            for j in range(self.neighbors[i].size()):
-                # if i/3 != self.neighbors[i][j]/3: #only for hexaphenylbenzene (forbids jumps within phosphonic group)
-#~ 				dist = cnpa.length_ptr(&Os[i,0], &Os[self.neighbors[i][j],0], &self.pbc[0])
-                dist = cnpa.length(Os[i], Os[self.neighbors[i][j]], self.pbc)
-                if dist < r_cut:
-#~ 					prob = fermi(parameters[0], parameters[1], parameters[2], dist)
-#~ 					self.logger.debug("Adding Transition {}-{} with distance {:.4f} and probability {:.4f}".format(i,self.neighbors[i][j],dist,prob))
-                    self.start_tmp.push_back(i)
-                    self.destination_tmp.push_back(self.neighbors[i][j])
-                    # self.prob.push_back(fermi(parameters[0], parameters[1], parameters[2], dist))
-                    self.jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist))
+#     def calculate_transitions_new(self, double [:,::1] Os, double r_cut):
+#         cdef:
+#             int i,j
+#             double dist
+#
+#         self.start_tmp.clear()
+#         self.destination_tmp.clear()
+#         self.jump_probability_tmp.clear()
+#         for i in range(Os.shape[0]):
+#             for j in range(self.neighbors[i].size()):
+#                 # if i/3 != self.neighbors[i][j]/3: #only for hexaphenylbenzene (forbids jumps within phosphonic group)
+# #~ 				dist = cnpa.length_ptr(&Os[i,0], &Os[self.neighbors[i][j],0], &self.pbc[0])
+#                 dist = cnpa.length(Os[i], Os[self.neighbors[i][j]], self.pbc)
+#                 if dist < r_cut:
+# #~ 					prob = fermi(parameters[0], parameters[1], parameters[2], dist)
+# #~ 					self.logger.debug("Adding Transition {}-{} with distance {:.4f} and probability {:.4f}".format(i,self.neighbors[i][j],dist,prob))
+#                     self.start_tmp.push_back(i)
+#                     self.destination_tmp.push_back(self.neighbors[i][j])
+#                     # self.prob.push_back(fermi(parameters[0], parameters[1], parameters[2], dist))
+#                     self.jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist))
 
     def calculate_transitions_POOangle(self, double [:,::1] Os, double [:,::1] Ps, np.int64_t [:] P_neighbors, double r_cut, double angle_thresh):
         cdef:
@@ -407,15 +391,9 @@ cdef class Helper:
         for i in range(Os.shape[0]):
             for j in range(self.neighbors[i].size()):
                 index2 = self.neighbors[i][j]
-                if self.nonortho == 0:
-                    dist = cnpa.length_ptr(&Os[i,0], &Os[index2,0], &self.pbc[0])
-                else:
-                    dist = cnpa.length_nonortho_bruteforce(Os[i], Os[index2], self.h, self.h_inv)
+                dist = self.atom_box.distance(&Os[i,0], &Os[index2,0])
                 if dist < r_cut:
-                    if self.nonortho == 0:
-                        POO_angle = cnpa.angle_ptr(&Os[i, 0], &Ps[P_neighbors[i], 0], &Os[i, 0], &Os[index2, 0], &(self.pbc)[0])
-                    else:
-                        POO_angle = cnpa.angle_nonortho(Os[i], Ps[P_neighbors[i]], Os[i], Os[index2], self.h, self.h_inv)
+                    POO_angle = self.atom_box.angle(&Ps[P_neighbors[i], 0], &Os[i, 0], &Os[index2, 0])
                     self.start_tmp.push_back(i)
                     self.destination_tmp.push_back(self.neighbors[i][j])
                     if POO_angle >= angle_thresh:
@@ -423,9 +401,9 @@ cdef class Helper:
                     else:
                         self.jump_probability_tmp.push_back(0)
 
-        self.start.push_back(self.start_tmp)
-        self.destination.push_back(self.destination_tmp)
-        self.jump_probability.push_back(self.jump_probability_tmp)
+        # self.start.push_back(self.start_tmp)
+        # self.destination.push_back(self.destination_tmp)
+        # self.jump_probability.push_back(self.jump_probability_tmp)
 
     def get_transition_number(self):
         return self.start_tmp.size()

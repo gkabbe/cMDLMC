@@ -5,7 +5,7 @@ import cython_gsl
 from setuptools import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
-
+from Cython.Build import cythonize
 
 def readme():
     with open('README.rst', 'r') as f:
@@ -85,6 +85,7 @@ setup(name='mdkmc',
       # scripts=["bin/MDMC.py"],
       include_package_data=True,
       zip_safe=False,
-      ext_modules=ext_modules,
+      # ext_modules=ext_modules,
+      ext_modules=cythonize(ext_modules, language="c++"),
       cmdclass={'build_ext': build_ext}
       )

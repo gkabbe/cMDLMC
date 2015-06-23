@@ -187,7 +187,8 @@ cdef double length_ptr(double *a1_pos, double *a2_pos, double *pbc) nogil:
         double *dist = [0,0,0]
         int i
 
-    diff_ptr(&a1_pos[0], &a2_pos[0], &pbc[0], dist)
+    diff_ptr(a1_pos, a2_pos, pbc, dist)
+    # diff_ptr(&a1_pos[0], &a2_pos[0], &pbc[0], dist)
 
     return sqrt(dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2])
         
