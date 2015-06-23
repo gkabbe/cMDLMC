@@ -107,7 +107,7 @@ cpdef double length_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, do
     return sqrt(mindist)
 
 
-cdef double length_nonortho_bruteforce_ptr(double * a1_pos, double * a2_pos, double * h, double * h_inv):
+cdef double length_nonortho_bruteforce_ptr(double * a1_pos, double * a2_pos, double * h, double * h_inv) nogil:
     cdef:
         double diffvec[3]
         vector[double] d

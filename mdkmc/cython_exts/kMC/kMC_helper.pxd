@@ -18,6 +18,9 @@ cdef class AtomBox:
     cdef:
         double [:] periodic_boundaries
 
+    cdef double distance(self, double * atompos_1, double * atompos_2) nogil
+    cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil
+
 cdef class Function:
     cdef double evaluate(self, double x)
 

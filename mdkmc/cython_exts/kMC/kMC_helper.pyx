@@ -241,8 +241,44 @@ cdef class AEFunction(Function):
         return self.A * exp(-E/(R*self.T))
 
 cdef class AtomBox:
+    """The AtomBox class takes care of all the distance and angle calculation within the kMC_helper."""
 
-    cdef
+    cdef double distance(self, double * atompos_1, double * atompos_2) nogil:
+        return 0
+
+    cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
+        return 0
+
+cdef class AtomBox_Cubic(AtomBox):
+    """Subclass of AtomBox, which takes care of orthogonal periodic MD boxes"""
+
+    def __cinit__(self, double [:] periodic_boundaries):
+        self.periodic_boundaries = periodic_boundaries
+
+    cdef double distance(self, double * atompos_1, double * atompos_2) nogil:
+        return cnpa.length_ptr(atompos_1, atompos_2, &self.periodic_boundaries[0])
+
+    cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
+        return cnpa.angle_ptr(atompos_1, atompos_2, atompos_2, atompos_3, &self.periodic_boundaries[0])
+
+cdef class AtomBox_Monoclin(AtomBox):
+    """Subclass of AtomBox, which takes care of monoclinic periodic MD boxes"""
+    cdef:
+        double [:,::1] pbc_nonortho
+        double [:,::1] h
+        double [:,::1] h_inv
+
+    def __cinit__(self, double [:] periodic_boundaries):
+        self.periodic_boundaries = periodic_boundaries
+        self.pbc_nonortho = periodic_boundaries.reshape((3,3))
+        self.h = np.array(periodic_boundaries.reshape((3,3)).T, order="C")
+        self.h_inv = np.array(np.linalg.inv(self.h), order="C")
+
+    cdef double distance(self, double * atompos_1, double * atompos_2) nogil:
+        return cnpa.length_nonortho_bruteforce_ptr(atompos_1, atompos_2, &self.h[0, 0], &self.h_inv[0, 0])
+
+    cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
+        return cnpa.angle_ptr(atompos_1, atompos_2, atompos_2, atompos_3, &self.periodic_boundaries[0])
 
 cdef class Helper:
     cdef:
