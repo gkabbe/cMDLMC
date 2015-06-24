@@ -368,7 +368,7 @@ cdef class Helper:
         vector[int] start_tmp
         vector[int] destination_tmp
         vector[double] jump_probability_tmp
-        vector[vector[int]] neighbors
+        public vector[vector[int]] neighbors
         object logger
         int [:] box_multiplier
         double [:] pbc
@@ -378,6 +378,7 @@ cdef class Helper:
         double [:, ::1] oxygen_frame_extended
         double [:, ::1] phosphorus_frame_extended
         int [:] P_neighbors
+        double r_cut, angle_threshold
         Function jumprate_fct
         AtomBox atom_box
         BoxExtender extender
@@ -421,9 +422,9 @@ cdef class Helper:
         self.pbc = pbc
 
         if nonortho:
-            self.atom_box = AtomBox_Cubic(pbc_extended)
-        else:
             self.atom_box = AtomBox_Monoclin(pbc_extended)
+        else:
+            self.atom_box = AtomBox_Cubic(pbc_extended)
 
         if type(seed) != types.IntType:
             seed = time.time()
@@ -470,8 +471,10 @@ cdef class Helper:
 
     def get_transitions(self, int framenumber):
         cdef int trajectory_length = self.oxygen_trajectory.shape[0]
-        while self.start.size() < trajectory_length and framenumber > self.start.size():
-            self.calculate_transitions_POOangle()
+        print "hello"
+        while self.start.size() < trajectory_length and framenumber > self.start.size()-1:
+            self.calculate_transitions_POOangle(self.start.size(), self.r_cut, self.angle_threshold)
+            print "calculated transitions. size of start:", self.start.size()
         return (self.start[framenumber % trajectory_length],
                self.destination[framenumber % trajectory_length],
                self.jump_probability[framenumber % trajectory_length])
@@ -481,6 +484,7 @@ cdef class Helper:
         cdef:
             int i,j, index2
             double dist, PO_angle
+        print "let's get some jump rates!"
         self.oxygen_frame_extended[:] = self.oxygen_trajectory[framenumber]
         self.phosphorus_frame_extended[:] = self.phosphorus_trajectory[framenumber]
 
@@ -507,6 +511,7 @@ cdef class Helper:
         self.start.push_back(self.start_tmp)
         self.destination.push_back(self.destination_tmp)
         self.jump_probability.push_back(self.jump_probability_tmp)
+        print "finished"
 
     def get_transition_number(self):
         return self.start_tmp.size()

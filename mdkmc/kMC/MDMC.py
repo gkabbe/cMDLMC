@@ -10,7 +10,7 @@ import re
 import ast
 
 import numpy as np
-# import ipdb
+import ipdb
 import git
 import inspect
 import argparse
@@ -505,6 +505,7 @@ class MDMC:
         jumpmatrix = np.zeros((Opos.shape[0], Opos.shape[0]), int)
 
         start_time = time.time()
+        ipdb.set_trace()
 
         helper = kMC_helper.Helper(self.pbc_extended, self.nonortho,
                                    jumprate_parameter_dict=self.jumprate_params_fs,
