@@ -229,12 +229,12 @@ def count_protons_and_oxygens(double[:,::1] Opos, np.uint8_t [:] proton_lattice,
 
 
 #Define Function Objects. These can later be substituted easily by kMC_helper
-cdef class Function:
+cdef class JumprateFunction:
     cdef double evaluate(self, double x):
         return 0
 
 
-cdef class FermiFunction(Function):
+cdef class FermiFunction(JumprateFunction):
     # cdef:
     #     double a, b, c
     def __cinit__(self, double a, double b, double c):
@@ -246,7 +246,7 @@ cdef class FermiFunction(Function):
         return self.a/(1+exp((x-self.b)/self.c))
 
 
-cdef class AEFunction(Function):
+cdef class AEFunction(JumprateFunction):
 
     def __cinit__(self, double A, double a, double x0, double xint, T):
         self.A = A
@@ -362,9 +362,9 @@ cdef class Helper:
         # the destination oxygen, and for the jump probability of the oxygen connection
         # The _tmp vectors hold the information for a single frame, whereas the nested vectors hold
         # the indices and probabilities for the whole trajectory
-        vector[vector[int]] start
-        vector[vector[int]] destination
-        vector[vector[double]] jump_probability
+        public vector[vector[int]] start
+        public vector[vector[int]] destination
+        public vector[vector[double]] jump_probability
         vector[int] start_tmp
         vector[int] destination_tmp
         vector[double] jump_probability_tmp
@@ -379,7 +379,7 @@ cdef class Helper:
         double [:, ::1] phosphorus_frame_extended
         int [:] P_neighbors
         double r_cut, angle_threshold
-        Function jumprate_fct
+        JumprateFunction jumprate_fct
         AtomBox atom_box
         BoxExtender extender
 
@@ -423,8 +423,10 @@ cdef class Helper:
 
         if nonortho:
             self.atom_box = AtomBox_Monoclin(pbc_extended)
+            self.extender = BoxExtender_Monoclin(self.pbc, self.box_multiplier)
         else:
             self.atom_box = AtomBox_Cubic(pbc_extended)
+            self.extender = BoxExtender_Cubic(self.pbc, self.box_multiplier)
 
         if type(seed) != types.IntType:
             seed = time.time()
@@ -472,6 +474,7 @@ cdef class Helper:
     def get_transitions(self, int framenumber):
         cdef int trajectory_length = self.oxygen_trajectory.shape[0]
         print "hello"
+        print "vector size:", self.start.size()
         while self.start.size() < trajectory_length and framenumber > self.start.size()-1:
             self.calculate_transitions_POOangle(self.start.size(), self.r_cut, self.angle_threshold)
             print "calculated transitions. size of start:", self.start.size()
@@ -480,7 +483,7 @@ cdef class Helper:
                self.jump_probability[framenumber % trajectory_length])
 
 
-    def calculate_transitions_POOangle(self, int framenumber, double r_cut, double angle_thresh):
+    cpdef calculate_transitions_POOangle(self, int framenumber, double r_cut, double angle_thresh):
         cdef:
             int i,j, index2
             double dist, PO_angle

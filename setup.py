@@ -86,6 +86,6 @@ setup(name='mdkmc',
       include_package_data=True,
       zip_safe=False,
       # ext_modules=ext_modules,
-      ext_modules=cythonize(ext_modules, language="c++"),
+      ext_modules=ext_modules,
       cmdclass={'build_ext': build_ext}
       )
