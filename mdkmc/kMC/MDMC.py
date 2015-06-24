@@ -505,12 +505,12 @@ class MDMC:
         jumpmatrix = np.zeros((Opos.shape[0], Opos.shape[0]), int)
 
         start_time = time.time()
-        ipdb.set_trace()
 
-        helper = kMC_helper.Helper(self.pbc_extended, self.nonortho,
-                                   jumprate_parameter_dict=self.jumprate_params_fs,
-                                   jumprate_type=self.jumprate_type,
-                                   seed=self.seed, verbose=self.verbose)
+        helper = kMC_helper.Helper(self.O_trajectory, self.P_trajectory, self.pbc,
+                                   np.array(self.box_multiplier, dtype=np.int32),
+                                   np.array(self.P_neighbors, dtype=np.int32),
+                                   self.nonortho, self.jumprate_params_fs)
+        ipdb.set_trace()
 
         # Equilibration
         for sweep in xrange(self.equilibration_sweeps):

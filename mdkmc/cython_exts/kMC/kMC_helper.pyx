@@ -483,7 +483,7 @@ cdef class Helper:
                self.jump_probability[framenumber % trajectory_length])
 
 
-    cpdef calculate_transitions_POOangle(self, int framenumber, double r_cut, double angle_thresh):
+    cdef calculate_transitions_POOangle(self, int framenumber, double r_cut, double angle_thresh):
         cdef:
             int i,j, index2
             double dist, PO_angle
