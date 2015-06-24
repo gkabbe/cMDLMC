@@ -494,7 +494,7 @@ class MDMC:
             #~ self.determine_PO_angles(self.O_trajectory[0], self.P_trajectory[0], self.P_neighbors, self.angles)
 
         if self.verbose:
-            print >> self.output, "# sweeps:", self.sweeps
+            print >> self.output, "# Sweeps:", self.sweeps
         self.print_settings()
 
         Opos = np.zeros((self.box_multiplier[0]*self.box_multiplier[1]*self.box_multiplier[2]*self.oxygennumber, 3), np.float64)

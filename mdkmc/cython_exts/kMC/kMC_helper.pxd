@@ -16,6 +16,7 @@ ctypedef fused float_or_double:
 
 cdef class AtomBox:
     cdef:
+        double [:, :, ::1] oxygen_trajectory
         double [:] periodic_boundaries
 
     cdef double distance(self, double * atompos_1, double * atompos_2) nogil
