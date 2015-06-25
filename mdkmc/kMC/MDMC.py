@@ -187,13 +187,11 @@ def extend_simulationbox(Opos, onumber, h, box_multiplier, nonortho=False):
                             for i in xrange(onumber):
                                 Oview[x, y, z, i, :] = Oview[0, 0, 0, i] + x * v1 + y * v2 + z * v3
         else:
+            ipdb.set_trace()
             Oview = Opos.view()
             Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], onumber, 3)
             kMC_helper.extend_simulationbox(Oview, h,
-                                            box_multiplier[0],
-                                            box_multiplier[1],
-                                            box_multiplier[2],
-                                            onumber)
+                                            box_multiplier)
 
 
 def calculate_displacement(proton_lattice, proton_pos_snapshot,
@@ -277,8 +275,9 @@ class MDMC:
         Ps = np.zeros((self.phosphorusnumber_extended, 3))
         Os[:self.oxygennumber] = self.O_trajectory[0]
         Ps[:self.phosphorusnumber] = self.P_trajectory[0]
-        extend_simulationbox(Ps, self.phosphorusnumber, self.h, self.box_multiplier)
-        extend_simulationbox(Os, self.oxygennumber, self.h, self.box_multiplier)
+        # ipdb.set_trace()
+        kMC_helper.extend_simulationbox(Ps, self.h, np.array(self.box_multiplier, dtype=np.int32), self.phosphorusnumber)
+        kMC_helper.extend_simulationbox(Os, self.h, np.array(self.box_multiplier, dtype=np.int32), self.oxygennumber)
 
         if self.nonortho:
             for i in xrange(Os.shape[0]):
@@ -509,8 +508,13 @@ class MDMC:
         helper = kMC_helper.Helper(self.O_trajectory, self.P_trajectory, self.pbc,
                                    np.array(self.box_multiplier, dtype=np.int32),
                                    np.array(self.P_neighbors, dtype=np.int32),
-                                   self.nonortho, self.jumprate_params_fs)
-        ipdb.set_trace()
+                                   self.nonortho, self.jumprate_params_fs,
+                                   self.cutoff_radius, self.angle_threshold)
+        # Nur zu Testzwecken!!!
+        # helper.determine_neighbors(0, self.cutoff_radius)
+        # helper.get_transitions(10)
+        # helper.calculate_transitions_POOangle(0, self.cutoff_radius, self.angle_threshold)
+        # ---------------------
 
         # Equilibration
         for sweep in xrange(self.equilibration_sweeps):
@@ -518,20 +522,25 @@ class MDMC:
                 print >> self.output, "# Equilibration sweep {}/{}".format(sweep, self.equilibration_sweeps), "\r",
             if sweep % (self.skip_frames+1) == 0:
                 if not self.shuffle:
-                    Opos[:self.oxygennumber] = self.O_trajectory[sweep % self.O_trajectory.shape[0]]
+                    frame = sweep
+                #     Opos[:self.oxygennumber] = self.O_trajectory[sweep % self.O_trajectory.shape[0]]
                 else:
-                    Opos[:self.oxygennumber] = self.O_trajectory[np.random.randint(self.O_trajectory.shape[0])]
-                extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
-                if self.po_angle:
-                    Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep % self.P_trajectory.shape[0]]
-                    extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
+                    frame = np.random.randint(self.O_trajectory.shape[0])
+                #     Opos[:self.oxygennumber] = self.O_trajectory[np.random.randint(self.O_trajectory.shape[0])]
+                # extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
+                # if self.po_angle:
+                #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep % self.P_trajectory.shape[0]]
+                #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
                 if sweep % neighbor_update == 0:
-                    helper.determine_neighbors(Opos, self.cutoff_radius)
-                if self.po_angle:
-                    helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
-                else:
-                    helper.calculate_transitions_new(Opos, self.jumprate_params_fs, self.cutoff_radius)
-            helper.sweep_list(proton_lattice)
+                    ipdb.set_trace()
+                    helper.determine_neighbors(frame % self.O_trajectory.shape[0])
+                    print helper.neighbors
+                    # if self.po_angle:
+                    #     helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
+                    # else:
+                    #     helper.calculate_transitions_new(Opos, self.jumprate_params_fs, self.cutoff_radius)
+
+            helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
 
         if not self.xyz_output:
             self.print_observable_names()
@@ -541,33 +550,35 @@ class MDMC:
         for sweep in xrange(0, self.sweeps):
             if sweep % (self.skip_frames+1) == 0:
                 if not self.shuffle:
-                    Opos[:self.oxygennumber] = self.O_trajectory[sweep%self.O_trajectory.shape[0]]
+                    frame = sweep
+                #     Opos[:self.oxygennumber] = self.O_trajectory[sweep%self.O_trajectory.shape[0]]
                 else:
-                    Opos[:self.oxygennumber] = self.O_trajectory[np.random.randint(self.O_trajectory.shape[0])]
-                extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
-                if self.po_angle:
-                    Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep%self.P_trajectory.shape[0]]
-                    extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
+                    frame = np.random.randint(self.O_trajectory.shape[0])
+                #     Opos[:self.oxygennumber] = self.O_trajectory[np.random.randint(self.O_trajectory.shape[0])]
+                # extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
+                # if self.po_angle:
+                #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep%self.P_trajectory.shape[0]]
+                #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
                 if sweep % neighbor_update == 0:
-                    # print >> self.output, "neighbor_update at sweep", sweep
-                    helper.determine_neighbors(Opos, self.cutoff_radius)
-                if self.po_angle:
-                    helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
-                else:
-                    helper.calculate_transitions_new(Opos, self.jumprate_params_fs, self.cutoff_radius)
+                    helper.determine_neighbors(frame % self.O_trajectory.shape[0])
+                # if self.po_angle:
+                #     helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
+                # else:
+                #     helper.calculate_transitions_new(Opos, self.jumprate_params_fs, self.cutoff_radius)
+            helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
 
             if sweep % self.reset_freq == 0:
                 protonlattice_snapshot, proton_pos_snapshot, displacement = \
                     self.reset_observables(proton_pos_snapshot, proton_lattice,
-                                           displacement, Opos, helper)
+                                           displacement, helper.oxygen_frame_extended, helper)
             if  sweep % self.print_freq == 0:
-                #~ self.remove_com_movement_frame(Opos)
+                # self.remove_com_movement_frame(Opos)
                 if not self.nonortho:
                     calculate_displacement(proton_lattice, proton_pos_snapshot,
-                                           Opos, displacement, self.pbc,
+                                           helper.oxygen_frame_extended, displacement, self.pbc,
                                            wrap=self.periodic_wrap)
                 else:
-                    calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, proton_pos_new, Opos, displacement, self.h, self.h_inv)
+                    calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, proton_pos_new, helper.oxygen_frame_extended, displacement, self.h, self.h_inv)
 
                 calculate_MSD(MSD, displacement)
                 autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
@@ -575,7 +586,8 @@ class MDMC:
                     self.print_observables(sweep, autocorrelation, helper, self.md_timestep_fs, start_time, MSD)
                 else:
                     self.print_OsHs(Opos, proton_lattice, sweep, self.md_timestep_fs)
-            helper.sweep_list(proton_lattice)
+            # helper.sweep_list(proton_lattice)
+            helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
 
             # jumps = helper.sweep_gsl(proton_lattice, transitionmatrix)
             #~ jumps = helper.sweep_list_jumpmat(proton_lattice, jumpmatrix)
