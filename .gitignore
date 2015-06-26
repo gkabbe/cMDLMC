@@ -6,6 +6,7 @@
 *.c
 *.html
 *.log
+*.pdf
 .idea
 mdkmc.egg-info/
 build
