@@ -1,5 +1,5 @@
 #cython: profile=False
-#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False, initializedcheck=False
+#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=True, initializedcheck=False
 # TODO: Cleanup
 import time
 import numpy as np
@@ -230,32 +230,35 @@ def count_protons_and_oxygens(double[:,::1] Opos, np.uint8_t [:] proton_lattice,
 
 #Define Function Objects. These can later be substituted easily by kMC_helper
 cdef class JumprateFunction:
-    cdef double evaluate(self, double x):
+    cdef double evaluate(self, double x) nogil:
         return 0
 
 
 cdef class FermiFunction(JumprateFunction):
-    # cdef:
-    #     double a, b, c
+    cdef:
+        double a, b, c
+
     def __cinit__(self, double a, double b, double c):
         self.a = a
         self.b = b
         self.c = c
 
-    cdef double evaluate(self, double x):
+    cdef double evaluate(self, double x) nogil:
         return self.a/(1+exp((x-self.b)/self.c))
 
 
 cdef class AEFunction(JumprateFunction):
+    cdef:
+        double A, a, x0, xint, T
 
-    def __cinit__(self, double A, double a, double x0, double xint, T):
+    def __cinit__(self, double A, double a, double x0, double xint, double T):
         self.A = A
         self.a = a
         self.x0 = x0
         self.xint = xint
         self.T = T
 
-    cdef double evaluate(self, double x):
+    cdef double evaluate(self, double x) nogil:
         cdef double E
         if x <= self.x0:
             E = 0
@@ -375,9 +378,9 @@ cdef class Helper:
         # the destination oxygen, and for the jump probability of the oxygen connection
         # The _tmp vectors hold the information for a single frame, whereas the nested vectors hold
         # the indices and probabilities for the whole trajectory
-        public vector[vector[int]] start
-        public vector[vector[int]] destination
-        public vector[vector[double]] jump_probability
+        public vector[vector[np.int32_t]] start
+        public vector[vector[np.int32_t]] destination
+        public vector[vector[np.float32_t]] jump_probability
         # vector[int] start_tmp
         # vector[int] destination_tmp
         # vector[double] jump_probability_tmp
@@ -499,9 +502,9 @@ cdef class Helper:
         cdef:
             int i,j, index2
             double dist, PO_angle
-            vector[int] start_tmp
-            vector[int] destination_tmp
-            vector[double] jump_probability_tmp
+            vector[np.int32_t] start_tmp
+            vector[np.int32_t] destination_tmp
+            vector[np.float32_t] jump_probability_tmp
 
         # print "let's get some jump rates!"
         self.oxygen_frame_extended[:self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
@@ -601,7 +604,6 @@ cdef class Helper:
                     proton_lattice[index_destination] = proton_lattice[index_origin]
                     proton_lattice[index_origin] = 0
                     self.jumps += 1
-        return self.jumps
 
     def reset_jumpcounter(self):
         self.jumps = 0

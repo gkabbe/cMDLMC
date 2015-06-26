@@ -1,4 +1,5 @@
-#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False, initializedcheck=False
+#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=True, initializedcheck=False
+#cython: profile=False
 # TODO: Cleanup
 import numpy as np
 cimport numpy as np
