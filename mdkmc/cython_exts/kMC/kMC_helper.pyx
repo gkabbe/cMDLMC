@@ -267,60 +267,32 @@ cdef class AEFunction(JumprateFunction):
 
 cdef class AtomBox:
     """The AtomBox class takes care of all the distance and angle calculation within the kMC_helper."""
-
-    cdef double distance(self, double * atompos_1, double * atompos_2) nogil:
-        return 0
-
-    cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
-        return 0
-
-cdef class AtomBox_Cubic(AtomBox):
-    """Subclass of AtomBox, which takes care of orthogonal periodic MD boxes"""
-
-    def __cinit__(self, double [:] periodic_boundaries):
-        self.periodic_boundaries = periodic_boundaries
-
-    cdef double distance(self, double * atompos_1, double * atompos_2) nogil:
-        return cnpa.length_ptr(atompos_1, atompos_2, &self.periodic_boundaries[0])
-
-    cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
-        return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3, &self.periodic_boundaries[0])
-
-cdef class AtomBox_Monoclin(AtomBox):
-    """Subclass of AtomBox, which takes care of monoclinic periodic MD boxes"""
     cdef:
-        double [:, ::1] pbc_nonortho
-        double [:, ::1] h
-        double [:, ::1] h_inv
-
-    def __cinit__(self, double [:] periodic_boundaries):
-        self.periodic_boundaries = periodic_boundaries
-        self.pbc_nonortho = periodic_boundaries.reshape((3,3))
-        self.h = np.array(periodic_boundaries.reshape((3,3)).T, order="C")
-        self.h_inv = np.array(np.linalg.inv(self.h), order="C")
-
-    cdef double distance(self, double * atompos_1, double * atompos_2) nogil:
-        return cnpa.length_nonortho_bruteforce_ptr(atompos_1, atompos_2, &self.h[0, 0], &self.h_inv[0, 0])
-
-    cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
-        return cnpa.angle_ptr_nonortho(atompos_2, atompos_1, atompos_2, atompos_3, &self.h[0, 0], &self.h_inv[0, 0])
-
-
-cdef class BoxExtender:
-    """Takes care of the extension of the box size when the box multipliers are
-    larger than 1"""
-    cdef:
-        int [:] box_multiplier
+        public double [:, :, ::1] oxygen_trajectory
+        public double [:, :, ::1] phosphorus_trajectory
         double [:] periodic_boundaries
+        public double [:] periodic_boundaries_extended
+        int [:] box_multiplier
         double [:, ::1] pbc_matrix
         double [:, :, :, :, ::1] frame_reshaped
 
-    def __cinit__(self, double [:] periodic_boundaries, int [:] box_multiplier):
-        self.box_multiplier = box_multiplier
+    def __cinit__(self, double [:, :, ::1] oxygen_trajectory,
+                  np.ndarray [np.double_t, ndim=1] periodic_boundaries, int [:] box_multiplier,
+                  double [:, :, ::1] phosphorus_trajectory=None):
+        self.oxygen_trajectory = oxygen_trajectory
+        if phosphorus_trajectory is not None:
+            self.phosphorus_trajectory = phosphorus_trajectory
         self.periodic_boundaries = periodic_boundaries
-        self.pbc_matrix = np.zeros((3, 3))
+        self.box_multiplier = box_multiplier
 
-    cdef void get_frame_inplace(self, int framenumber, int atomnumber_unextended, double [:, ::1] frame_to_be_extended):
+
+    cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
+        return 0
+
+    cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
+        return 0
+
+    cdef get_extended_frame_inplace(self, int atomnumber_unextended, double [:, ::1] frame_to_be_extended):
         cdef:
             int x,y,z,i,j
 
@@ -338,20 +310,61 @@ cdef class BoxExtender:
                                                                 + y * self.pbc_matrix[1,j] \
                                                                 + z * self.pbc_matrix[2,j]
 
+    def get_extended_frame(self, double [:, ::1] unextended_frame):
+        cdef np.ndarray [np.double_t, ndim=2] extended_frame  = \
+            np.zeros((self.box_multiplier[0]*self.box_multiplier[1]*self.box_multiplier[2]*unextended_frame.shape[0], 3))
+        extended_frame[:unextended_frame.shape[0]] = unextended_frame
+        self.get_extended_frame_inplace(unextended_frame.shape[0], extended_frame)
+        return extended_frame
 
-cdef class BoxExtender_Cubic(BoxExtender):
+cdef class AtomBox_Cubic(AtomBox):
+    """Subclass of AtomBox, which takes care of orthogonal periodic MD boxes"""
+    def __cinit__(self, double [:, :, ::1] oxygen_trajectory,
+                  np.ndarray [np.double_t, ndim=1] periodic_boundaries, int [:] box_multiplier,
+                  double [:, :, ::1] phosphorus_trajectory=None):
+        cdef int i
 
-    def __cinit__(self, double [:] periodic_boundaries, int [:] box_multiplier):
+        self.pbc_matrix = np.zeros((3, 3))
         self.pbc_matrix[0, 0] = periodic_boundaries[0]
         self.pbc_matrix[1, 1] = periodic_boundaries[1]
         self.pbc_matrix[2, 2] = periodic_boundaries[2]
 
-cdef class BoxExtender_Monoclin(BoxExtender):
-    def __cinit__(self, double [::1] periodic_boundaries, int [:] box_multiplier):
-        self.pbc_matrix[0, :] = periodic_boundaries[:3]
-        self.pbc_matrix[1, :] = periodic_boundaries[3:6]
-        self.pbc_matrix[2, :] = periodic_boundaries[6:9]
+        self.periodic_boundaries_extended = np.array(periodic_boundaries)
+        for i in range(3):
+            self.periodic_boundaries_extended[i] *= box_multiplier[i]
 
+    cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
+        return cnpa.length_ptr(atompos_1, atompos_2, &self.periodic_boundaries_extended[0])
+
+    cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
+        return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3, &self.periodic_boundaries_extended[0])
+
+
+cdef class AtomBox_Monoclin(AtomBox):
+    """Subclass of AtomBox, which takes care of monoclinic periodic MD boxes"""
+    cdef:
+        public double [:, ::1] h
+        public double [:, ::1] h_inv
+
+    def __cinit__(self, double [:, :, ::1] oxygen_trajectory,
+                  np.ndarray [np.double_t, ndim=1] periodic_boundaries, int [:] box_multiplier,
+                  double [:, :, ::1] phosphorus_trajectory=None):
+
+        self.periodic_boundaries_extended = np.array(periodic_boundaries)
+        for i in range(0, 3):
+            for j in range(0, 3):
+                self.periodic_boundaries_extended[3*i+j] *= box_multiplier[i]
+
+
+        self.h = np.array(self.periodic_boundaries_extended.reshape((3,3)).T, order="C")
+        self.h_inv = np.array(np.linalg.inv(self.h), order="C")
+        self.pbc_matrix = periodic_boundaries.reshape((3, 3))
+
+    cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
+        return cnpa.length_nonortho_bruteforce_ptr(atompos_1, atompos_2, &self.h[0, 0], &self.h_inv[0, 0])
+
+    cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
+        return cnpa.angle_ptr_nonortho(atompos_2, atompos_1, atompos_2, atompos_3, &self.h[0, 0], &self.h_inv[0, 0])
 
 cdef class Helper:
     cdef:
@@ -373,22 +386,21 @@ cdef class Helper:
         int [:] box_multiplier
         double [:] pbc
         double [:, ::1] pbc_matrix
-        double [:, :, ::1] oxygen_trajectory
-        double [:, :, ::1] phosphorus_trajectory
-        public double [:, ::1] oxygen_frame_extended
+        # double [:, :, ::1] oxygen_trajectory
+        # double [:, :, ::1] phosphorus_trajectory
+        double [:, ::1] oxygen_frame_extended
         double [:, ::1] phosphorus_frame_extended
         int [:] P_neighbors
         int oxygennumber_unextended
         int phosphorusnumber_unextended
         double r_cut, angle_threshold
         JumprateFunction jumprate_fct
-        AtomBox atom_box
-        BoxExtender extender
+        AtomBox atombox
         np.uint32_t saved_frame_counter
 
-    def __cinit__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
-                  double [:] pbc, int [:] box_multiplier, int [:] P_neighbors, bool nonortho,
-                  jumprate_parameter_dict, double cutoff_radius, double angle_threshold,
+    def __cinit__(self, AtomBox atombox, double [:] pbc, int [:] box_multiplier,
+                  int [:] P_neighbors, bool nonortho, jumprate_parameter_dict,
+                  double cutoff_radius, double angle_threshold,
                   jumprate_type="MD_rates", seed=None, verbose=False):
         cdef:
             int i
@@ -401,14 +413,14 @@ cdef class Helper:
                                                                    self.__class__.__name__))
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.jumps = 0
-        self.oxygen_trajectory = oxygen_trajectory
-        self.phosphorus_trajectory = phosphorus_trajectory
+        # self.oxygen_trajectory = oxygen_trajectory
+        # self.phosphorus_trajectory = phosphorus_trajectory
         self.oxygen_frame_extended = np.zeros((box_multiplier[0]*box_multiplier[1]*box_multiplier[2]
-                                               *oxygen_trajectory.shape[1], oxygen_trajectory.shape[2]))
+                                               *atombox.oxygen_trajectory.shape[1], atombox.oxygen_trajectory.shape[2]))
         self.phosphorus_frame_extended = np.zeros((box_multiplier[0]*box_multiplier[1]*box_multiplier[2]
-                                                   *phosphorus_trajectory.shape[1], phosphorus_trajectory.shape[2]))
-        self.oxygennumber_unextended = oxygen_trajectory.shape[1]
-        self.phosphorusnumber_unextended = phosphorus_trajectory.shape[1]
+                                                   *atombox.phosphorus_trajectory.shape[1], atombox.phosphorus_trajectory.shape[2]))
+        self.oxygennumber_unextended = atombox.oxygen_trajectory.shape[1]
+        self.phosphorusnumber_unextended = atombox.phosphorus_trajectory.shape[1]
         self.box_multiplier = box_multiplier
         self.P_neighbors = P_neighbors
         self.nonortho = nonortho
@@ -432,12 +444,7 @@ cdef class Helper:
 
         self.pbc = pbc
 
-        if nonortho:
-            self.atom_box = AtomBox_Monoclin(pbc_extended)
-            self.extender = BoxExtender_Monoclin(self.pbc, self.box_multiplier)
-        else:
-            self.atom_box = AtomBox_Cubic(pbc_extended)
-            self.extender = BoxExtender_Cubic(self.pbc, self.box_multiplier)
+        self.atombox = atombox
 
         if type(seed) != types.IntType:
             seed = time.time()
@@ -472,18 +479,18 @@ cdef class Helper:
             vector[int] a
             # double [:, ::1] oxygen_frame = self.oxygen_trajectory[framenumber]
         # print "lets find the neihgbors"
-        self.oxygen_frame_extended[:self.oxygennumber_unextended] = self.oxygen_trajectory[framenumber]
-        self.phosphorus_frame_extended[:self.phosphorusnumber_unextended] = self.phosphorus_trajectory[framenumber]
+        self.oxygen_frame_extended[:self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
+        self.phosphorus_frame_extended[:self.phosphorusnumber_unextended] = self.atombox.phosphorus_trajectory[framenumber]
 
-        self.extender.get_frame_inplace(framenumber, self.oxygennumber_unextended, self.oxygen_frame_extended)
-        self.extender.get_frame_inplace(framenumber, self.phosphorusnumber_unextended, self.phosphorus_frame_extended)
+        self.atombox.get_extended_frame_inplace(self.oxygennumber_unextended, self.oxygen_frame_extended)
+        self.atombox.get_extended_frame_inplace(self.phosphorusnumber_unextended, self.phosphorus_frame_extended)
 
         self.neighbors.clear()
         for i in xrange(self.oxygen_frame_extended.shape[0]):
             a.clear()
             for j in xrange(self.oxygen_frame_extended.shape[0]):
                 if i != j:
-                    dist = self.atom_box.distance(&self.oxygen_frame_extended[i,0], &self.oxygen_frame_extended[j,0])
+                    dist = self.atombox.distance_ptr(&self.oxygen_frame_extended[i,0], &self.oxygen_frame_extended[j,0])
                     if dist < self.r_cut:
                         a.push_back(j)
             self.neighbors.push_back(a)
@@ -497,11 +504,11 @@ cdef class Helper:
             vector[double] jump_probability_tmp
 
         # print "let's get some jump rates!"
-        self.oxygen_frame_extended[:self.oxygennumber_unextended] = self.oxygen_trajectory[framenumber]
-        self.phosphorus_frame_extended[:self.phosphorusnumber_unextended] = self.phosphorus_trajectory[framenumber]
+        self.oxygen_frame_extended[:self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
+        self.phosphorus_frame_extended[:self.phosphorusnumber_unextended] = self.atombox.phosphorus_trajectory[framenumber]
 
-        self.extender.get_frame_inplace(framenumber, self.oxygennumber_unextended, self.oxygen_frame_extended)
-        self.extender.get_frame_inplace(framenumber, self.phosphorusnumber_unextended, self.phosphorus_frame_extended)
+        self.atombox.get_extended_frame_inplace(self.oxygennumber_unextended, self.oxygen_frame_extended)
+        self.atombox.get_extended_frame_inplace(self.phosphorusnumber_unextended, self.phosphorus_frame_extended)
 
         start_tmp.clear()
         destination_tmp.clear()
@@ -509,10 +516,19 @@ cdef class Helper:
         for i in range(self.phosphorus_frame_extended.shape[0]):
             for j in range(self.neighbors[i].size()):
                 index2 = self.neighbors[i][j]
-                dist = self.atom_box.distance(&self.oxygen_frame_extended[i,0], &self.oxygen_frame_extended[index2,0])
+                dist = self.atombox.distance_ptr(&self.oxygen_frame_extended[i,0], &self.oxygen_frame_extended[index2,0])
                 if dist < r_cut:
-                    POO_angle = self.atom_box.angle(&self.phosphorus_frame_extended[self.P_neighbors[i], 0],
+                    try:
+                        POO_angle = self.atombox.angle_ptr(&self.phosphorus_frame_extended[self.P_neighbors[i], 0],
                                                     &self.oxygen_frame_extended[i, 0], &self.oxygen_frame_extended[index2, 0])
+                    except ZeroDivisionError:
+                        print "uhoh"
+                        print "P:", self.phosphorus_frame_extended[self.P_neighbors[i], 0], \
+                            self.phosphorus_frame_extended[self.P_neighbors[i], 1], \
+                            self.phosphorus_frame_extended[self.P_neighbors[i], 2]
+                        print "O1:", self.oxygen_frame_extended[i, 0], self.oxygen_frame_extended[i, 1], self.oxygen_frame_extended[i, 2]
+                        print "O2:", self.oxygen_frame_extended[index2, 0], self.oxygen_frame_extended[index2, 1], self.oxygen_frame_extended[index2, 2]
+
                     start_tmp.push_back(i)
                     destination_tmp.push_back(self.neighbors[i][j])
                     if POO_angle >= angle_thresh:
@@ -561,7 +577,7 @@ cdef class Helper:
             int step, i, index_origin, index_destination
             int trajectory_length
             int steps
-        trajectory_length = self.oxygen_trajectory.shape[0]
+        trajectory_length = self.atombox.oxygen_trajectory.shape[0]
         # print "frame:", frame
         # print "sweep from vector"
         # print self.saved_frame_counter

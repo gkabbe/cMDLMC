@@ -264,6 +264,8 @@ cdef double angle_ptr(double * a1, double * a2, double * a3, double * a4, double
         double v2[3]
         int i
 
+
+
     for i in range(3):
         v1[i] = a2[i] - a1[i]
         v2[i] = a4[i] - a3[i]

@@ -14,13 +14,13 @@ ctypedef fused float_or_double:
     float
     double
 
-cdef class AtomBox:
-    cdef:
-        double [:, :, ::1] oxygen_trajectory
-        double [:] periodic_boundaries
-
-    cdef double distance(self, double * atompos_1, double * atompos_2) nogil
-    cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil
+# cdef class AtomBox:
+#     cdef:
+#         double [:, :, ::1] oxygen_trajectory
+#         double [:] periodic_boundaries
+#
+#     cdef double distance(self, double * atompos_1, double * atompos_2) nogil
+#     cdef double angle(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil
 
 cdef class JumprateFunction:
     cdef double evaluate(self, double x)

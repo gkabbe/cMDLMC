@@ -266,18 +266,15 @@ class MDMC:
                     self.trajectory = self.trajectory[:self.clip_trajectory]
 
             self.O_trajectory = load_trajectory(self.trajectory, "O", verbose=self.verbose)
+            if self.po_angle:
+                self.P_trajectory = load_trajectory(self.trajectory, self.o_neighbor, verbose=self.verbose)
         else:
             pass
 
-    def determine_PO_pairs(self):
+    def determine_PO_pairs(self, framenumber, atombox):
         P_neighbors = np.zeros(self.oxygennumber_extended, int)
-        Os = np.zeros((self.oxygennumber_extended, 3))
-        Ps = np.zeros((self.phosphorusnumber_extended, 3))
-        Os[:self.oxygennumber] = self.O_trajectory[0]
-        Ps[:self.phosphorusnumber] = self.P_trajectory[0]
-        # ipdb.set_trace()
-        kMC_helper.extend_simulationbox(Ps, self.h, np.array(self.box_multiplier, dtype=np.int32), self.phosphorusnumber)
-        kMC_helper.extend_simulationbox(Os, self.h, np.array(self.box_multiplier, dtype=np.int32), self.oxygennumber)
+        Os = atombox.get_extended_frame(atombox.oxygen_trajectory[framenumber])
+        Ps = atombox.get_extended_frame(atombox.phosphorus_trajectory[framenumber])
 
         if self.nonortho:
             for i in xrange(Os.shape[0]):
@@ -285,7 +282,7 @@ class MDMC:
                 P_neighbors[i] = P_index
         else:
             for i in xrange(Os.shape[0]):
-                P_index = npa.nextNeighbor(Os[i], Ps, self.pbc_extended)[0]
+                P_index = npa.nextNeighbor(Os[i], Ps, atombox.periodic_boundaries_extended)[0]
                 P_neighbors[i] = P_index
         return P_neighbors
 
@@ -464,31 +461,31 @@ class MDMC:
         #Check PBC and determine whether cell is orthorhombic or non-orthorhombic
         if len(self.pbc) == 3:
             self.nonortho = False
-            self.pbc_extended = self.pbc * self.box_multiplier
-            self.h = np.zeros((3, 3))
-            self.h[0, 0] = self.pbc[0]
-            self.h[1, 1] = self.pbc[1]
-            self.h[2, 2] = self.pbc[2]
+            if self.po_angle:
+                atombox = kMC_helper.AtomBox_Cubic(self.O_trajectory, self.pbc,
+                                                   np.array(self.box_multiplier, dtype=np.int32),
+                                                   self.P_trajectory)
+            else:
+                atombox = kMC_helper.AtomBox_Cubic(self.O_trajectory, self.pbc,
+                                                   np.array(self.box_multiplier, dtype=np.int32))
         else:
-            self.pbc_extended = np.copy(self.pbc)
-            self.pbc_extended[0:3] *= self.box_multiplier[0]
-            self.pbc_extended[3:6] *= self.box_multiplier[1]
-            self.pbc_extended[6:9] *= self.box_multiplier[2]
             self.nonortho = True
-            self.h = np.array(self.pbc.reshape((3, 3)).T, order="C")
-            self.h_inv = np.array(np.linalg.inv(self.h), order="C")
-            self.h_ext = np.array(self.pbc_extended.reshape((3, 3)).T, order="C")
-            self.h__ext_inv = np.array(np.linalg.inv(self.h_ext), order="C")
+            if self.po_angle:
+                atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
+                                                   np.array(self.box_multiplier, dtype=np.int32),
+                                                   self.P_trajectory)
+            else:
+                atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
+                                                   np.array(self.box_multiplier, dtype=np.int32))
 
         displacement, MSD, proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
         #only update neighborlists after neighbor_freq position updates
         neighbor_update = self.neighbor_freq*(self.skip_frames+1)
 
         if self.po_angle:
-            self.P_trajectory = load_trajectory(self.trajectory, self.o_neighbor, verbose=self.verbose)
             self.phosphorusnumber = self.P_trajectory.shape[1]
             self.phosphorusnumber_extended = self.phosphorusnumber * self.box_multiplier[0] * self.box_multiplier[1] *self.box_multiplier[2]
-            self.P_neighbors = self.determine_PO_pairs()
+            self.P_neighbors = self.determine_PO_pairs(framenumber=0, atombox=atombox)
             self.angles = np.zeros((self.oxygennumber_extended, self.oxygennumber_extended))
             #~ self.determine_PO_angles(self.O_trajectory[0], self.P_trajectory[0], self.P_neighbors, self.angles)
 
@@ -505,16 +502,10 @@ class MDMC:
 
         start_time = time.time()
 
-        helper = kMC_helper.Helper(self.O_trajectory, self.P_trajectory, self.pbc,
-                                   np.array(self.box_multiplier, dtype=np.int32),
+        helper = kMC_helper.Helper(atombox, self.pbc, np.array(self.box_multiplier, dtype=np.int32),
                                    np.array(self.P_neighbors, dtype=np.int32),
                                    self.nonortho, self.jumprate_params_fs,
                                    self.cutoff_radius, self.angle_threshold)
-        # Nur zu Testzwecken!!!
-        # helper.determine_neighbors(0, self.cutoff_radius)
-        # helper.get_transitions(10)
-        # helper.calculate_transitions_POOangle(0, self.cutoff_radius, self.angle_threshold)
-        # ---------------------
 
         # Equilibration
         for sweep in xrange(self.equilibration_sweeps):
@@ -532,7 +523,6 @@ class MDMC:
                 #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep % self.P_trajectory.shape[0]]
                 #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
                 if sweep % neighbor_update == 0:
-                    ipdb.set_trace()
                     helper.determine_neighbors(frame % self.O_trajectory.shape[0])
                     print helper.neighbors
                     # if self.po_angle:
@@ -550,7 +540,7 @@ class MDMC:
         for sweep in xrange(0, self.sweeps):
             if sweep % (self.skip_frames+1) == 0:
                 if not self.shuffle:
-                    frame = sweep
+                    frame = sweep % self.O_trajectory.shape[0]
                 #     Opos[:self.oxygennumber] = self.O_trajectory[sweep%self.O_trajectory.shape[0]]
                 else:
                     frame = np.random.randint(self.O_trajectory.shape[0])
@@ -560,23 +550,25 @@ class MDMC:
                 #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep%self.P_trajectory.shape[0]]
                 #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
                 if sweep % neighbor_update == 0:
-                    helper.determine_neighbors(frame % self.O_trajectory.shape[0])
+                    helper.determine_neighbors(frame)
                 # if self.po_angle:
                 #     helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
                 # else:
                 #     helper.calculate_transitions_new(Opos, self.jumprate_params_fs, self.cutoff_radius)
-            helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
+            helper.sweep_from_vector(frame, proton_lattice)
 
             if sweep % self.reset_freq == 0:
                 protonlattice_snapshot, proton_pos_snapshot, displacement = \
-                    self.reset_observables(proton_pos_snapshot, proton_lattice,
-                                           displacement, helper.oxygen_frame_extended, helper)
+                    self.reset_observables(proton_pos_snapshot, proton_lattice, displacement,
+                                           atombox.get_extended_frame(atombox.oxygen_trajectory[frame]), helper)
             if  sweep % self.print_freq == 0:
                 # self.remove_com_movement_frame(Opos)
                 if not self.nonortho:
+                    # print " ".join(map(lambda x: "{:02d}".format(x), proton_lattice))
+                    # print "proton lattice:", len(proton_lattice)
                     calculate_displacement(proton_lattice, proton_pos_snapshot,
-                                           helper.oxygen_frame_extended, displacement, self.pbc,
-                                           wrap=self.periodic_wrap)
+                                           atombox.get_extended_frame(atombox.oxygen_trajectory[frame]),
+                                           displacement, self.pbc, wrap=self.periodic_wrap)
                 else:
                     calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, proton_pos_new, helper.oxygen_frame_extended, displacement, self.h, self.h_inv)
 
