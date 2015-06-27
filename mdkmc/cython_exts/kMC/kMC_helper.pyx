@@ -397,6 +397,7 @@ cdef class Helper:
         int oxygennumber_unextended
         int phosphorusnumber_unextended
         double r_cut, angle_threshold
+        double neighbor_search_radius
         JumprateFunction jumprate_fct
         AtomBox atombox
         np.uint32_t saved_frame_counter
@@ -404,6 +405,7 @@ cdef class Helper:
     def __cinit__(self, AtomBox atombox, double [:] pbc, int [:] box_multiplier,
                   int [:] P_neighbors, bool nonortho, jumprate_parameter_dict,
                   double cutoff_radius, double angle_threshold,
+                  double neighbor_search_radius,
                   jumprate_type="MD_rates", seed=None, verbose=False):
         cdef:
             int i
@@ -429,6 +431,7 @@ cdef class Helper:
         self.nonortho = nonortho
         self.r_cut = cutoff_radius
         self.angle_threshold = angle_threshold
+        self.neighbor_search_radius = neighbor_search_radius
         self.saved_frame_counter = 0
 
         if pbc.size == 3:
@@ -479,7 +482,7 @@ cdef class Helper:
         cdef:
             int i,j
             double dist
-            vector[int] a
+            vector[int] neighbor_list
             # double [:, ::1] oxygen_frame = self.oxygen_trajectory[framenumber]
         # print "lets find the neihgbors"
         self.oxygen_frame_extended[:self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
@@ -490,13 +493,13 @@ cdef class Helper:
 
         self.neighbors.clear()
         for i in xrange(self.oxygen_frame_extended.shape[0]):
-            a.clear()
+            neighbor_list.clear()
             for j in xrange(self.oxygen_frame_extended.shape[0]):
                 if i != j:
                     dist = self.atombox.distance_ptr(&self.oxygen_frame_extended[i,0], &self.oxygen_frame_extended[j,0])
-                    if dist < self.r_cut:
-                        a.push_back(j)
-            self.neighbors.push_back(a)
+                    if dist < self.neighbor_search_radius:
+                        neighbor_list.push_back(j)
+            self.neighbors.push_back(neighbor_list)
 
     cdef calculate_transitions_POOangle(self, int framenumber, double r_cut, double angle_thresh):
         cdef:
@@ -521,17 +524,8 @@ cdef class Helper:
                 index2 = self.neighbors[i][j]
                 dist = self.atombox.distance_ptr(&self.oxygen_frame_extended[i,0], &self.oxygen_frame_extended[index2,0])
                 if dist < r_cut:
-                    try:
-                        POO_angle = self.atombox.angle_ptr(&self.phosphorus_frame_extended[self.P_neighbors[i], 0],
-                                                    &self.oxygen_frame_extended[i, 0], &self.oxygen_frame_extended[index2, 0])
-                    except ZeroDivisionError:
-                        print "uhoh"
-                        print "P:", self.phosphorus_frame_extended[self.P_neighbors[i], 0], \
-                            self.phosphorus_frame_extended[self.P_neighbors[i], 1], \
-                            self.phosphorus_frame_extended[self.P_neighbors[i], 2]
-                        print "O1:", self.oxygen_frame_extended[i, 0], self.oxygen_frame_extended[i, 1], self.oxygen_frame_extended[i, 2]
-                        print "O2:", self.oxygen_frame_extended[index2, 0], self.oxygen_frame_extended[index2, 1], self.oxygen_frame_extended[index2, 2]
-
+                    POO_angle = self.atombox.angle_ptr(&self.phosphorus_frame_extended[self.P_neighbors[i], 0],
+                                                &self.oxygen_frame_extended[i, 0], &self.oxygen_frame_extended[index2, 0])
                     start_tmp.push_back(i)
                     destination_tmp.push_back(self.neighbors[i][j])
                     if POO_angle >= angle_thresh:
@@ -623,7 +617,7 @@ cdef class Helper:
         # print trajectory_length
         while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame+1:
             # print "calculating transitions"
-            self.calculate_transitions_POOangle_noneighborlist(self.saved_frame_counter, self.r_cut, self.angle_threshold)
+            self.calculate_transitions_POOangle(self.saved_frame_counter, self.r_cut, self.angle_threshold)
             # print "transitions calculated:", self.saved_frame_counter
         # print "done with transition calculation"
 

@@ -118,6 +118,13 @@ CONFIG_DICT = {
                     "will speed up the KMC run, but may distort the dynamics, as changes in the oxygen neighborhood "
                     "are detected less frequently."
         },
+    "neighbor_search_radius":
+        {
+            "parse_fct": parse_float,
+            "default": "15.0",
+            "help": "All atoms whose distance is not larger than the neighbor_search_radius are considered as "
+                    "neighbors."
+        },
     "proton_number":
         {
             "parse_fct": parse_int,

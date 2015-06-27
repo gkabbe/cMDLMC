@@ -502,10 +502,14 @@ class MDMC:
 
         start_time = time.time()
 
-        helper = kMC_helper.Helper(atombox, self.pbc, np.array(self.box_multiplier, dtype=np.int32),
-                                   np.array(self.P_neighbors, dtype=np.int32),
-                                   self.nonortho, self.jumprate_params_fs,
-                                   self.cutoff_radius, self.angle_threshold)
+        helper = kMC_helper.Helper(atombox=atombox, pbc=self.pbc,
+                                   box_multiplier=np.array(self.box_multiplier, dtype=np.int32),
+                                   P_neighbors=np.array(self.P_neighbors, dtype=np.int32),
+                                   nonortho=self.nonortho,
+                                   jumprate_parameter_dict=self.jumprate_params_fs,
+                                   cutoff_radius=self.cutoff_radius,
+                                   angle_threshold=self.angle_threshold,
+                                   neighbor_search_radius=self.neighbor_search_radius)
 
         # Equilibration
         for sweep in xrange(self.equilibration_sweeps):
@@ -522,8 +526,8 @@ class MDMC:
                 # if self.po_angle:
                 #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep % self.P_trajectory.shape[0]]
                 #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
-                # if sweep % neighbor_update == 0:
-                #     helper.determine_neighbors(frame % self.O_trajectory.shape[0])
+                if sweep % neighbor_update == 0:
+                    helper.determine_neighbors(frame % self.O_trajectory.shape[0])
                 #     print helper.neighbors
                     # if self.po_angle:
                     #     helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
@@ -549,8 +553,8 @@ class MDMC:
                 # if self.po_angle:
                 #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep%self.P_trajectory.shape[0]]
                 #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
-                # if sweep % neighbor_update == 0:
-                #     helper.determine_neighbors(frame)
+                if sweep % neighbor_update == 0:
+                    helper.determine_neighbors(frame)
                 # if self.po_angle:
                 #     helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
                 # else:
