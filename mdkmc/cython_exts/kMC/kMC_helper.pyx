@@ -516,7 +516,7 @@ cdef class Helper:
         start_tmp.clear()
         destination_tmp.clear()
         jump_probability_tmp.clear()
-        for i in range(self.phosphorus_frame_extended.shape[0]):
+        for i in range(self.oxygen_frame_extended.shape[0]):
             for j in range(self.neighbors[i].size()):
                 index2 = self.neighbors[i][j]
                 dist = self.atombox.distance_ptr(&self.oxygen_frame_extended[i,0], &self.oxygen_frame_extended[index2,0])
@@ -544,6 +544,42 @@ cdef class Helper:
         self.jump_probability.push_back(jump_probability_tmp)
         self.saved_frame_counter += 1
         # print "finished jo"
+
+    cdef calculate_transitions_POOangle_noneighborlist(self, int framenumber, double r_cut, double angle_thresh):
+        cdef:
+            int i,j, index2
+            double dist, PO_angle
+            vector[np.int32_t] start_tmp
+            vector[np.int32_t] destination_tmp
+            vector[np.float32_t] jump_probability_tmp
+
+        self.oxygen_frame_extended[:self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
+        self.phosphorus_frame_extended[:self.phosphorusnumber_unextended] = self.atombox.phosphorus_trajectory[framenumber]
+
+        self.atombox.get_extended_frame_inplace(self.oxygennumber_unextended, self.oxygen_frame_extended)
+        self.atombox.get_extended_frame_inplace(self.phosphorusnumber_unextended, self.phosphorus_frame_extended)
+
+        start_tmp.clear()
+        destination_tmp.clear()
+        jump_probability_tmp.clear()
+        for i in range(self.oxygen_frame_extended.shape[0]):
+            for j in range(self.oxygen_frame_extended.shape[0]):
+                if i != j:
+                    dist = self.atombox.distance_ptr(&self.oxygen_frame_extended[i,0], &self.oxygen_frame_extended[j,0])
+                    if dist < r_cut:
+                        POO_angle = self.atombox.angle_ptr(&self.phosphorus_frame_extended[self.P_neighbors[i], 0],
+                                                        &self.oxygen_frame_extended[i, 0], &self.oxygen_frame_extended[j, 0])
+                        start_tmp.push_back(i)
+                        destination_tmp.push_back(j)
+                        if POO_angle >= angle_thresh:
+                            jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist))
+                        else:
+                            jump_probability_tmp.push_back(0)
+
+        self.start.push_back(start_tmp)
+        self.destination.push_back(destination_tmp)
+        self.jump_probability.push_back(jump_probability_tmp)
+        self.saved_frame_counter += 1
 
     def get_transition_number(self):
         return self.start_tmp.size()
@@ -587,7 +623,7 @@ cdef class Helper:
         # print trajectory_length
         while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame+1:
             # print "calculating transitions"
-            self.calculate_transitions_POOangle(self.saved_frame_counter, self.r_cut, self.angle_threshold)
+            self.calculate_transitions_POOangle_noneighborlist(self.saved_frame_counter, self.r_cut, self.angle_threshold)
             # print "transitions calculated:", self.saved_frame_counter
         # print "done with transition calculation"
 
