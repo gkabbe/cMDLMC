@@ -522,9 +522,9 @@ class MDMC:
                 # if self.po_angle:
                 #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep % self.P_trajectory.shape[0]]
                 #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
-                if sweep % neighbor_update == 0:
-                    helper.determine_neighbors(frame % self.O_trajectory.shape[0])
-                    print helper.neighbors
+                # if sweep % neighbor_update == 0:
+                #     helper.determine_neighbors(frame % self.O_trajectory.shape[0])
+                #     print helper.neighbors
                     # if self.po_angle:
                     #     helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
                     # else:
@@ -549,8 +549,8 @@ class MDMC:
                 # if self.po_angle:
                 #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep%self.P_trajectory.shape[0]]
                 #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
-                if sweep % neighbor_update == 0:
-                    helper.determine_neighbors(frame)
+                # if sweep % neighbor_update == 0:
+                #     helper.determine_neighbors(frame)
                 # if self.po_angle:
                 #     helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
                 # else:
