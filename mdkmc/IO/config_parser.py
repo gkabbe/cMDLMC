@@ -121,7 +121,7 @@ CONFIG_DICT = {
     "neighbor_search_radius":
         {
             "parse_fct": parse_float,
-            "default": "15.0",
+            "default": 15.0,
             "help": "All atoms whose distance is not larger than the neighbor_search_radius are considered as "
                     "neighbors."
         },

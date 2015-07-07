@@ -237,7 +237,7 @@ def nextNeighbor_nonortho(double [:] a1_pos, double [:, ::1] atoms_pos, double [
     return minind, mindist
 
 
-cdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:] pbc):
+cpdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:] pbc):
     cdef:
         double v1[3]
         double v2[3]

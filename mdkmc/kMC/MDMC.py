@@ -16,7 +16,7 @@ import inspect
 import argparse
 from textwrap import wrap
 
-from mdkmc.IO import xyzparser
+from mdkmc.IO import xyz_parser
 from mdkmc.IO import BinDump
 from mdkmc.IO import config_parser
 from mdkmc.cython_exts.kMC import kMC_helper
@@ -509,12 +509,13 @@ class MDMC:
                                    jumprate_parameter_dict=self.jumprate_params_fs,
                                    cutoff_radius=self.cutoff_radius,
                                    angle_threshold=self.angle_threshold,
-                                   neighbor_search_radius=self.neighbor_search_radius)
+                                   neighbor_search_radius=self.neighbor_search_radius,
+                                   jumprate_type=self.jumprate_type)
 
         # Equilibration
         for sweep in xrange(self.equilibration_sweeps):
             if sweep % 1000 == 0:
-                print >> self.output, "# Equilibration sweep {}/{}".format(sweep, self.equilibration_sweeps), "\r",
+                print >> self.output, "# Equilibration sweep {}/{}".format(sweep, self.equilibration_sweeps, ), "\r",
             if sweep % (self.skip_frames+1) == 0:
                 if not self.shuffle:
                     frame = sweep
@@ -583,7 +584,8 @@ class MDMC:
                 else:
                     self.print_OsHs(Opos, proton_lattice, sweep, self.md_timestep_fs)
             # helper.sweep_list(proton_lattice)
-            helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
+            helper.sweep_from_vector_jumpmatrix(sweep % self.O_trajectory.shape[0], proton_lattice, jumpmatrix)
+            # helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice, jumpmatrix)
 
             # jumps = helper.sweep_gsl(proton_lattice, transitionmatrix)
             #~ jumps = helper.sweep_list_jumpmat(proton_lattice, jumpmatrix)

@@ -405,8 +405,8 @@ cdef class Helper:
     def __cinit__(self, AtomBox atombox, double [:] pbc, int [:] box_multiplier,
                   int [:] P_neighbors, bool nonortho, jumprate_parameter_dict,
                   double cutoff_radius, double angle_threshold,
-                  double neighbor_search_radius,
-                  jumprate_type="MD_rates", seed=None, verbose=False):
+                  double neighbor_search_radius, jumprate_type,
+                  seed=None, verbose=False):
         cdef:
             int i
             double [:] pbc_extended
@@ -634,6 +634,37 @@ cdef class Helper:
                     proton_lattice[index_destination] = proton_lattice[index_origin]
                     proton_lattice[index_origin] = 0
                     self.jumps += 1
+
+    def sweep_from_vector_jumpmatrix(self, int frame, np.uint8_t [:] proton_lattice, np.int64_t [:, ::1] jumpmatrix):
+        cdef:
+            int step, i, index_origin, index_destination
+            int trajectory_length
+            int steps
+        trajectory_length = self.atombox.oxygen_trajectory.shape[0]
+        # print "frame:", frame
+        # print "sweep from vector"
+        # print self.saved_frame_counter
+        # print trajectory_length
+        while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame+1:
+            # print "calculating transitions"
+            self.calculate_transitions_POOangle(self.saved_frame_counter, self.r_cut, self.angle_threshold)
+            # print "transitions calculated:", self.saved_frame_counter
+        # print "done with transition calculation"
+
+        # print self.start.size()
+        steps =  self.start[frame].size()
+        # print "steps:", steps
+
+        for step in xrange(steps):
+            i = gsl_rng_uniform_int(self.r, steps)
+            index_origin = self.start[frame][i]
+            index_destination = self.destination[frame][i]
+            if proton_lattice[index_origin] > 0 and proton_lattice[index_destination] == 0:
+                if gsl_rng_uniform(self.r) < self.jump_probability[frame][i]:
+                    proton_lattice[index_destination] = proton_lattice[index_origin]
+                    proton_lattice[index_origin] = 0
+                    self.jumps += 1
+                    jumpmatrix[index_origin, index_destination] += 1
 
     def reset_jumpcounter(self):
         self.jumps = 0

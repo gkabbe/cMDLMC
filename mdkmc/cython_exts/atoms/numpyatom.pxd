@@ -18,7 +18,7 @@ cdef void diff_ptr(double *a1_pos, double *a2_pos, double *pbc, double *diffvec)
 
 cdef void diff_ptr_nonortho(double  *a1_pos, double *a2_pos, double *diffvec, double * h, double * h_inv) nogil
 
-cdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:] pbc)
+cpdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:] pbc)
 
 cdef double angle_ptr(double * a1, double * a2, double * a3, double * a4, double * pbc) nogil
 

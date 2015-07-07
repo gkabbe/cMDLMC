@@ -34,7 +34,7 @@ def get_acidHs(atoms, pbc):
 
 def npget_acidHs(atoms, pbc, only_indices=False):
     if len(atoms.shape) > 2 or len(atoms.shape) == 0:
-        print "Expecting array with dimensions (No of frames, no of atoms) or (no of atoms)"
+        print "Expecting array with dimensions (No. of frames, no. of atoms) or (no. of atoms)"
     elif len(atoms.shape) == 2:
         atoms = atoms[0]
     else:
@@ -47,7 +47,7 @@ def npget_acidHs(atoms, pbc, only_indices=False):
     if only_indices:
         return acidH_indices
     else:
-        return Hs[acidH_indices]
+        return atoms_pos[acidH_indices]
 
 
 def get_Os(atoms):
@@ -108,38 +108,38 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
         if verbose:
             print "# Found following binfiles: {}".format(binfiles)
         if len(binfiles) > 0:
-            traj = np.load(binfiles[0])
-            if binfiles[0][-4:] == ".npz" and arg in traj.keys():
-                traj = traj[arg]
+            trajectory = np.load(binfiles[0])
+            if binfiles[0][-4:] == ".npz" and arg in trajectory.keys():
+                trajectory = trajectory[arg]
             if atomnames_list is not None:
                 selection = None
                 atomnumber = 0
                 for atomname in atomnames_list:
                     if selection is None:
-                        selection = traj["name"] == atomname
+                        selection = trajectory["name"] == atomname
                     else:
-                        selection = np.logical_or(selection, traj["name"] == atomname)
-                    atomnumber += (traj[0]["name"] == atomname).sum()
-                traj = traj[selection]
-                traj = traj.reshape(traj.shape[0]/atomnumber, atomnumber)
+                        selection = np.logical_or(selection, trajectory["name"] == atomname)
+                    atomnumber += (trajectory[0]["name"] == atomname).sum()
+                trajectory = trajectory[selection]
+                trajectory = trajectory.reshape(trajectory.shape[0]/atomnumber, atomnumber)
         else:
             if verbose:
                 print "# Loading from file {}".format(filename)
             xyz_file = XYZFile(filename, verbose=verbose)
-            traj = xyz_file.get_trajectory_numpy(atomnames_list, verbose=verbose)
+            trajectory = xyz_file.get_trajectory_numpy(atomnames_list, verbose=verbose)
             if remove_com:
-                npa.remove_com_movement_traj(traj, verbose=verbose)
+                npa.remove_com_movement_traj(trajectory, verbose=verbose)
             if create_if_not_existing:
-                npsave_atoms(filename, traj, verbose=verbose)
+                npsave_atoms(filename, trajectory, verbose=verbose)
     else:
         if filename[-4:] == ".npy":
-            traj = np.load(filename)
+            trajectory = np.load(filename)
         elif filename[-4:] == ".npz":
             if verbose:
                 print "# Compressed binary file archive. Loading {}.".format(arg)
-            traj = np.load(filename)[arg]
+            trajectory = np.load(filename)[arg]
 
-    return traj
+    return trajectory
 
 
 def mark_acidic_protons(traj, pbc, nonortho=False, verbose=False):
@@ -148,6 +148,7 @@ def mark_acidic_protons(traj, pbc, nonortho=False, verbose=False):
 
 
 def npsave_covevo(fname, Os, Hs, pbc, nonortho=False, verbose=False):
+    """Saves the evolution of the covalent bonds of the hydrogen atoms with the oxygen atoms -> covevo"""
     print "# Determining covevo.."
     start_time = time.time()
     covevo = np.zeros((Hs.shape[0], Hs.shape[1]), int)
