@@ -196,6 +196,13 @@ CONFIG_DICT = {
             "default": True,
             "help": "If true, proton motion will be wrapped into the periodic box."
         },
+    "jumpmatrix_file":
+        {
+            "parse_fct": parse_string,
+            "default": None,
+            "help": "If a filename is given, the number of proton jumps between each oxygen pair will be counted and "
+                    "saved."
+        },
     "box_multiplier":
         {
             "parse_fct": lambda line: map(int, line.split()[1:]),

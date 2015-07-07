@@ -497,8 +497,8 @@ class MDMC:
         if self.po_angle:
             Ppos = np.zeros((self.box_multiplier[0]*self.box_multiplier[1]*self.box_multiplier[2]*self.phosphorusnumber, 3), np.float64)
 
-        transitionmatrix = np.zeros((Opos.shape[0], Opos.shape[0]))
-        jumpmatrix = np.zeros((Opos.shape[0], Opos.shape[0]), int)
+        # transitionmatrix = np.zeros((Opos.shape[0], Opos.shape[0]))
+        # jumpmatrix = np.zeros((Opos.shape[0], Opos.shape[0]), int)
 
         start_time = time.time()
 
@@ -584,8 +584,10 @@ class MDMC:
                 else:
                     self.print_OsHs(Opos, proton_lattice, sweep, self.md_timestep_fs)
             # helper.sweep_list(proton_lattice)
-            helper.sweep_from_vector_jumpmatrix(sweep % self.O_trajectory.shape[0], proton_lattice, jumpmatrix)
-            # helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice, jumpmatrix)
+            if self.jumpmatrix:
+                helper.sweep_from_vector_jumpmatrix(sweep % self.O_trajectory.shape[0], proton_lattice)
+            else:
+                helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
 
             # jumps = helper.sweep_gsl(proton_lattice, transitionmatrix)
             #~ jumps = helper.sweep_list_jumpmat(proton_lattice, jumpmatrix)

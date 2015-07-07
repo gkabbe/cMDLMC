@@ -401,12 +401,14 @@ cdef class Helper:
         JumprateFunction jumprate_fct
         AtomBox atombox
         np.uint32_t saved_frame_counter
+        public double [:, ::1] jumpmatrix
+        bool calculate_jumpmatrix
 
     def __cinit__(self, AtomBox atombox, double [:] pbc, int [:] box_multiplier,
                   int [:] P_neighbors, bool nonortho, jumprate_parameter_dict,
                   double cutoff_radius, double angle_threshold,
                   double neighbor_search_radius, jumprate_type,
-                  seed=None, verbose=False):
+                  seed=None, bool calculate_jumpmatrix=False, verbose=False):
         cdef:
             int i
             double [:] pbc_extended
@@ -433,6 +435,8 @@ cdef class Helper:
         self.angle_threshold = angle_threshold
         self.neighbor_search_radius = neighbor_search_radius
         self.saved_frame_counter = 0
+        self.calculate_jumpmatrix = calculate_jumpmatrix
+        self.jumpmatrix = np.zeros((self.oxygen_frame_extended.shape[0], self.oxygen_frame_extended.shape[0]))
 
         if pbc.size == 3:
             pbc_extended = np.zeros(3)
@@ -635,7 +639,7 @@ cdef class Helper:
                     proton_lattice[index_origin] = 0
                     self.jumps += 1
 
-    def sweep_from_vector_jumpmatrix(self, int frame, np.uint8_t [:] proton_lattice, np.int64_t [:, ::1] jumpmatrix):
+    def sweep_from_vector_jumpmatrix(self, int frame, np.uint8_t [:] proton_lattice):
         cdef:
             int step, i, index_origin, index_destination
             int trajectory_length
@@ -664,31 +668,10 @@ cdef class Helper:
                     proton_lattice[index_destination] = proton_lattice[index_origin]
                     proton_lattice[index_origin] = 0
                     self.jumps += 1
-                    jumpmatrix[index_origin, index_destination] += 1
+                    self.jumpmatrix[index_origin, index_destination] += 1
 
     def reset_jumpcounter(self):
         self.jumps = 0
 
     def get_jumps(self):
         return self.jumps
-
-
-# cdef class TestCl:
-#     cdef:
-#         double y
-#         object traj
-#
-#     def __cinit__(self, double [:, :, ::1] traj, double y):
-#         self.y = y
-#         self.traj = traj
-#
-#     def get_my_obj(self):
-#         return self.traj
-#
-#     def del_my_obj(self):
-#         del(self.traj)
-#
-#     def calc_sth(self):
-#         cdef double [:, :, ::1] x = self.traj
-#
-#         x[0, 0, 0] = 123
