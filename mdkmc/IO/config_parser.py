@@ -196,7 +196,7 @@ CONFIG_DICT = {
             "default": True,
             "help": "If true, proton motion will be wrapped into the periodic box."
         },
-    "jumpmatrix_file":
+    "jumpmatrix_filename":
         {
             "parse_fct": parse_string,
             "default": None,

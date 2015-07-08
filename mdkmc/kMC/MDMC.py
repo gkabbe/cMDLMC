@@ -584,15 +584,15 @@ class MDMC:
                 else:
                     self.print_OsHs(Opos, proton_lattice, sweep, self.md_timestep_fs)
             # helper.sweep_list(proton_lattice)
-            if self.jumpmatrix:
+            if self.jumpmatrix_filename is not None:
                 helper.sweep_from_vector_jumpmatrix(sweep % self.O_trajectory.shape[0], proton_lattice)
             else:
                 helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
 
             # jumps = helper.sweep_gsl(proton_lattice, transitionmatrix)
             #~ jumps = helper.sweep_list_jumpmat(proton_lattice, jumpmatrix)
-
-        #~ return jumpmatrix
+        if self.jumpmatrix_filename is not None:
+            np.savetxt(self.jumpmatrix_filename, helper.jumpmatrix)
 
 def main(*args):
     parser=argparse.ArgumentParser(description="MDMC Test", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
