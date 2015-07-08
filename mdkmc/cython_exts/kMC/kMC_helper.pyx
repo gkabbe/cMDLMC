@@ -645,20 +645,9 @@ cdef class Helper:
             int trajectory_length
             int steps
         trajectory_length = self.atombox.oxygen_trajectory.shape[0]
-        # print "frame:", frame
-        # print "sweep from vector"
-        # print self.saved_frame_counter
-        # print trajectory_length
         while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame+1:
-            # print "calculating transitions"
             self.calculate_transitions_POOangle(self.saved_frame_counter, self.r_cut, self.angle_threshold)
-            # print "transitions calculated:", self.saved_frame_counter
-        # print "done with transition calculation"
-
-        # print self.start.size()
         steps =  self.start[frame].size()
-        # print "steps:", steps
-
         for step in xrange(steps):
             i = gsl_rng_uniform_int(self.r, steps)
             index_origin = self.start[frame][i]

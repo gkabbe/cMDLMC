@@ -540,7 +540,6 @@ class MDMC:
                     frame = np.random.randint(self.O_trajectory.shape[0])
                 if sweep % neighbor_update == 0:
                     helper.determine_neighbors(frame)
-            helper.sweep_from_vector(frame, proton_lattice)
 
             if sweep % self.reset_freq == 0:
                 protonlattice_snapshot, proton_pos_snapshot, displacement = \

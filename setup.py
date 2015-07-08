@@ -81,7 +81,7 @@ setup(name='mdkmc',
       entry_points={
           'console_scripts': ['mdmc=mdkmc.kMC.MDMC:main',
                               'jumpstat=mdkmc.analysis.jumpstat:main',
-                              'anglecheck=mdkmc.analysis.jumpmat_anglecrit:main'],
+                              'md_jumpmatrix=mdkmc.analysis.jumpmat_anglecrit:main'],
       },
       # scripts=["bin/MDMC.py"],
       include_package_data=True,

@@ -44,7 +44,7 @@ def compare(trajectory_path, pbc, recalc=False, anglecut=np.pi/2, distcut=3.0):
         if i % 1000 == 0:
             print formatstr.format(i), "\r",
     print ""
-    jumpmat_filename = os.path.splitext(trajectory_path)[0] + "_jumpmat"
+    jumpmat_filename = os.path.splitext(trajectory_path)[0] + "_MDjumpmat"
     if not os.path.exists(jumpmat_filename) or recalc:
         print "saving to {}".format(jumpmat_filename)
         np.savetxt(jumpmat_filename, jumpmat, fmt="%d")
@@ -52,28 +52,28 @@ def compare(trajectory_path, pbc, recalc=False, anglecut=np.pi/2, distcut=3.0):
         print "{} already exists".format(jumpmat_filename)
         jumpmat = np.loadtxt(jumpmat_filename, dtype=int)
 
-
-    anglemat_filename = os.path.splitext(trajectory_path)[0] + "_anglemat"
-    if not os.path.exists(anglemat_filename) or recalc:
-        print "checking angle criterion"
-        ah.get_anglematrix(Os, Ps, P_neighbors, pbc, anglemat, angle_cutoff=anglecut, distance_cutoff=distcut)
-        print "saving to {}".format(anglemat_filename)
-        np.savetxt(anglemat_filename, anglemat, fmt="%d")
-    else:
-        print "{} already exists".format(anglemat_filename)
-        anglemat = np.loadtxt(anglemat_filename, dtype=int)
-
-    jumpmat_bool = jumpmat != 0
-    anglemat_bool = anglemat != 0
-
-    allowed_transitions = zip(*np.where(anglemat_bool))
-
-    counter = 0
-    for transition in allowed_transitions:
-        if not jumpmat_bool[transition]:
-            print transition
-            counter += 1
-    print counter, "allowed transitions were counted, which did not show any jumps in the MD"
+    #
+    # anglemat_filename = os.path.splitext(trajectory_path)[0] + "_anglemat"
+    # if not os.path.exists(anglemat_filename) or recalc:
+    #     print "checking angle criterion"
+    #     ah.get_anglematrix(Os, Ps, P_neighbors, pbc, anglemat, angle_cutoff=anglecut, distance_cutoff=distcut)
+    #     print "saving to {}".format(anglemat_filename)
+    #     np.savetxt(anglemat_filename, anglemat, fmt="%d")
+    # else:
+    #     print "{} already exists".format(anglemat_filename)
+    #     anglemat = np.loadtxt(anglemat_filename, dtype=int)
+    #
+    # jumpmat_bool = jumpmat != 0
+    # anglemat_bool = anglemat != 0
+    #
+    # allowed_transitions = zip(*np.where(anglemat_bool))
+    #
+    # counter = 0
+    # for transition in allowed_transitions:
+    #     if not jumpmat_bool[transition]:
+    #         print transition
+    #         counter += 1
+    # print counter, "allowed transitions were counted, which did not show any jumps in the MD"
 
     # entries_jump = zip(*np.where(jumpmat_bool))
     # print "no. of observed jumps in MD:", len(entries_jump)
