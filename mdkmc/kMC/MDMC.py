@@ -376,6 +376,7 @@ class MDMC:
             remaining_time = -1
         print >> self.output, " {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {:8d} {:10d} {:10.2f} {:10.2f}".format(
             sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps(), speed, remaining_time)
+        self.averaged_results[(sweep % self.reset_freq)/self.print_freq, 2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
     def print_observables_reservoir(self, sweep, timestep_fs, r, jumps, start_time):
         print >> self.output, " {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {:8d} {:10.2f}".format(
@@ -512,6 +513,8 @@ class MDMC:
                                    neighbor_search_radius=self.neighbor_search_radius,
                                    jumprate_type=self.jumprate_type)
 
+        self.averaged_results = np.zeros((self.reset_freq/self.print_freq, 7))
+
         # Equilibration
         for sweep in xrange(self.equilibration_sweeps):
             if sweep % 1000 == 0:
@@ -519,47 +522,24 @@ class MDMC:
             if sweep % (self.skip_frames+1) == 0:
                 if not self.shuffle:
                     frame = sweep
-                #     Opos[:self.oxygennumber] = self.O_trajectory[sweep % self.O_trajectory.shape[0]]
                 else:
                     frame = np.random.randint(self.O_trajectory.shape[0])
-                #     Opos[:self.oxygennumber] = self.O_trajectory[np.random.randint(self.O_trajectory.shape[0])]
-                # extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
-                # if self.po_angle:
-                #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep % self.P_trajectory.shape[0]]
-                #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
                 if sweep % neighbor_update == 0:
                     helper.determine_neighbors(frame % self.O_trajectory.shape[0])
-                #     print helper.neighbors
-                    # if self.po_angle:
-                    #     helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
-                    # else:
-                    #     helper.calculate_transitions_new(Opos, self.jumprate_params_fs, self.cutoff_radius)
-
             helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
 
         if not self.xyz_output:
             self.print_observable_names()
 
-        #~ print >> self.output, "#{:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format("Sweeps", "Time", "MSD_x", "MSD_y", "MSD_z", "Autocorr", "Jumps", "Sweeps/Sec", "Remaining Time/Min")
         #Run
         for sweep in xrange(0, self.sweeps):
             if sweep % (self.skip_frames+1) == 0:
                 if not self.shuffle:
                     frame = sweep % self.O_trajectory.shape[0]
-                #     Opos[:self.oxygennumber] = self.O_trajectory[sweep%self.O_trajectory.shape[0]]
                 else:
                     frame = np.random.randint(self.O_trajectory.shape[0])
-                #     Opos[:self.oxygennumber] = self.O_trajectory[np.random.randint(self.O_trajectory.shape[0])]
-                # extend_simulationbox(Opos, self.oxygennumber, self.h, self.box_multiplier)
-                # if self.po_angle:
-                #     Ppos[:self.phosphorusnumber] = self.P_trajectory[sweep%self.P_trajectory.shape[0]]
-                #     extend_simulationbox(Ppos, self.phosphorusnumber, self.h, self.box_multiplier)
                 if sweep % neighbor_update == 0:
                     helper.determine_neighbors(frame)
-                # if self.po_angle:
-                #     helper.calculate_transitions_POOangle(Opos, Ppos, self.P_neighbors, self.cutoff_radius, self.angle_threshold)
-                # else:
-                #     helper.calculate_transitions_new(Opos, self.jumprate_params_fs, self.cutoff_radius)
             helper.sweep_from_vector(frame, proton_lattice)
 
             if sweep % self.reset_freq == 0:
@@ -567,10 +547,7 @@ class MDMC:
                     self.reset_observables(proton_pos_snapshot, proton_lattice, displacement,
                                            atombox.get_extended_frame(atombox.oxygen_trajectory[frame]), helper)
             if  sweep % self.print_freq == 0:
-                # self.remove_com_movement_frame(Opos)
                 if not self.nonortho:
-                    # print " ".join(map(lambda x: "{:02d}".format(x), proton_lattice))
-                    # print "proton lattice:", len(proton_lattice)
                     calculate_displacement(proton_lattice, proton_pos_snapshot,
                                            atombox.get_extended_frame(atombox.oxygen_trajectory[frame]),
                                            displacement, self.pbc, wrap=self.periodic_wrap)
@@ -593,6 +570,18 @@ class MDMC:
             #~ jumps = helper.sweep_list_jumpmat(proton_lattice, jumpmatrix)
         if self.jumpmatrix_filename is not None:
             np.savetxt(self.jumpmatrix_filename, helper.jumpmatrix)
+
+        self.averaged_results /= (self.sweeps/self.reset_freq)
+        self.averaged_results[:, 0] = range(0, self.reset_freq, self.print_freq)
+        self.averaged_results[:, 1] = self.averaged_results[:, 0] * self.md_timestep_fs
+        print "# {}".format("-"*98)
+        print "# Averaged Results:"
+        print >> self.output, "# {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10}".format(
+            "Sweeps", "Time", "MSD_x", "MSD_y", "MSD_z", "Autocorr", "Jumps")
+        for line in self.averaged_results:
+            print >> self.output, "  {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10}".format(*line)
+
+
 
 def main(*args):
     parser=argparse.ArgumentParser(description="MDMC Test", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
