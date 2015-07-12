@@ -609,19 +609,34 @@ cdef class Helper:
                     self.jumps += 1
         return self.jumps
 
+    def store_transitions_in_vector(self, bool verbose=False):
+        cdef int i
+        for i in range(self.atombox.oxygen_trajectory.shape[0]):
+            self.calculate_transitions_POOangle(i, self.r_cut, self.angle_threshold)
+            if verbose and i % 1000 == 0:
+                print "# Saving transitions {} / {}".format(i, self.atombox.oxygen_trajectory.shape[0]), "\r",
+        print ""
+        if verbose:
+            print "# Done"
+
+        # self.atombox.oxygen_trajectory = None
+        # self.atombox.phosphorus_trajectory = None
+        # if verbose:
+        #     print "# Deleted atombox"
+
     def sweep_from_vector(self, int frame, np.uint8_t [:] proton_lattice):
         cdef:
             int step, i, index_origin, index_destination
             int trajectory_length
             int steps
-        trajectory_length = self.atombox.oxygen_trajectory.shape[0]
+        # trajectory_length = self.atombox.oxygen_trajectory.shape[0]
         # print "frame:", frame
         # print "sweep from vector"
         # print self.saved_frame_counter
         # print trajectory_length
-        while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame+1:
+        # while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame+1:
             # print "calculating transitions"
-            self.calculate_transitions_POOangle(self.saved_frame_counter, self.r_cut, self.angle_threshold)
+            # self.calculate_transitions_POOangle(self.saved_frame_counter, self.r_cut, self.angle_threshold)
             # print "transitions calculated:", self.saved_frame_counter
         # print "done with transition calculation"
 

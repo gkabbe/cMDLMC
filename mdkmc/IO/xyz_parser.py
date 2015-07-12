@@ -54,13 +54,13 @@ class XYZFile(object):
                 Os.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
         return Os
 
-    def parse_frame_Os_np(self, pos_array):
+    def parse_frame_np(self, pos_array, atomname):
         self.datei.readline()
         self.datei.readline()
         i = 0
         for index in xrange(self.atomnr):
             line = self.datei.readline()
-            if index in self.atomdict["O"]:
+            if index in self.atomdict[atomname]:
                 pos_array[i] = map(float, line.split()[1:4])
                 i += 1
 

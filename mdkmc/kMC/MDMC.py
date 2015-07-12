@@ -366,15 +366,17 @@ class MDMC:
 
     def print_observable_names(self):
         print >> self.output, "# {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format(
-            "Sweeps", "Time", "MSD_x", "MSD_y", "MSD_z", "Autocorr", "Jumps", "Sweeps/Sec", "Remaining Time/Min")
+            "Sweeps", "Time", "MSD_x", "MSD_y", "MSD_z", "Autocorr", "Jumps", "Sweeps/Sec", "Remaining Time/Hours:Min")
 
     def print_observables(self, sweep, autocorrelation, helper, timestep_fs, start_time, MSD):
         speed = float(sweep)/(time.time()-start_time)
         if speed != 0:
-            remaining_time = (self.sweeps - sweep)/speed/60
+            remaining_time_hours = int((self.sweeps - sweep)/speed/3600)
+            remaining_time_min = int((((self.sweeps - sweep)/speed) % 3600)/60)
+            remaining_time = "{:02d}:{:02d}".format(remaining_time_hours, remaining_time_min)
         else:
-            remaining_time = -1
-        print >> self.output, " {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {:8d} {:10d} {:10.2f} {:10.2f}".format(
+            remaining_time = "-01:-01"
+        print >> self.output, " {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {:8d} {:10d} {:10.2f} {:10}".format(
             sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps(), speed, remaining_time)
         self.averaged_results[(sweep % self.reset_freq)/self.print_freq, 2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
@@ -513,6 +515,9 @@ class MDMC:
                                    neighbor_search_radius=self.neighbor_search_radius,
                                    jumprate_type=self.jumprate_type)
 
+        helper.determine_neighbors(0)
+        helper.store_transitions_in_vector(verbose=self.verbose)
+
         self.averaged_results = np.zeros((self.reset_freq/self.print_freq, 7))
 
         # Equilibration
@@ -524,8 +529,8 @@ class MDMC:
                     frame = sweep
                 else:
                     frame = np.random.randint(self.O_trajectory.shape[0])
-                if sweep % neighbor_update == 0:
-                    helper.determine_neighbors(frame % self.O_trajectory.shape[0])
+                # if sweep % neighbor_update == 0:
+                #     helper.determine_neighbors(frame % self.O_trajectory.shape[0])
             helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
 
         if not self.xyz_output:
@@ -538,8 +543,8 @@ class MDMC:
                     frame = sweep % self.O_trajectory.shape[0]
                 else:
                     frame = np.random.randint(self.O_trajectory.shape[0])
-                if sweep % neighbor_update == 0:
-                    helper.determine_neighbors(frame)
+                # if sweep % neighbor_update == 0:
+                #     helper.determine_neighbors(frame)
 
             if sweep % self.reset_freq == 0:
                 protonlattice_snapshot, proton_pos_snapshot, displacement = \
