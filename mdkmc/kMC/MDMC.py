@@ -561,14 +561,14 @@ class MDMC:
                 calculate_MSD(MSD, displacement)
                 autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
                 if not self.xyz_output:
-                    self.print_observables(sweep, autocorrelation, helper, self.md_timestep_fs, start_time, MSD)
+                    self.print_observables(frame, autocorrelation, helper, self.md_timestep_fs, start_time, MSD)
                 else:
-                    self.print_OsHs(Opos, proton_lattice, sweep, self.md_timestep_fs)
+                    self.print_OsHs(Opos, proton_lattice, frame, self.md_timestep_fs)
             # helper.sweep_list(proton_lattice)
             if self.jumpmatrix_filename is not None:
-                helper.sweep_from_vector_jumpmatrix(sweep % self.O_trajectory.shape[0], proton_lattice)
+                helper.sweep_from_vector_jumpmatrix(frame, proton_lattice)
             else:
-                helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
+                helper.sweep_from_vector(frame, proton_lattice)
 
             # jumps = helper.sweep_gsl(proton_lattice, transitionmatrix)
             #~ jumps = helper.sweep_list_jumpmat(proton_lattice, jumpmatrix)
