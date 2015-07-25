@@ -370,7 +370,7 @@ class MDMC:
 
     def print_observables(self, sweep, autocorrelation, helper, timestep_fs, start_time, MSD):
         speed = float(sweep)/(time.time()-start_time)
-        if speed != 0:
+        if sweep != 0:
             remaining_time_hours = int((self.sweeps - sweep)/speed/3600)
             remaining_time_min = int((((self.sweeps - sweep)/speed) % 3600)/60)
             remaining_time = "{:02d}:{:02d}".format(remaining_time_hours, remaining_time_min)
@@ -561,7 +561,7 @@ class MDMC:
                 calculate_MSD(MSD, displacement)
                 autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
                 if not self.xyz_output:
-                    self.print_observables(frame, autocorrelation, helper, self.md_timestep_fs, start_time, MSD)
+                    self.print_observables(sweep, autocorrelation, helper, self.md_timestep_fs, start_time, MSD)
                 else:
                     self.print_OsHs(Opos, proton_lattice, frame, self.md_timestep_fs)
             # helper.sweep_list(proton_lattice)
