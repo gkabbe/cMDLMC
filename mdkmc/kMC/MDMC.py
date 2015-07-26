@@ -11,8 +11,7 @@ import ast
 
 import numpy as np
 import ipdb
-import git
-import inspect
+
 import argparse
 from textwrap import wrap
 
@@ -42,7 +41,7 @@ logger.addHandler(fh)
 # logger.addHandler(ch)
 # --------------------------------------------------------------------------------------
 
-script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+
 # print "#", os.path.join(script_path,"../cython/kMC")
 
 
@@ -141,8 +140,10 @@ def print_confighelp():
 
 
 def get_gitversion():
-    repo = git.Repo(script_path)
-    print "# Hello. I am from commit {}".format(repo.active_branch.commit.hexsha)
+    from mdkmc.version_hash import commit_hash, commit_date, commit_message
+    print "# Hello. I am from commit {}".format(commit_hash)
+    print "# Commit Date: {}".format(commit_date)
+    print "# Commit Message: {}".format(commit_message)
 
 
 def count_protons_and_oxygens(Opos, proton_lattice, O_counter, H_counter, bin_bounds):

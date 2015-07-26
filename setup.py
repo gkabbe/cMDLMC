@@ -1,11 +1,22 @@
 import os
 import sys
+import subprocess
 import numpy  # to get includes
 import cython_gsl
 from setuptools import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
+
+
+def get_commit_hash():
+    command = "git log -n 1 --format=%H%n%s%n%ad"
+    try:
+        commit_hash, commit_message, commit_date = subprocess.check_output(command.split()).strip().split("\n")
+    except subprocess.CalledProcessError:
+        print >> sys.stderr, "Command '{}' could not be executed successfully.".format(command)
+    return commit_hash, commit_message, commit_date
+
 
 def readme():
     with open('README.rst', 'r') as f:
@@ -48,10 +59,6 @@ for ext_path in cython_exts:
         include_dirs=[".", numpy.get_include(), cython_gsl.get_cython_include_dir()]
     ))
 
-
-# noinspection PyPackageRequirements,PyPackageRequirements
-
-
 setup(name='mdkmc',
       version='0.1',
       description='Implementation of the MD/KMC algorithm in Python',
@@ -90,3 +97,10 @@ setup(name='mdkmc',
       ext_modules=ext_modules,
       cmdclass={'build_ext': build_ext}
       )
+
+# Write hash of current commit to file
+with open("mdkmc/version_hash.py", "w") as f:
+    commit_hash, commit_message, commit_date = get_commit_hash()
+    print >> f, "commit_hash = \"{}\"".format(commit_hash)
+    print >> f, "commit_message = \"{}\"".format(commit_message)
+    print >> f, "commit_date = \"{}\"".format(commit_date)

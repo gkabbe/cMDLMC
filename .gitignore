@@ -11,4 +11,5 @@
 mdkmc.egg-info/
 build
 dist
+version_hash.py
 
