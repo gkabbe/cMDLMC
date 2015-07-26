@@ -243,8 +243,8 @@ class MDMC:
         self.logger.info("Creating an instance of {}.{}".format(__name__, self.__class__.__name__))
         try:
             get_gitversion()
-        except git.InvalidGitRepositoryError:
-            print "# No Git repository found, so I cannot show any commit information"
+        except ImportError:
+            print >> sys.stderr, "# No Commit information found"
         if "configfile" in kwargs.keys():
             # Load settings from config file
             file_kwargs = load_configfile_new(kwargs["configfile"], verbose=True)
