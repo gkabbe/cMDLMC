@@ -88,6 +88,7 @@ setup(name='mdkmc',
       entry_points={
           'console_scripts': ['mdmc=mdkmc.kMC.MDMC:main',
                               'jumpstat=mdkmc.analysis.jumpstat:main',
+                              'poo-occupation=mdkmc.analysis.phosphonic_group_occupation:main',
                               'md_jumpmatrix=mdkmc.analysis.jumpmat_anglecrit:main'],
       },
       # scripts=["bin/MDMC.py"],
