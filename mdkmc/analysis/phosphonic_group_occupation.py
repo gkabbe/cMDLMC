@@ -79,7 +79,59 @@ def jump_probabilities(PO3_groups, covevo):
             print dissociation_times
     return dissociation_times
 
+def proton_distance_correlation(covevo, PO3_groups, Os, Hs, pbc):
+    for i in xrange(1, covevo.shape[0]):
+        change = np.where(covevo[i] != covevo[i-1])[0]
+        if len(change) > 0:
+            print "At frame {}:".format(i)
+            for H_index in change:
+                print "jump from {} to {}".format(covevo[i-1, H_index], covevo[i, H_index])
+                # first check, how long the jumping proton will stay close to its new neighbor oxygen
+                # then check if the jumping proton bonds covalently to its new oxygen in this time
+                new_neighbor = covevo[i, H_index]
+                old_neighbor = covevo[i-1, H_index]
+                j, count = i, 0
+                OH_dists = []
+                while j < covevo.shape[0] and covevo[j, H_index] == new_neighbor:
+                    OH_dists.append(npa.length(Hs[j, H_index], Os[j, new_neighbor], pbc))
+                    j += 1
+                min_dist = min(OH_dists)
+                count = j - i
+                print "proton {} stays close to oxygen {} for {} frames".format(H_index, new_neighbor, count)
+                print "closest distance: {}".format(min_dist)
+                # if covalent bond exists in interval, check what the other protons at this phosphonic group are doing:
+                if min_dist <= 1.1:
+                    PO3_group_index = np.where(PO3_groups == new_neighbor)[0][0]
+                    O_indices = [new_neighbor]
+                    H_indices = [H_index]
+                    for Oind in PO3_groups[PO3_group_index]:
+                        if Oind != new_neighbor:
+                            O_indices.append(Oind)
+                            H_ind = npa.nextNeighbor(Os[i, Oind], Hs[i], pbc=pbc)[0]
+                            H_indices.append(H_ind)
+                    for k in xrange(1, 3):
+                        if npa.length(Os[i, O_indices[k]], Hs[i, H_indices[k]], pbc) > 1.3:
+                            print "the other two oxygens are not covalently bonded"
+                            break
+                    else:
+                        for j in xrange(i, i+count):
+                            for k in xrange(3):
+                                print npa.length(Os[j, O_indices[k]], Hs[j, H_indices[k]], pbc),
+                            print ""
+                else:
+                    print "proton {} never comes close enough".format(H_index)
 
+
+
+def dissociation_times(PO3_groups, covevo):
+
+    # print PO3_groups
+
+    dissociation_times = jump_probabilities(PO3_groups, covevo)
+    for dt in dissociation_times:
+        print dt
+
+# count_occupation_times(PO3_groups, covevo)
 
 def main(*args):
     parser=argparse.ArgumentParser(description="Phosphonic Group Occupation Counter", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -93,12 +145,16 @@ def main(*args):
     covevo = np.load(covevo_filename)
     pbc = np.array(args.pbc)
 
-    Ps = trajectory[0][trajectory[0]["name"] == "P"]["pos"]
-    Os = trajectory[0][trajectory[0]["name"] == "O"]["pos"]
+    BinDump.mark_acidic_protons(trajectory, pbc, verbose=True)
+    atoms = npa.select_atoms(trajectory, "O", "P", "AH")
+    Os = atoms["O"]
+    Ps = atoms["P"]
+    Hs = atoms["AH"]
+    print "# Hs:", Hs.shape
     # O_indices = np.where(trajectory[0]["name"] == "O")[0]
     # P_indices = np.where(trajectory[0]["name"] == "O")[0]
-    O_indices = range(Os.shape[0])
-    P_indices = range(Ps.shape[0])
+    O_indices = range(Os.shape[1])
+    P_indices = range(Ps.shape[1])
     first_frame  = trajectory[0]["pos"]
 
     # print P_indices
@@ -109,17 +165,15 @@ def main(*args):
     PO3_groups = []
 
     for P_index in P_indices:
-        O_neighbors = sorted(O_indices, key=lambda O_index: npa.length(Ps[P_index], Os[O_index], pbc))
+        O_neighbors = sorted(O_indices, key=lambda O_index: npa.length(Ps[0, P_index], Os[0, O_index], pbc))
         PO3_groups.append(O_neighbors[:3])
 
     PO3_groups = np.array(PO3_groups)
-    # print PO3_groups
 
-    dissociation_times = jump_probabilities(PO3_groups, covevo)
-    for dt in dissociation_times:
-        print dt
+    # dissociation_times(PO3_groups, covevo)
 
-# count_occupation_times(PO3_groups, covevo)
+    proton_distance_correlation(covevo, PO3_groups, Os, Hs, pbc)
+
 
 if __name__ == "__main__":
     main()
