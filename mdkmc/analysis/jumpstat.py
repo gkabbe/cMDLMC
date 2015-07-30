@@ -69,8 +69,11 @@ def main(*args):
     parser.add_argument("--frames", "-f", type=int, default=0, help = "Number of frames in xyz file")
     parser.add_argument("--mode", "-m", choices=["jumpprobs", "jumphisto", "O_RDF"], default="jumpprobs", help = "Choose whether to calculate probability histogram \
         or the histogram of proton jumps for different oxygen distances")
-
     args = parser.parse_args()
+
+    # Thank you to http://stackoverflow.com/questions/881696/unbuffered-stdout-in-python-as-in-python-u-from-within-the-program
+    unbuffered = os.fdopen(sys.stdout.fileno(), 'w', 0)
+    sys.stdout = unbuffered
     
     if len(args.pbc) == 3:
         nonortho = False
