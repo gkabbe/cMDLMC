@@ -447,7 +447,7 @@ class MDMC:
             print "\n#done"
         return tm_avg
 
-    def ASEP(self):
+    def kmc_run(self):
         if self.seed is not None:
             np.random.seed(self.seed)
         else:
@@ -606,7 +606,7 @@ def main(*args):
     md_mc = MDMC(configfile=args.configfile)
     # md_mc.print_settings()
     start_time = time.time()
-    md_mc.ASEP()
+    md_mc.kmc_run()
 
     print "#Total time: {:.1f} minutes".format((time.time()-start_time)/60)
 

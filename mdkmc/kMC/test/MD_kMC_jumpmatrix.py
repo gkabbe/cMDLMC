@@ -44,7 +44,7 @@ def jumpmatrix_MD(covevo, O_number, verbose=False):
 def jumpmatrix_kMC(filename, pbc, temp, proton_number, time_step, sweeps, equilibration_sweeps, mode, verbose=False):
 	mdmc = MDMC.MDMC(filename=filename, pbc=pbc, temp=temp, proton_number=proton_number)
 	if mode == "dist":
-		jumpmat = mdmc.ASEP(output=sys.stdout, sweeps=sweeps, equilibration_sweeps=equilibration_sweeps, MD_timestep_fs=time_step, skip_frames=0, print_freq=75, reset_freq=25000, dump_trajectory=False, box_multiplier=(1,1,1), neighbor_freq=10, verbose=verbose)
+		jumpmat = mdmc.kmc_run(output=sys.stdout, sweeps=sweeps, equilibration_sweeps=equilibration_sweeps, MD_timestep_fs=time_step, skip_frames=0, print_freq=75, reset_freq=25000, dump_trajectory=False, box_multiplier=(1,1,1), neighbor_freq=10, verbose=verbose)
 	elif mode == "angle":
 		jumpmat = mdmc.ASEP_angle(output=sys.stdout, sweeps=sweeps, equilibration_sweeps=equilibration_sweeps, MD_timestep_fs=time_step, skip_frames=0, print_freq=75, reset_freq=25000, dump_trajectory=False, box_multiplier=(1,1,1), neighbor_freq=10, verbose=verbose)
 	else:
