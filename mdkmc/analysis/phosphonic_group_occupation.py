@@ -19,9 +19,9 @@ def count_occupation_times(PO3_groups, covevo):
     occupation_time = np.zeros(PO3_groups.shape[0])
     occupation_times = []
     for i in xrange(covevo.shape[0]):
+        if i % 1000 == 0:
+            print "At frame {}".format(i), "\r",
         change = np.where(covevo[i] != covevo[i-1])[0]
-        if len(change) > 0:
-            print "At frame {}:".format(i)
         occupations = get_occupations(PO3_groups, covevo[i])
         for PO3_index, occupation_number in enumerate(occupations):
             if occupation_number == 3:
@@ -29,7 +29,10 @@ def count_occupation_times(PO3_groups, covevo):
             elif occupation_time[PO3_index] != 0:
                 occupation_times.append(occupation_time[PO3_index])
                 occupation_time[PO3_index] = 0
-    print occupation_times
+    print ""
+    for ot in occupation_times:
+        print ot
+
 
 def count_occupation_times_absolute(PO3_groups, PO3_index, covevo):
     """If there is any defect in the whole trajectory, count the time until there is no defect"""
@@ -79,7 +82,7 @@ def jump_probabilities(PO3_groups, covevo):
             print dissociation_times
     return dissociation_times
 
-def proton_distance_correlation(covevo, PO3_groups, Os, Hs, pbc):
+def proton_oxygen_distance_correlation(covevo, PO3_groups, Os, Hs, pbc):
     for i in xrange(1, covevo.shape[0]):
         change = np.where(covevo[i] != covevo[i-1])[0]
         if len(change) > 0:
@@ -121,6 +124,48 @@ def proton_distance_correlation(covevo, PO3_groups, Os, Hs, pbc):
                 else:
                     print "proton {} never comes close enough".format(H_index)
 
+
+def proton_phosphor_distance_correlation(covevo, PO3_groups, Os, Ps, pbc):
+    for i in xrange(1, covevo.shape[0]):
+        change = np.where(covevo[i] != covevo[i-1])[0]
+        if len(change) > 0:
+            print "At frame {}:".format(i)
+            for H_index in change:
+                print "jump from {} to {}".format(covevo[i-1, H_index], covevo[i, H_index])
+                # first check, how long the jumping proton will stay close to its new neighbor oxygen
+                # then check if the jumping proton bonds covalently to its new oxygen in this time
+                new_neighbor = covevo[i, H_index]
+                old_neighbor = covevo[i-1, H_index]
+                j, count = i, 0
+                OH_dists = []
+                while j < covevo.shape[0] and covevo[j, H_index] == new_neighbor:
+                    OH_dists.append(npa.length(Hs[j, H_index], Os[j, new_neighbor], pbc))
+                    j += 1
+                min_dist = min(OH_dists)
+                count = j - i
+                print "proton {} stays close to oxygen {} for {} frames".format(H_index, new_neighbor, count)
+                print "closest distance: {}".format(min_dist)
+                # if covalent bond exists in interval, check what the other protons at this phosphonic group are doing:
+                if min_dist <= 1.1:
+                    PO3_group_index = np.where(PO3_groups == new_neighbor)[0][0]
+                    O_indices = [new_neighbor]
+                    H_indices = [H_index]
+                    for Oind in PO3_groups[PO3_group_index]:
+                        if Oind != new_neighbor:
+                            O_indices.append(Oind)
+                            H_ind = npa.nextNeighbor(Os[i, Oind], Hs[i], pbc=pbc)[0]
+                            H_indices.append(H_ind)
+                    for k in xrange(1, 3):
+                        if npa.length(Os[i, O_indices[k]], Hs[i, H_indices[k]], pbc) > 1.3:
+                            print "the other two oxygens are not covalently bonded"
+                            break
+                    else:
+                        for j in xrange(i, i+count):
+                            for k in xrange(3):
+                                print npa.length(Os[j, O_indices[k]], Hs[j, H_indices[k]], pbc),
+                            print ""
+                else:
+                    print "proton {} never comes close enough".format(H_index)
 
 
 def dissociation_times(PO3_groups, covevo):
@@ -172,7 +217,8 @@ def main(*args):
 
     # dissociation_times(PO3_groups, covevo)
 
-    proton_distance_correlation(covevo, PO3_groups, Os, Hs, pbc)
+    # proton_oxygen_distance_correlation(covevo, PO3_groups, Os, Hs, pbc)
+    count_occupation_times(PO3_groups, covevo)
 
 
 if __name__ == "__main__":
