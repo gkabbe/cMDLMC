@@ -109,7 +109,7 @@ def jump_probs(double [:,:,::1] Os, double [:,:,::1] Hs, cnp.int64_t [:,::1] cov
         if verbose == True:
             if i%100 == 0:
                 print "# {:} {:.2f} fps".format(i, i/(time.time()-start_time)),"\r",
-
+    print ""
 
     print "# Oxygen distance, jump probability, jump probability standard deviation"
     for i in xrange(bins):
