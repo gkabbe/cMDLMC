@@ -595,8 +595,8 @@ def main(*args):
     args = parser.parse_args()
 
     # Thank you to http://stackoverflow.com/questions/881696/unbuffered-stdout-in-python-as-in-python-u-from-within-the-program
-    unbuffered = os.fdopen(sys.stdout.fileno(), 'w', 0)
-    sys.stdout = unbuffered
+#    unbuffered = os.fdopen(sys.stdout.fileno(), 'w', 0)
+#    sys.stdout = unbuffered
 
 
     if args.confighelp:
@@ -608,7 +608,7 @@ def main(*args):
     start_time = time.time()
     md_mc.kmc_run()
 
-    print "#Total time: {:.1f} minutes".format((time.time()-start_time)/60)
+    print >> self.output, "#Total time: {:.1f} minutes".format((time.time()-start_time)/60)
 
 if __name__ == "__main__":
     main()
