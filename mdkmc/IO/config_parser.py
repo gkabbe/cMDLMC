@@ -225,5 +225,11 @@ CONFIG_DICT = {
                     "the expected parameters are A, a, x0, xint and T. a, x0 and xint are fit parameters for the "
                     "function describing the activation energy over the oxygen distance, whereas A and T are parameters"
                     "of the Arrhenius equation, which converts the activation energy to a jumprate."
-        }
+        },
+    "higher_msd":
+	{
+	     "parse_fct": parse_bool,
+	     "default": False,
+             "help": "Calculates higher MSDs."
+	}
 }
