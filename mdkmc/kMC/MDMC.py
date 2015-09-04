@@ -625,11 +625,6 @@ def main(*args):
     parser.add_argument("--confighelp", "-c", action="store_true", help="config file help")
     args = parser.parse_args()
 
-    # Thank you to http://stackoverflow.com/questions/881696/unbuffered-stdout-in-python-as-in-python-u-from-within-the-program
-#    unbuffered = os.fdopen(sys.stdout.fileno(), 'w', 0)
-#    sys.stdout = unbuffered
-
-
     if args.confighelp:
         print_confighelp()
         sys.exit(0)
