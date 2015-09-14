@@ -123,7 +123,7 @@ def load_configfile_new(configfilename, verbose=False):
     return config_dict
 
 
-def print_confighelp():
+def print_confighelp(args):
     text_width = 80
     parser_dict = config_parser.CONFIG_DICT
     for k, v in parser_dict.iteritems():
@@ -617,24 +617,23 @@ class MDMC:
         for line in self.averaged_results:
             print >> self.output, "  {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10}".format(*line)
 
+def start_kmc(args):
+    md_mc = MDMC(configfile=args.config_file)
+    md_mc.kmc_run()
 
 
 def main(*args):
-    parser=argparse.ArgumentParser(description="MDMC Test", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("configfile", help="config file")
-    parser.add_argument("--confighelp", "-c", action="store_true", help="config file help")
+    parser = argparse.ArgumentParser(description="MDMC Test", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    subparsers = parser.add_subparsers()
+    parser_config_help = subparsers.add_parser("config_help", help="config file help")
+    parser_config_load = subparsers.add_parser("config_load", help="Load config file and start KMC run")
+    parser_config_load.add_argument("config_file", help="Config file")
+    parser_config_help.set_defaults(func=print_confighelp)
+    parser_config_load.set_defaults(func=start_kmc)
     args = parser.parse_args()
+    args.func(args)
 
-    if args.confighelp:
-        print_confighelp()
-        sys.exit(0)
 
-    md_mc = MDMC(configfile=args.configfile)
-    # md_mc.print_settings()
-    start_time = time.time()
-    md_mc.kmc_run()
-
-    print >> self.output, "#Total time: {:.1f} minutes".format((time.time()-start_time)/60)
 
 if __name__ == "__main__":
     main()
