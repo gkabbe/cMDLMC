@@ -281,7 +281,7 @@ class MDMC:
 
             if self.clip_trajectory is not None:
                 if self.clip_trajectory >= self.trajectory.shape[0]:
-                    print "# Trying to clip trajectory to {} frames, but trajectory only has {} frames!"\
+                    print "# Trying to clip trajectory to {} frames, but trajectory only has {} frames!" \
                         .format(self.clip_trajectory, self.trajectory.shape[0])
                 else:
                     if self.verbose:
@@ -323,7 +323,7 @@ class MDMC:
                         PO2 = npa.distance(O_frame[j], P_frame[P_neighbors[j]], self.pbc)
                         angles[i,j] = np.dot(PO1, PO2)/np.linalg.norm(PO1)/np.linalg.norm(PO2)
 
-#TODO print_settings fertig!
+                        #TODO print_settings fertig!
     def print_settings(self):
         print "# I'm using the following settings:"
         for k, v in self.__dict__.iteritems():
@@ -358,8 +358,8 @@ class MDMC:
         MSD = np.zeros(3)
         proton_pos_snapshot = np.zeros((self.proton_number, 3))
         proton_pos_new = np.zeros((self.proton_number, 3))
-	if not self.higher_msd:
-		msd2, msd3, msd4 = None, None, None	
+        if not self.higher_msd:
+            msd2, msd3, msd4 = None, None, None
 
         return displacement, MSD, msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new
 
@@ -401,10 +401,10 @@ class MDMC:
             remaining_time = "{:02d}:{:02d}".format(remaining_time_hours, remaining_time_min)
         else:
             remaining_time = "-01:-01"
-	if (msd2, msd3, msd4) != (None, None, None):
-		msd_higher = "{:18.8f} {:18.8f} {:18.8f}".format(msd2, msd3, msd4)
-	else:
-		msd_higher = ""
+        if (msd2, msd3, msd4) != (None, None, None):
+            msd_higher = "{:18.8f} {:18.8f} {:18.8f}".format(msd2, msd3, msd4)
+        else:
+            msd_higher = ""
         print >> self.output, " {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {msd_higher:}  {:8d} {:10d} {:10.2f} {:10}".format(
             sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps(), speed, remaining_time, msd_higher=msd_higher)
         self.averaged_results[(sweep % self.reset_freq)/self.print_freq, 2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
@@ -465,7 +465,6 @@ class MDMC:
             for i in xrange(O_trajectory.shape[0]):
                 Opos[:144,:] = O_trajectory[i]
                 kMC_helper.extend_simulationbox_z(5, Opos, self.pbc[2], 144)
-        # 		ipdb.set_trace()
                 if i % 1000 == 0:
                     print "#{}/{} frames".format(i, O_trajectory.shape[0]),
                     print "\r",
@@ -505,11 +504,11 @@ class MDMC:
             self.nonortho = True
             if self.po_angle:
                 atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
-                                                   np.array(self.box_multiplier, dtype=np.int32),
-                                                   self.P_trajectory)
+                                                      np.array(self.box_multiplier, dtype=np.int32),
+                                                      self.P_trajectory)
             else:
                 atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
-                                                   np.array(self.box_multiplier, dtype=np.int32))
+                                                      np.array(self.box_multiplier, dtype=np.int32))
 
         displacement, MSD, msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
         #only update neighborlists after neighbor_freq position updates
@@ -559,8 +558,8 @@ class MDMC:
                     frame = sweep
                 else:
                     frame = np.random.randint(self.O_trajectory.shape[0])
-                # if sweep % neighbor_update == 0:
-                #     helper.determine_neighbors(frame % self.O_trajectory.shape[0])
+                    # if sweep % neighbor_update == 0:
+                    #     helper.determine_neighbors(frame % self.O_trajectory.shape[0])
             helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
 
         if not self.xyz_output:
@@ -573,8 +572,8 @@ class MDMC:
                     frame = sweep % self.O_trajectory.shape[0]
                 else:
                     frame = np.random.randint(self.O_trajectory.shape[0])
-                # if sweep % neighbor_update == 0:
-                #     helper.determine_neighbors(frame)
+                    # if sweep % neighbor_update == 0:
+                    #     helper.determine_neighbors(frame)
 
             if sweep % self.reset_freq == 0:
                 protonlattice_snapshot, proton_pos_snapshot, displacement = \
@@ -588,10 +587,10 @@ class MDMC:
                 else:
                     calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, proton_pos_new, helper.oxygen_frame_extended, displacement, self.h, self.h_inv)
 
-		if self.higher_msd:
-			MSD, msd2, msd3, msd4 = calculate_higher_MSD(displacement)	
-		else:
-                	calculate_MSD(MSD, displacement)
+                if self.higher_msd:
+                    MSD, msd2, msd3, msd4 = calculate_higher_MSD(displacement)
+                else:
+                    calculate_MSD(MSD, displacement)
                 autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
                 if not self.xyz_output:
                     self.print_observables(sweep, autocorrelation, helper, self.md_timestep_fs, start_time, MSD, msd2, msd3, msd4)
@@ -603,8 +602,8 @@ class MDMC:
             else:
                 helper.sweep_from_vector(frame, proton_lattice)
 
-            # jumps = helper.sweep_gsl(proton_lattice, transitionmatrix)
-            #~ jumps = helper.sweep_list_jumpmat(proton_lattice, jumpmatrix)
+                # jumps = helper.sweep_gsl(proton_lattice, transitionmatrix)
+                #~ jumps = helper.sweep_list_jumpmat(proton_lattice, jumpmatrix)
         if self.jumpmatrix_filename is not None:
             np.savetxt(self.jumpmatrix_filename, helper.jumpmatrix)
 
