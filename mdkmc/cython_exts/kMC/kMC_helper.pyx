@@ -579,6 +579,33 @@ cdef class Helper:
         self.jump_probability.push_back(jump_probability_tmp)
         self.saved_frame_counter += 1
 
+    def serialize_transitions(self):
+        """Write jump transitions to numpy vector.
+        Returns Numpy array with 3 fields: int32, int32, float32.
+        First field is the index of start oxygen, second field is the index of destination oxygen.
+        Third field is the jump probability."""
+        cdef:
+            int i, dim0=0, dim1=0
+
+        dt = np.dtype({"names": ["start", "dest", "prob"],
+                       "formats": [np.int32, np.int32, np.float32]
+                      })
+        # Make sure, all 3 vectors have the same 0th dimension
+        if self.start.size() == self.destination.size() == self.jump_probability.size():
+            dim0 = self.start.size()
+            # Find largest vector
+            for i in range(self.start.size()):
+                    dim1 = max(dim1, self.start[i].size())
+            transition_array = np.zeros((dim0, dim1), dtype=dt)
+
+            for i in range(self.start.size()):
+                for j in range(self.start[i].size()):
+                    transition_array[i, j] = self.start[i][j], self.destination[i][j], self.jump_probability[i][j]
+            return transition_array
+
+        else:
+            raise Exception("start destination and probability vectors have not same dimension")
+
     def get_transition_number(self):
         return self.start_tmp.size()
 
