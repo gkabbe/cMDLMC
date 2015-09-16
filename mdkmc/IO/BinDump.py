@@ -14,7 +14,6 @@ script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfra
 from mdkmc.cython_exts.atoms import numpyatom as cython_npa
 from mdkmc.IO.xyz_parser import XYZFile
 from mdkmc.atoms import numpyatom as npa
-from mdkmc.atoms.numpyatom import xyzatom as dtype_xyz
 
 
 def get_acidHs(atoms, pbc):
@@ -139,6 +138,26 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
             trajectory = np.load(filename)[arg]
 
     return trajectory
+
+def npload_memmap(filename, verbose=False):
+    root, ext = os.path.splitext(filename)
+    if ext == ".xyz":
+        if not "nobackup_mm" in root:
+            newfilename = "_".join([root, "nobackup_mm.npy"])
+        else:
+            newfilename = "".join([root, ".npy"])
+    else:
+        newfilename = filename
+
+    try:
+        memmap = np.lib.format.open_memmap(newfilename, mode="r")
+    except IOError:
+        if verbose:
+            print "# Loading file {}".format(filename)
+        xyz_file = XYZFile(filename, verbose=verbose)
+        memmap = xyz_file.get_trajectory_memmap(newfilename)
+        npa.remove_com_movement_traj(memmap, verbose=verbose)
+    return memmap
 
 
 def mark_acidic_protons(traj, pbc, nonortho=False, verbose=False):

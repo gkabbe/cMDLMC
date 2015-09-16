@@ -7,8 +7,7 @@ import time
 
 from mdkmc.atoms import atomclass as ac
 from mdkmc.atoms import numpyatom as npa
-from mdkmc.misc.timer import TimeIt
-
+from mdkmc.atoms.numpyatom import xyzatom as dtype_xyz
 
 class XYZFile(object):
     def __init__(self, filename, framenumber=None, verbose=False):
@@ -38,7 +37,7 @@ class XYZFile(object):
                 atomdict[atomname].add(index)
             else:
                 if verbose:
-                    print "#adding", atomname, "to atomdict"
+                    print "# Adding", atomname, "to atomdict"
                 atomdict[atomname] = set([index])
         self.datei.seek(0)
 
@@ -169,7 +168,7 @@ class XYZFile(object):
 
         return atoms
 
-    def get_trajectory_numpy(self, atomnames=None, acidic_protons=False, verbose=False):
+    def get_trajectory_numpy(self, atomnames=None, verbose=False):
         # pdb.set_trace()
         start_time = time.time()
         traj = []
@@ -188,6 +187,13 @@ class XYZFile(object):
             print "# Total time: {} sec".format(time.time()-start_time)
 
         return np.array(traj, dtype=npa.xyzatom)
+
+    def get_trajectory_memmap(self, memmap_fname, atomnames=None, verbose=False):
+        frame_number = self.get_framenumber()
+        memmap = np.lib.format.open_memmap(memmap_fname, dtype=dtype_xyz, shape=(frame_number, self.atomnr), mode="w+")
+
+        for i in xrange(frame_number):
+            memmap[i, :] = self.get_atoms_numpy(atomnames)
 
     def print_frame(self):
         for i in xrange(self.atomnr + 2):
