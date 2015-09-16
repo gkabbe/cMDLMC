@@ -276,10 +276,11 @@ class MDMC:
             # Save settings as object variable
             self.__dict__.update(file_kwargs)
 
-            # self.trajectory = BinDump.npload_atoms(self.filename, create_if_not_existing=True,
-            #                                        remove_com=True, verbose=self.verbose)
-            self.trajectory = BinDump.npload_memmap(self.filename, verbose=self.verbose)
-            ipdb.set_trace()
+            if self.memmap:
+                self.trajectory = BinDump.npload_memmap(self.filename, verbose=self.verbose)
+            else:
+                self.trajectory = BinDump.npload_atoms(self.filename, create_if_not_existing=True,
+                                                    remove_com=True, verbose=self.verbose)
 
             if self.clip_trajectory is not None:
                 if self.clip_trajectory >= self.trajectory.shape[0]:

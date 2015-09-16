@@ -101,7 +101,7 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
                     binfiles.append(filename[:-4] + middle + ending)
         return binfiles
 
-    if os.path.splitext(filename) == ".xyz":
+    if os.path.splitext(filename)[1] == ".xyz":
         binfiles = find_binfiles(filename)
         if verbose:
             print "# Found following binfiles: {}".format(binfiles)

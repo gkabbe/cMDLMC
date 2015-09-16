@@ -230,6 +230,12 @@ CONFIG_DICT = {
 	{
 	     "parse_fct": parse_bool,
 	     "default": False,
-             "help": "Calculates higher MSDs."
-	}
+         "help": "Calculates higher MSDs."
+	},
+    "memmap":
+    {
+        "parse_fct": parse_bool,
+        "default": False,
+        "help": "Use numpy memmap, instead of loading the whole trajectory into RAM"
+    }
 }
