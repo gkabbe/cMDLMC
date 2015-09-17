@@ -2,6 +2,7 @@
 
 import numpy as np
 import os
+import sys
 import ipdb
 import time
 
@@ -195,9 +196,11 @@ class XYZFile(object):
         for i in xrange(frame_number):
             memmap[i, :] = self.get_atoms_numpy(atomnames)
             if verbose and i % 1000 == 0:
-                print "# {:06d} / {:06d}\r",
+                print "# {:06d} / {:06d}\r".format(i, frame_number),
+                sys.stdout.flush()
         if verbose:
             print ""
+        return memmap
 
     def print_frame(self):
         for i in xrange(self.atomnr + 2):
