@@ -59,6 +59,19 @@ def load_trajectory(traj, atomname, verbose=False):
     return np.array(atom_traj["pos"], order="C")
 
 
+def load_atoms_from_numpy_trajectory(traj_fname, atomnames, clip=None, verbose=False):
+    trajectory = BinDump.npload_atoms(traj_fname, create_if_not_existing=True, remove_com=True, verbose=verbose)
+    if clip:
+        if verbose:
+            print "# Clipping trajectory to the first {} frames".format(clip)
+        trajectory = trajectory[:clip]
+    single_atom_trajs = []
+    for atom in atomnames:
+        atom_nr = trajectory[0][trajectory[0]["name"] == atom].size
+        atom_traj = (trajectory[trajectory["name"] == atom]).reshape((trajectory.shape[0], atom_nr))
+        atom_traj = np.array(atom_traj["pos"], order="C")
+        single_atom_trajs.append(atom_traj)
+    return single_atom_trajs
 def count_atoms_in_volume(atoms, ((xmin, xmax), (ymin, ymax), (zmin, zmax)), pbc):
     # if volume.shape != (3,2):
     # 	raise ValueError("Shape of Volume needs to be (3,2). [[xmin, xmax], [ymin, ymax], [zmin, zmax]]")
