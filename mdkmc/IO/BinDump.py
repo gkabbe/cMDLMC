@@ -142,22 +142,24 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
 def npload_memmap(filename, verbose=False):
     root, ext = os.path.splitext(filename)
     if ext == ".xyz":
-        if not "nobackup_mm" in root:
-            newfilename = "_".join([root, "nobackup_mm.npy"])
+        if not "nobackup" in root:
+            memmap_filename = "_".join([root, "nobackup.npy"])
         else:
-            newfilename = "".join([root, ".npy"])
+            memmap_filename = "".join([root, ".npy"])
     else:
-        newfilename = filename
+        memmap_filename = filename
 
     try:
-        memmap = np.lib.format.open_memmap(newfilename, mode="r")
+        memmap = np.lib.format.open_memmap(memmap_filename, mode="r")
     except IOError:
         if verbose:
             print "# Loading file {}".format(filename)
         xyz_file = XYZFile(filename, verbose=verbose)
-        memmap = xyz_file.get_trajectory_memmap(newfilename)
+        if verbose:
+            print "# Saving new mem map under {}".format(memmap_filename)
+        memmap = xyz_file.get_trajectory_memmap(memmap_filename, verbose=verbose)
         npa.remove_com_movement_traj(memmap, verbose=verbose)
-    return memmap
+    return memmap, memmap_filename
 
 
 def mark_acidic_protons(traj, pbc, nonortho=False, verbose=False):
