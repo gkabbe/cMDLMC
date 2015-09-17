@@ -522,7 +522,6 @@ class MDMC:
         return tm_avg
 
     def kmc_run(self):
-        start_time = time.time()
         if self.seed is not None:
             np.random.seed(self.seed)
         else:
@@ -613,6 +612,7 @@ class MDMC:
             self.print_observable_names()
 
         #Run
+        start_time = time.time()
         for sweep in xrange(0, self.sweeps):
             if sweep % (self.skip_frames+1) == 0:
                 if not self.shuffle:
