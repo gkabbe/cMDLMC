@@ -72,7 +72,7 @@ class XYZFile(object):
                 return frame
             if frame % 1000 == 0:
                 if verbose:
-                    print "#Frame", frame,
+                    print "# Frame", frame,
                     print "\r",
             self.datei.readline()
             Oindex = 0
@@ -194,6 +194,10 @@ class XYZFile(object):
 
         for i in xrange(frame_number):
             memmap[i, :] = self.get_atoms_numpy(atomnames)
+            if verbose and i % 1000 == 0:
+                print "# {:06d} / {:06d}\r",
+        if verbose:
+            print ""
 
     def print_frame(self):
         for i in xrange(self.atomnr + 2):
