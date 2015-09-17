@@ -322,23 +322,22 @@ class MDMC:
             self.__dict__.update(file_kwargs)
 
             if self.memmap:
-                self.trajectory = BinDump.npload_memmap(self.filename, verbose=self.verbose)
-            else:
-                self.trajectory = BinDump.npload_atoms(self.filename, create_if_not_existing=True,
-                                                    remove_com=True, verbose=self.verbose)
-
-            if self.clip_trajectory is not None:
-                if self.clip_trajectory >= self.trajectory.shape[0]:
-                    print "# Trying to clip trajectory to {} frames, but trajectory only has {} frames!" \
-                        .format(self.clip_trajectory, self.trajectory.shape[0])
+                if self.po_angle:
+                    self.O_trajectory, self.P_trajectory = \
+                        load_atoms_from_numpy_trajectory_as_memmap(self.filename, ["O", self.o_neighbor],
+                                                                   clip=self.clip_trajectory, verbose=self.verbose)
                 else:
-                    if self.verbose:
-                        print "# Clipping trajectory from frame 0 to frame {}".format(self.clip_trajectory)
-                    self.trajectory = self.trajectory[:self.clip_trajectory]
-
-            self.O_trajectory = load_trajectory(self.trajectory, "O", verbose=self.verbose)
-            if self.po_angle:
-                self.P_trajectory = load_trajectory(self.trajectory, self.o_neighbor, verbose=self.verbose)
+                    self.O_trajectory = \
+                        load_atoms_from_numpy_trajectory_as_memmap(self.filename, ["O"],
+                                                                   clip=self.clip_trajectory, verbose=self.verbose)
+            else:
+                if self.po_angle:
+                    self.O_trajectory, self.P_trajectory = \
+                        load_atoms_from_numpy_trajectory(self.filename, ["O", self.o_neighbor],
+                                                         clip=self.clip_trajectory, verbose=self.verbose)
+                else:
+                    self.O_trajectory = load_atoms_from_numpy_trajectory(self.filename, ["O"],
+                                                                         clip=self.clip_trajectory, verbose=self.verbose)
         else:
             pass
 
