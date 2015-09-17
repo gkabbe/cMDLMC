@@ -72,6 +72,38 @@ def load_atoms_from_numpy_trajectory(traj_fname, atomnames, clip=None, verbose=F
         atom_traj = np.array(atom_traj["pos"], order="C")
         single_atom_trajs.append(atom_traj)
     return single_atom_trajs
+
+def load_atoms_from_numpy_trajectory_as_memmap(traj_fname, atomnames, clip=None, verbose=False):
+    trajectory, traj_fname = BinDump.npload_memmap(traj_fname, verbose=verbose)
+    if clip:
+        if verbose:
+            print "# Clipping trajectory to the first {} frames".format(clip)
+            trajectory_length = clip
+        else:
+            trajectory_length = trajectory.shape[0]
+    single_atom_trajs = []
+    for atom in atomnames:
+        root, ext = os.path.splitext(traj_fname)
+        new_fname = "{}_{}.npy".format(root, atom)
+        try:
+            if verbose:
+                print "# Trying to load memmap from", new_fname
+            memmap = np.lib.format.open_memmap(new_fname)
+        except IOError:
+            if verbose:
+                print "# Could not find trajectory {}. Creating new.".format(new_fname)
+            atom_nr = trajectory[0][trajectory[0]["name"] == atom].size
+            atom_traj = (trajectory[trajectory["name"] == atom]).reshape((trajectory.shape[0], atom_nr))
+            atom_traj = np.array(atom_traj["pos"], order="C")
+
+            memmap = np.lib.format.open_memmap(new_fname, dtype=float, shape=atom_traj.shape, mode="w+")
+            memmap[:] = atom_traj[:]
+        if clip:
+            memmap = memmap[:clip]
+        single_atom_trajs.append(memmap)
+    return single_atom_trajs
+
+
 def count_atoms_in_volume(atoms, ((xmin, xmax), (ymin, ymax), (zmin, zmax)), pbc):
     # if volume.shape != (3,2):
     # 	raise ValueError("Shape of Volume needs to be (3,2). [[xmin, xmax], [ymin, ymax], [zmin, zmax]]")
