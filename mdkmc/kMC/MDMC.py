@@ -282,23 +282,23 @@ def calculate_MSD(MSD, displacement):
 
 
 def calculate_higher_MSD(displacement):
-	MSD = np.zeros((3))
-	msd2 = 0
-	msd3 =0
-	msd4 =0
-	#ipdb.set_trace()
-	for d in displacement:
-		MSD += d*d
-		#ipdb.set_trace()
-		msd2 += (MSD[0]+MSD[1]+MSD[2])**0.5
-		msd3 += (MSD[0]+MSD[1]+MSD[2])**(1.5)
-		msd4 += (MSD[0]+MSD[1]+MSD[2])**(2)
-	MSD /= displacement.shape[0]
-	msd2 /= displacement.shape[0]
-	msd3 /= displacement.shape[0]
-	msd4 /= displacement.shape[0]
-	#ipdb.set_trace()
-	return MSD, msd2, msd3, msd4
+    MSD = np.zeros((3))
+    msd2 = 0
+    msd3 =0
+    msd4 =0
+    #ipdb.set_trace()
+    for d in displacement:
+        MSD += d*d
+        #ipdb.set_trace()
+        msd2 += (MSD[0]+MSD[1]+MSD[2])**0.5
+        msd3 += (MSD[0]+MSD[1]+MSD[2])**(1.5)
+        msd4 += (MSD[0]+MSD[1]+MSD[2])**(2)
+    MSD /= displacement.shape[0]
+    msd2 /= displacement.shape[0]
+    msd3 /= displacement.shape[0]
+    msd4 /= displacement.shape[0]
+    #ipdb.set_trace()
+    return MSD, msd2, msd3, msd4
 
 
 
