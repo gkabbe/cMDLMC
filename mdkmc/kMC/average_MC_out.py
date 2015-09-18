@@ -72,7 +72,7 @@ def get_observable_names(outfilename):
         
     for c in reversed(comments):
         if "Sweeps" in c:
-            return c
+            return c.split()
     
 #~ def bootstrap_msd(filename, fit_startpoint, samples=None):
     #~ """Sample multiple times from the given data intervals, and each time determine the mean square displacement. 
@@ -108,15 +108,14 @@ def average_kmc(args):
     comments = get_observable_names(kmc_out)
 
     if args.variance:
-        print("#{:12} {:12}"+6*" {:16}"+4*" {:8}".format(comments[0], comments[1], comments[2], comments[2]+"_var",  comments[3], comments[3]+"_var", comments[4], comments[4]+"_var", comments[5], comments[5]+"_var", comments[6], comments[6]+"_var"))
+        print "# {:10} {:10}"+6*" {:12}"+4*" {:6}".format(comments[0], comments[1], comments[2], comments[2]+"_var",  comments[3], comments[3]+"_var", comments[4], comments[4]+"_var", comments[5], comments[5]+"_var", comments[6], comments[6]+"_var")
         format_string = "{t[0]:10.2f} {t[1]:10.2f} {msd[0]:12.4f} {msdvar[0]:12.4f} {msd[1]:12.4f} {msdvar[1]:12.4f} {msd[2]:12.4f} {msdvar[2]:12.4f} {autocorr:6.2f} {autocorrvar:6.2f} {jumps:6.2f} {jumpsvar:6.2f}"
         time, average, variance = result
         
         for i in range(average.shape[0]):
-            print(format_string.format(t=time[i], msd=average[i,0:3], msdvar=variance[i,0:3], autocorr=average[i,3], autocorrvar=variance[i,3], jumps=average[i,4], jumpsvar=variance[i,4]))
+            print format_string.format(t=time[i], msd=average[i,0:3], msdvar=variance[i,0:3], autocorr=average[i,3], autocorrvar=variance[i,3], jumps=average[i,4], jumpsvar=variance[i,4])
     else:
-        print(comments)
-        print("#", " ".join(["{:<12}", "{:<12}", 3*"{:<16}", 2*"{:<8}"]).format(*comments))
+        print "#", " ".join(["{:>10}", "{:>10}", 3*"{:>12}", 2*"{:>6}"]).format(*comments[1:])
         format_string = "{t[0]:10.2f} {t[1]:10.2f} {msd[0]:12.4f} {msd[1]:12.4f} {msd[2]:12.4f} {autocorr:6.2f} {jumps:6.2f}"
         time, average = result
         for i in range(average.shape[0]):
