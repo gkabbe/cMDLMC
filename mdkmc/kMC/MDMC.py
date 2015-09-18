@@ -664,7 +664,7 @@ class MDMC:
         for line in self.averaged_results:
             print >> self.output, "  {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10}".format(*line)
 
-        print >> self.output, "#Total time: {:.1f} minutes".format((time.time()-start_time)/60)
+        print >> self.output, "# Total time: {:.1f} minutes".format((time.time()-start_time)/60)
 
 
 def start_kmc(args):
