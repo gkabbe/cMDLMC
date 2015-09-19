@@ -74,17 +74,18 @@ def get_observable_names(outfilename):
         if "Sweeps" in c:
             return c.split()
     
-#~ def bootstrap_msd(filename, fit_startpoint, samples=None):
-    #~ """Sample multiple times from the given data intervals, and each time determine the mean square displacement. 
-    #~ Return average MSD and standard deviation."""
-   #~ 
-    #~ data = load_interval_samples(filename, lines, intervals, columns, time_columns)
-    #~ if samples is None:
-        #~ samples = data.shape[0]
-    #~ rand_ints = np.random.randint(samples, size=(samples, data.shape[1]))
-    #~ bootstrap_data = data[rand_ints, np.arange(data.shape[1]), 2:5].sum(axis=2)
-    #~ 
-    #~ np.polyfit()
+def bootstrap_msd(args):
+    filename = args.file
+    data = load_intervals_intelligently(filename)
+
+    msd = data[:, :, 2:5].sum(axis=2)
+    msd_mean = msd.mean(axis=0)
+    msd_mean_diff = (np.roll(msd_mean, -1) - msd_mean)[:-1]
+    msd_shift = np.roll(msd, -1, axis=1)
+    differences = (msd_shift - msd)[:, :-1]
+    import matplotlib.pylab as plt
+    ipdb.set_trace()
+
     
 def get_slope(args):
     """Fit model of the form f(x) = m * x + y to each interval.
@@ -134,6 +135,9 @@ def main(*args):
     parser_all.add_argument("file", help="KMC output")
     parser_all.add_argument("--variance", action="store_true", help="Also output variance")
     parser_all.set_defaults(func=average_kmc)
+    parser_bootstrap = subparsers.add_parser("bootstrap", help="Create bootstrap samples of MSD")
+    parser_bootstrap.set_defaults(func=bootstrap_msd)
+    parser_bootstrap.add_argument("file", help="KMC output")
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     args.func(args)
