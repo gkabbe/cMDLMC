@@ -24,16 +24,69 @@ def load_interval_samples(filename, lines, intervals, columns, time_columns):
     data = data.flatten().reshape(intervals, lines, len(columns))
     
     return data
+
     
 def load_intervals_intelligently(filename):
-    data = np.loadtxt(filename, usecols=(0, 1, 2, 3, 4, 5, 6))
-    intervals = np.where(data[:, 2] == 0)[0]
-    interval_length = intervals[1]
-    with open(filename, "r") as f:
-        if "Averaged Results" in " ".join(f.readlines()):
+    def get_settings_from_settings_output(lines):
+        settings = dict()
+        for line in lines:
+            if "print_freq" in line:
+                settings["print_freq"] = int(line.split()[-1])
+            elif "reset_freq" in line:
+                settings["reset_freq"] = int(line.split()[-1])
+            elif "sweeps" in line:
+                settings["sweeps"] = int(line.split()[-1])
+            elif len(settings) == 3:
+                break
+        try:
+            interval_length = settings["reset_freq"] / settings["print_freq"]
+            interval_number = settings["sweeps"] / settings["reset_freq"]
+            return interval_length, interval_number
+        except KeyError:
+            return None
+
+    def get_settings_from_average_at_the_end(lines):
+        interval_length = 0
+        total_lines = 0
+        count_interval = False
+        count_total = True
+        for line in lines:
+            if "Averaged Results" in line:
+                count_interval = True
+                count_total = False
+            if "Total time" in line:
+                break
+            if count_interval:
+                interval_length += 1
+            if count_total:
+                total_lines += 1
+        if interval_length != 0:
+            # The two comments are counted as well, therefore we substract them here
+            interval_length -= 2
+            return interval_length, total_lines/interval_length
+        else:
+            return None
+
+    def get_settings_from_msd_zeros(data, lines):
+        intervals = np.where(data[:, 2] == 0)[0]
+        interval_length = intervals[1]
+        if "Averaged Results" in " ".join(lines):
             interval_number = intervals.size - 1
         else:
             interval_number = intervals.size
+        return interval_length, interval_number
+
+    data = np.loadtxt(filename, usecols=(0, 1, 2, 3, 4, 5, 6))
+    with open(filename, "r") as f:
+        lines = f.readlines()
+    try:
+        interval_length, interval_number = get_settings_from_settings_output(lines)
+    except TypeError:
+        try:
+            interval_length, interval_number = get_settings_from_average_at_the_end(lines)
+        except TypeError:
+            interval_length, interval_number = get_settings_from_msd_zeros(data, lines)
+
             
     data = data[:interval_number*interval_length]
     data = data.reshape((interval_number, interval_length, 7))
@@ -44,7 +97,6 @@ def avg(filename, variance, verbose=False):
 
     data = load_intervals_intelligently(filename)
     avg = data[:, :, 2:].mean(axis=0)
-    
     time = data[0, :, 0:2]
 
     if variance == True:
@@ -102,6 +154,7 @@ def get_slope(args):
     print("Diffusion coefficient in pm²/ps:")
     print(m_mean*1e7/6, m_stddev*1e7/6)
 
+
 def average_kmc(args):
     kmc_out = args.file
     result = avg(kmc_out, args.variance, args.verbose)
@@ -121,6 +174,7 @@ def average_kmc(args):
         time, average = result
         for i in range(average.shape[0]):
             print(format_string.format(t=time[i], msd=average[i,:3], autocorr=average[i,3], jumps=average[i,4]))
+
 
 def main(*args):
 
