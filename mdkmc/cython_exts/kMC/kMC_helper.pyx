@@ -278,6 +278,7 @@ cdef class AtomBox:
         int [:] box_multiplier
         double [:, ::1] pbc_matrix
         double [:, :, :, :, ::1] frame_reshaped
+        int size  # Number of atoms in the extended box
 
     def __cinit__(self, double [:, :, ::1] oxygen_trajectory,
                   np.ndarray [np.double_t, ndim=1] periodic_boundaries, int [:] box_multiplier,
@@ -287,8 +288,12 @@ cdef class AtomBox:
             self.phosphorus_trajectory = phosphorus_trajectory
         self.periodic_boundaries = periodic_boundaries
         self.box_multiplier = box_multiplier
+        self.size = box_multiplier[0] * box_multiplier[1] * box_multiplier[2] * oxygen_trajectory.shape[1]
 
-
+    #cpdef double distance(int frame, int i, int j):
+    #   First, construct large box, then determine distance
+        # 
+        #return
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return 0
 

@@ -26,40 +26,18 @@ Afterwards, type
 
 This sets all Python variables to the path in your virtual environment.
 
-Next, install some packages, the MD/KMC algorithm needs:
+Next, install some packages (just copy and paste the following line):
 
-    pip install cython numpy CythonGSL
+    pip install cython; pip install numpy; pip install CythonGSL; pip install gitpython
 
-Now you can install the package via
+Now you can install the mdkmc package via
 
     python setup.py install
 
 Usage
 -----
 Use `mdmc` in order to start the main program. A config file must be specified.
-It looks like this:
-
-    # Prototype of a kMC config file
-    # Comments via '#' at the beginning of the line
-    filename 400K.xyz
-    mode ASEP
-    sweeps 75000 
-    equilibration_sweeps 2500000
-    md_timestep_fs 0.4   # The timestep of the trajectory on which the KMC will run
-    skip_frames 0
-    print_freq 75
-    reset_freq 25000
-    dump_trajectory False
-    box_multiplier 1 1 1
-    neighbor_freq 10
-    jumprate_params_fs dict(a=0.06, b=2.363, c=0.035)
-    jumprate_type MD_rates
-    proton_number 96
-    pbc 29.122 25.354 12.363
-    cutoff_radius 4.
-    po_angle True
-    verbose True
-
+All supported keywords are found by typing `mdmc config_help`
 
 Another script included in this package is `jumpstat`. It analyses the jump probability
 between two oxygen atoms depending on their mutual distance.
