@@ -1,0 +1,11 @@
+Cython==0.22
+CythonGSL==0.2.1
+GitPython==1.0.1
+PyQuante==1.6.5
+argparse==1.2.1
+gitdb==0.6.4
+ipdb==0.8.1
+ipython==3.1.0
+numpy==1.9.2
+smmap==0.9.0
+wsgiref==0.1.2

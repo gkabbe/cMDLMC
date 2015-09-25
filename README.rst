@@ -39,6 +39,12 @@ Next, install some packages (just copy and paste the following line):
 
     pip install cython; pip install numpy; pip install CythonGSL; pip install gitpython
 
+Alternatively, just run
+
+::
+
+    pip install -r requirements.txt
+
 Now you can install the mdkmc package via
 
 ::
