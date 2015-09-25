@@ -2,7 +2,7 @@
 # -*- coding: utf-8
 
 import numpy as np
-import argparse, argcomplete
+import argparse
 import ipdb, sys
 
 
@@ -138,7 +138,6 @@ def main(*args):
     parser_bootstrap = subparsers.add_parser("bootstrap", help="Create bootstrap samples of MSD")
     parser_bootstrap.set_defaults(func=bootstrap_msd)
     parser_bootstrap.add_argument("file", help="KMC output")
-    argcomplete.autocomplete(parser)
     args = parser.parse_args()
     args.func(args)
     
