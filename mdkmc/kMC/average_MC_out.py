@@ -4,6 +4,8 @@
 import numpy as np
 import argparse
 import ipdb, sys
+from scipy.optimize import curve_fit
+import matplotlib.pylab as plt
 
 
 def load_interval_samples(filename, lines, intervals, columns, time_columns):
@@ -93,7 +95,7 @@ def load_intervals_intelligently(filename):
     return data
 
 
-def avg(filename, variance, verbose=False):
+def avg(filename, variance, plot=False, verbose=False):
 
     data = load_intervals_intelligently(filename)
     avg = data[:, :, 2:].mean(axis=0)
@@ -142,22 +144,37 @@ def bootstrap_msd(args):
 def get_slope(args):
     """Fit model of the form f(x) = m * x + y to each interval.
     Determine then mean and standard deviation of the resulting slopes."""
+    def fit_func(x, m, y):
+        return m*x + y
 
     filename, fit_startpoint = args.file, args.msd_fitstart
     data = load_intervals_intelligently(filename)
-    m, y = np.polyfit(data[0, fit_startpoint:, 1], data[:, fit_startpoint:, 2:5].sum(axis=2).T, 1)
-    m_mean, m_stddev = m.mean(), np.sqrt(m.var())
+
+    time = data[0, fit_startpoint:, 1]
+    y = data[:, fit_startpoint:, 2:5].sum(axis=2).mean(axis=0)
+    y_err = np.sqrt(data[:, fit_startpoint:, 2:5].sum(axis=2).var(axis=0))
+    params, cov_mat = curve_fit(fit_func, time, y, sigma=y_err, absolute_sigma=True)
+    m, y_0 = params
+    m_err, y_0_err = np.sqrt(cov_mat[0, 0]), np.sqrt(cov_mat[1, 1])
+
     print("Slope in angström²/fs:")
-    print(m_mean, m_stddev)
+    print(m, m_err)
     print("Slope in pm²/ps:")
-    print(m_mean*1e7, m_stddev*1e7)
+    print(m*1e7, m_err*1e7)
     print("Diffusion coefficient in pm²/ps:")
-    print(m_mean*1e7/6, m_stddev*1e7/6)
+    print(m*1e7/6, m_err*1e7/6)
+
+    if args.plot:
+        plt.errorbar(time, y, y_err)
+        plt.plot(time, time*m+y_0)
+        plt.show()
+
+
 
 
 def average_kmc(args):
     kmc_out = args.file
-    result = avg(kmc_out, args.variance, args.verbose)
+    result = avg(kmc_out, variance=args.variance, plot=args.plot, verbose=args.verbose)
     
     comments = get_observable_names(kmc_out)
 
@@ -180,10 +197,11 @@ def main(*args):
 
     parser=argparse.ArgumentParser(description="Average KMC output. Assuming time in first column")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
+    parser.add_argument("--plot", "-p", action="store_true", help="Show plot")
     subparsers = parser.add_subparsers()
     parser_slope = subparsers.add_parser("slope", help="Only determine slope of MSD")
     parser_slope.add_argument("file", help="KMC output")
-    parser_slope.add_argument("--msd-fitstart", "-s", type=int, help="From which point in the MSD interval to start fitting")
+    parser_slope.add_argument("--msd-fitstart", "-s", type=int, default=0, help="From which point in the MSD interval to start fitting")
     parser_slope.set_defaults(func=get_slope)
     parser_all = subparsers.add_parser("average", help="Average all columns from KMC output")
     parser_all.add_argument("file", help="KMC output")
