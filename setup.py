@@ -92,7 +92,9 @@ setup(name='mdkmc',
                               'md_jumpmatrix=mdkmc.analysis.jumpmat_anglecrit:main',
                               'print_version=mdkmc.print_version:print_version',
                               'avg_mdmc=mdkmc.kMC.average_MC_out:main',
-                              'msd=mdkmc.analysis.msd:main'],
+                              'msd=mdkmc.analysis.msd:main',
+                              'ohbond-corr=mdkmc.analysis.ohbond_autocorr:main'
+                             ],
       },
       # scripts=["bin/MDMC.py"],
       include_package_data=True,
@@ -108,3 +110,4 @@ with open("mdkmc/version_hash.py", "w") as f:
     print >> f, "commit_hash = \"{}\"".format(commit_hash)
     print >> f, "commit_message = \"{}\"".format(commit_message)
     print >> f, "commit_date = \"{}\"".format(commit_date)
+    
