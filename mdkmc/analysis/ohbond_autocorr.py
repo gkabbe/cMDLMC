@@ -6,7 +6,7 @@ import re
 import os
 from math import ceil
 
-from IO import BinDump
+from mdkmc.IO import BinDump
 
 def main(*args):
     

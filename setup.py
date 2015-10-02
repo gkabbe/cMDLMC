@@ -110,4 +110,4 @@ with open("mdkmc/version_hash.py", "w") as f:
     print >> f, "commit_hash = \"{}\"".format(commit_hash)
     print >> f, "commit_message = \"{}\"".format(commit_message)
     print >> f, "commit_date = \"{}\"".format(commit_date)
-    
+
