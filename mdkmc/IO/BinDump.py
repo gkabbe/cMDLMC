@@ -4,7 +4,7 @@ import sys
 import os
 import numpy as np
 import pickle
-#import ipdb
+import ipdb
 import time
 import re
 import inspect
@@ -92,7 +92,8 @@ def npsave_atoms(np_filename, trajectory, overwrite=False, compressed=False, nob
         np.save(np_filename, trajectory)
 
 
-def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, create_if_not_existing=False, verbose=False):
+def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, create_if_not_existing=False,
+                 return_tuple=False, verbose=False):
     def find_binfiles(filename):
         binfiles = []
         for ending in [".npy", ".npz"]:
@@ -137,7 +138,16 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
                 print "# Compressed binary file archive. Loading {}.".format(arg)
             trajectory = np.load(filename)[arg]
 
-    return trajectory
+    if return_tuple and atomnames_list is not None:
+        atomlist = []
+        for atomname in atomnames_list:
+            atomnr = (trajectory[0]["name"] == atomname).sum()
+            traj = trajectory[trajectory["name"] == atomname].reshape((trajectory.shape[0], atomnr))
+            atomlist.append(traj)
+        return atomlist
+    else:
+        return trajectory
+
 
 def npload_memmap(filename, verbose=False):
     root, ext = os.path.splitext(filename)

@@ -5,6 +5,7 @@ import argparse
 import re
 import os
 from math import ceil
+import ipdb
 
 from mdkmc.IO import BinDump
 
@@ -14,17 +15,21 @@ def main(*args):
     parser.add_argument("filename", help="Trajectory from which to load the oxygen topologies")
     parser.add_argument("intervalnumber", type=int, help="Number of intervals over which to average")
     parser.add_argument("intervallength", type=int, help="Interval length")
+    parser.add_argument("--pbc", nargs=3, type=float, help="Trajectory from which to load the oxygen topologies")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     args = parser.parse_args()    
     
     intervalnumber = args.intervalnumber
     intervallength = args.intervallength
-    
+    pbc = np.array(args.pbc)
     covevo_filename = re.sub("\..{3}$", "", args.filename)+"_covevo.npy"
     if not os.path.exists(covevo_filename):
         if args.verbose == True:
             print "#Covevo file not existing. Creating..."
-        BinDump.npsave_covevo(covevo_filename, Os, Hs, pbc, verbose=args.verbose)
+        oxygens, hydrogens = BinDump.npload_atoms(args.filename, atomnames_list=["O", "H"],
+                                                  return_tuple=True, verbose=args.verbose)
+        oxygens, hydrogens = np.array(oxygens["pos"], order="C"), np.array(hydrogens["pos"], order="C")
+        BinDump.npsave_covevo(covevo_filename, oxygens, hydrogens, pbc, verbose=args.verbose)
     if args.verbose == True:
         print "#Loading Covevo File..."
     covevo = np.load(covevo_filename)
