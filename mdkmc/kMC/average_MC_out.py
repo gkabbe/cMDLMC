@@ -150,10 +150,10 @@ def get_slope(args):
     filename, fit_startpoint = args.file, args.msd_fitstart
     data = load_intervals_intelligently(filename)
 
-    time = data[0, fit_startpoint:, 1]
-    y = data[:, fit_startpoint:, 2:5].sum(axis=2).mean(axis=0)
-    y_err = np.sqrt(data[:, fit_startpoint:, 2:5].sum(axis=2).var(axis=0))
-    params, cov_mat = curve_fit(fit_func, time, y, sigma=y_err, absolute_sigma=True)
+    time = data[0, :, 1]
+    y = data[:, :, 2:5].sum(axis=2).mean(axis=0)
+    y_err = np.sqrt(data[:, :, 2:5].sum(axis=2).var(axis=0))
+    params, cov_mat = curve_fit(fit_func, time[fit_startpoint:], y[fit_startpoint:], sigma=y_err[fit_startpoint:], absolute_sigma=True)
     m, y_0 = params
     m_err, y_0_err = np.sqrt(cov_mat[0, 0]), np.sqrt(cov_mat[1, 1])
 
