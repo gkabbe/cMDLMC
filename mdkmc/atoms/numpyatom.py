@@ -118,8 +118,8 @@ def sqdist(a1_pos, a2_pos, pbc=None):
     return dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2]
 
 
-# Calculate squared distance using numpy vector operations
 def sqdist_np(a1_pos, a2_pos, pbc, axis_wise=False):
+    """Calculate squared distance using numpy vector operations"""
     dist = a1_pos - a2_pos
     while (dist > pbc / 2).any():
         indices = np.where(dist > pbc / 2)
@@ -127,6 +127,24 @@ def sqdist_np(a1_pos, a2_pos, pbc, axis_wise=False):
     while (dist < -pbc / 2).any():
         indices = np.where(dist < -pbc / 2)
         dist[indices] += pbc[indices[-1]]
+    if axis_wise:
+        return dist * dist
+    else:
+        return (dist * dist).sum(axis=1)
+
+
+def sqdist_np_multibox(a1_pos, a2_pos, pbc, axis_wise=False):
+    dist = a1_pos - a2_pos
+    move_mat = np.zeros((dist.shape[0], dist.shape[1], dist.shape[2]))
+    while (dist > pbc / 2).any():
+        indices = np.where(dist > pbc / 2)
+        dist[indices] -= pbc[indices[-1]]
+        move_mat[indices] += 1
+    while (dist < -pbc / 2).any():
+        indices = np.where(dist < -pbc / 2)
+        dist[indices] += pbc[indices[-1]]
+        move_mat[indices] -= 1
+    dist = move_mat * pbc + dist
     if axis_wise:
         return dist * dist
     else:
