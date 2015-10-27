@@ -1,13 +1,14 @@
 #!/usr/bin/python -u
+# -*- coding: utf-8
 
 import numpy as np
 import argparse
 from math import ceil
 import matplotlib.pylab as plt
+from scipy.optimize import curve_fit
 
 from mdkmc.atoms import numpyatom as npa
 from mdkmc.IO import BinDump
-
 
 def calculate_msd(atom_traj, pbc, intervalnumber, intervallength):
     """Input: trajectory in numpy format (only proton positions), periodic boundaries, number of intervals, interval length
@@ -68,6 +69,7 @@ def main(*args):
     parser.add_argument("--trajectory_cut", type=int, help="Restrict trajectory to specified number of frames")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbosity")
     parser.add_argument("--plot", action="store_true", help="Plot results")
+    parser.add_argument("--fit_from", type=int, help="Fit MSD from specified data point")
     parser_fixed = subparsers.add_parser("single", help="Intervals with fixed size")
     parser_fixed.add_argument("intervalnumber", type=int, help="Number of intervals over which to average")
     parser_fixed.add_argument("intervallength", type=int, help="Interval length")
@@ -87,7 +89,6 @@ def main(*args):
     proton_traj = npa.select_atoms(trajectory, "AH")["AH"]
 
 
-
     if args.subparser_name == "multi":
         # -------------------------------------
         # settings for multi interval analysis
@@ -103,17 +104,40 @@ def main(*args):
         intervallength = args.intervallength
         msd_mean, msd_var = calculate_msd(proton_traj, pbc, intervalnumber, intervallength)
 
-    for mm, mv in zip(msd_mean.sum(axis=1), msd_var.sum(axis=1)):
+    msd_mean, msd_var = msd_mean.sum(axis=1), msd_var.sum(axis=1) # sum over the three spatial coordinate axes
+
+    for mm, mv in zip():
         print mm, mv
 
-    if args.plot:
-        if msd_mean.shape[0] > 50:
-            step = msd_mean.shape[0] / 50
-        else:
-            step = 1
-        plt.errorbar(np.arange(0, msd_mean.shape[0], step), msd_mean.sum(axis=1)[::step], yerr=np.sqrt(msd_var.sum(axis=1)[::step]))
-        plt.show()
+    if msd_mean.shape[0] > 50:
+        step = msd_mean.shape[0] / 50
+    else:
+        step = 1
 
+    if args.plot:
+        plt.errorbar(np.arange(0, msd_mean.shape[0], step), msd_mean[::step], yerr=np.sqrt(msd_var[::step]))
+
+    if args.fit_from:
+        def fit_func(x, m, y):
+            return m*x + y
+        params, cov_mat = curve_fit(fit_func, np.arange(args.fit_from, msd_mean.shape[0]), msd_mean[args.fit_from:],
+                                    sigma=np.sqrt(msd_var[args.fit_from:]), absolute_sigma=True)
+        m, y_0 = params
+        m_err, y_0_err = np.sqrt(cov_mat[0, 0]), np.sqrt(cov_mat[1, 1])
+
+        print "\nSlope in angström²/timestep:"
+        print m, m_err
+        print "\nSlope in pm²/timestep:"
+        print m*1e4, m_err*1e4
+        print "\nDiffusion coefficient in angström²/timestep:"
+        print m/6, m_err/6
+        print "\nDiffusion coefficient in pm²/timestep:"
+        print m*1e4/6, m_err*1e4/6
+
+        if args.plot:
+            plt.plot(np.arange(msd_mean.shape[0]), m*np.arange(msd_mean.shape[0])+y_0)
+
+    plt.show()
 
 if __name__ == "__main__":
     main()
