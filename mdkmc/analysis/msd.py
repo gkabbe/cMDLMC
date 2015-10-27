@@ -3,10 +3,10 @@
 import numpy as np
 import argparse
 from math import ceil
+import matplotlib.pylab as plt
 
 from mdkmc.atoms import numpyatom as npa
 from mdkmc.IO import BinDump
-import ipdb
 
 
 def calculate_msd(atom_traj, pbc, intervalnumber, intervallength):
@@ -62,27 +62,19 @@ def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay):
 
 def main(*args):
     parser = argparse.ArgumentParser(description="Determine Mean Square Displacement of MD trajectory")
+    subparsers = parser.add_subparsers(dest="subparser_name")
     parser.add_argument("filename", help="Trajectory filename")
     parser.add_argument("pbc", nargs=3, type=float, help="Periodic boundaries")
-    parser.add_argument("intervalnumber", type=int, help="Number of intervals over which to average")
-    parser.add_argument("intervallength", type=int, help="Interval length")
-    parser.add_argument("mode", type=str, help="multi mode  refers to new multintervall analysis including change of boxes and single proton variance calculation (in multi mode choose intervalnumber equal to 1), single mode is gabriels standard MSD")
     parser.add_argument("--trajectory_cut", type=int, help="Restrict trajectory to specified number of frames")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
-    #parser.add_argument("--variance_all_H", type=bool, help="if true Variance not from intervalls, variance from every H atom ")
-    parser.add_argument("--variance_all_H", action="store_true", help="if true Variance not from intervalls, variance from every H atom ")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbosity")
+    parser.add_argument("--plot", action="store_true", help="Plot results")
+    parser_fixed = subparsers.add_parser("single", help="Intervals with fixed size")
+    parser_fixed.add_argument("intervalnumber", type=int, help="Number of intervals over which to average")
+    parser_fixed.add_argument("intervallength", type=int, help="Interval length")
+    parser_multi = subparsers.add_parser("multi", help="Intervals with variable size")
+    parser_multi.add_argument("--variance_all_H", action="store_true", help="If set, determine variance over every proton trajectory")
     args = parser.parse_args()
 
-    # settings for multi interval analysis
-    subintervalldelay = 20
-    resolution = 100
-    # -------------------------------------
-
-
-    intervalnumber = args.intervalnumber
-    intervallength = args.intervallength
-    variance_all_H = args.variance_all_H
-    mode = args.mode
     pbc = np.array(args.pbc)
     trajectory = BinDump.npload_atoms(args.filename, create_if_not_existing=True, remove_com=True, verbose=args.verbose)
     if args.trajectory_cut:
@@ -93,17 +85,34 @@ def main(*args):
 
     BinDump.mark_acidic_protons(trajectory, pbc, verbose=args.verbose)
     proton_traj = npa.select_atoms(trajectory, "AH")["AH"]
-    if mode == 'single':
-        msd_mean, msd_var = calculate_msd(proton_traj, pbc, intervalnumber, intervallength)
-    if mode == 'multi':
-        msd_mean, msd_var = calculate_msd_multi_interval(proton_traj[::resolution], pbc, intervalnumber,
-                                                         int(intervallength / resolution), subintervalldelay,
-                                                         variance_all_H)
+
+
+
+    if args.subparser_name == "multi":
+        # -------------------------------------
+        # settings for multi interval analysis
+        subinterval_delay = 20
+        resolution = 100
+        # -------------------------------------
+        msd_mean, msd_var = calculate_msd_multi_interval(proton_traj[::resolution], pbc, subinterval_delay)
         # use only first 60% of the calculated interval because of statistic
         msd_mean, msd_var = msd_mean[:int(msd_mean.shape[0]*0.6)], msd_var[:int(msd_var.shape[0]*0.6)]
 
+    else:
+        intervalnumber = args.intervalnumber
+        intervallength = args.intervallength
+        msd_mean, msd_var = calculate_msd(proton_traj, pbc, intervalnumber, intervallength)
+
     for mm, mv in zip(msd_mean.sum(axis=1), msd_var.sum(axis=1)):
         print mm, mv
+
+    if args.plot:
+        if msd_mean.shape[0] > 50:
+            step = msd_mean.shape[0] / 50
+        else:
+            step = 1
+        plt.errorbar(np.arange(0, msd_mean.shape[0], step), msd_mean.sum(axis=1)[::step], yerr=np.sqrt(msd_var.sum(axis=1)[::step]))
+        plt.show()
 
 
 if __name__ == "__main__":
