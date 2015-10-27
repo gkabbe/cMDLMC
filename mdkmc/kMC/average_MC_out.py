@@ -157,12 +157,14 @@ def get_slope(args):
     m, y_0 = params
     m_err, y_0_err = np.sqrt(cov_mat[0, 0]), np.sqrt(cov_mat[1, 1])
 
-    print("Slope in angström²/fs:")
-    print(m, m_err)
-    print("Slope in pm²/ps:")
-    print(m*1e7, m_err*1e7)
-    print("Diffusion coefficient in pm²/ps:")
-    print(m*1e7/6, m_err*1e7/6)
+    print "Slope in angström²/ps:"
+    print m*1000, m_err*1000
+    print "Slope in pm²/ps:"
+    print m*1e7, m_err*1e7
+    print "Diffusion coefficient in angström²/ps:"
+    print m*1000./6, m_err*1000./6
+    print "Diffusion coefficient in pm²/ps:"
+    print m*1e7/6, m_err*1e7/6
 
     if args.plot:
         plt.errorbar(time, y, y_err)
