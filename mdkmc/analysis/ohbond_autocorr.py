@@ -46,7 +46,8 @@ def main(*args):
     for i in xrange(intervalnumber):
         if args.verbose == True:
             print "# {} / {}".format(i, intervalnumber), "\r",
-            covevo_avg[i] = (covevo[i*startdist:i*startdist+intervallength] == covevo[i*startdist]).sum(axis=1)
+	#ipdb.set_trace()
+        covevo_avg[i] = (covevo[i*startdist:i*startdist+intervallength] == covevo[i*startdist]).sum(axis=1)
     print ""
             
     result = covevo_avg.sum(axis=0)/float(covevo_avg.shape[0])
