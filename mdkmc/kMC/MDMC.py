@@ -281,6 +281,15 @@ def calculate_MSD(MSD, displacement):
     MSD /= displacement.shape[0]
 
 
+def calculate_MSD_var(MSD, displacement, msd_var):
+    MSD *= 0
+    msd_var *= 0
+    for d in displacement:
+        MSD += d*d
+    MSD /= displacement.shape[0]
+    for i in xrange(displacement.shape[1]):
+        msd_var[i] = (displacement[:, i]*displacement[:, i]).var()
+    return MSD, msd_var
 def calculate_higher_MSD(displacement):
     MSD = np.zeros((3))
     msd2 = 0
@@ -348,7 +357,7 @@ class MDMC:
 
         if self.nonortho:
             for i in xrange(Os.shape[0]):
-                P_index = npa.nextNeighbor_nonortho(Os[i], Ps, self.h, self.h_inv)[0]
+                P_index = npa.nextNeighbor_nonortho(Os[i], Ps, atombox.h, atombox.h_inv)[0]
                 P_neighbors[i] = P_index
         else:
             for i in xrange(Os.shape[0]):
@@ -402,13 +411,14 @@ class MDMC:
 
     def init_observables_protons_constant(self):
         displacement = np.zeros((self.proton_number, 3))
+	msd_var= np.zeros(3)
         MSD = np.zeros(3)
         proton_pos_snapshot = np.zeros((self.proton_number, 3))
         proton_pos_new = np.zeros((self.proton_number, 3))
         if not self.higher_msd:
             msd2, msd3, msd4 = None, None, None
 
-        return displacement, MSD, msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new
+        return displacement, MSD, msd_var, msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new
 
     def init_observables_protons_variable(self, O_trajectory, zfac, bins):
         r = np.zeros(3, np.float32)
@@ -437,10 +447,10 @@ class MDMC:
         return protonlattice_snapshot, proton_pos_snapshot, displacement
 
     def print_observable_names(self):
-        print >> self.output, "# {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format(
-            "Sweeps", "Time", "MSD_x", "MSD_y", "MSD_z", "Autocorr", "Jumps", "Sweeps/Sec", "Remaining Time/Hours:Min")
+	    print >> self.output, "# {:>10} {:>10} {:>18} {:>18} {:>18}   {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format(
+            "Sweeps", "Time", "MSD_x", "MSD_y", "MSD_z", "MSD_x_var", "MSD_y_var", "MSD_z_var" , "Autocorr", "Jumps", "Sweeps/Sec", "Remaining Time/Hours:Min")
 
-    def print_observables(self, sweep, autocorrelation, helper, timestep_fs, start_time, MSD, msd2=None, msd3=None, msd4=None):
+    def print_observables(self, sweep, autocorrelation, helper, timestep_fs, start_time, MSD, msd_var, msd2=None, msd3=None, msd4=None):
         speed = float(sweep)/(time.time()-start_time)
         if sweep != 0:
             remaining_time_hours = int((self.sweeps - sweep)/speed/3600)
@@ -452,8 +462,8 @@ class MDMC:
             msd_higher = "{:18.8f} {:18.8f} {:18.8f}".format(msd2, msd3, msd4)
         else:
             msd_higher = ""
-        print >> self.output, " {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {msd_higher:}  {:8d} {:10d} {:10.2f} {:10}".format(
-            sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps(), speed, remaining_time, msd_higher=msd_higher)
+	print >> self.output, " {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {:18.8f} {:18.8f} {:18.8f}  {msd_higher:}  {:8d} {:10d} {:10.2f} {:10}".format(		
+            sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], msd_var[0],  msd_var[1], msd_var[2], autocorrelation, helper.get_jumps(), speed, remaining_time, msd_higher=msd_higher)
         self.averaged_results[(sweep % self.reset_freq)/self.print_freq, 2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
     def print_observables_reservoir(self, sweep, timestep_fs, r, jumps, start_time):
@@ -556,7 +566,7 @@ class MDMC:
                 atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
                                                       np.array(self.box_multiplier, dtype=np.int32))
 
-        displacement, MSD, msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
+        displacement, MSD, msd_var , msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
         #only update neighborlists after neighbor_freq position updates
         neighbor_update = self.neighbor_freq*(self.skip_frames+1)
 
@@ -632,17 +642,16 @@ class MDMC:
                                            atombox.get_extended_frame(atombox.oxygen_trajectory[frame]),
                                            displacement, self.pbc, wrap=self.periodic_wrap)
                 else:
-                    calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, proton_pos_new, helper.oxygen_frame_extended, displacement, self.h, self.h_inv)
-
+                    calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot, atombox.get_extended_frame(atombox.oxygen_trajectory[frame]), displacement, atombox.h, atombox.h_inv)
                 if self.higher_msd:
                     MSD, msd2, msd3, msd4 = calculate_higher_MSD(displacement)
                 else:
-                    calculate_MSD(MSD, displacement)
+		    MSD, msd_var= calculate_MSD_var(MSD, displacement, msd_var)
                 autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
                 if not self.xyz_output:
-                    self.print_observables(sweep, autocorrelation, helper, self.md_timestep_fs, start_time, MSD, msd2, msd3, msd4)
+                    self.print_observables(sweep, autocorrelation, helper, self.md_timestep_fs, start_time, MSD,msd_var,  msd2, msd3, msd4)
                 else:
-                    self.print_OsHs(Opos, proton_lattice, frame, self.md_timestep_fs)
+                    self.print_OsHs(atombox.oxygen_trajectory[frame], proton_lattice, frame, self.md_timestep_fs)
             # helper.sweep_list(proton_lattice)
             if self.jumpmatrix_filename is not None:
                 helper.sweep_from_vector_jumpmatrix(frame, proton_lattice)
