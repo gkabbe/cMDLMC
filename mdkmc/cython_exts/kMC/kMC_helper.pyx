@@ -363,8 +363,10 @@ cdef class AtomBox_Monoclin(AtomBox):
             for j in range(0, 3):
                 self.periodic_boundaries_extended[3*i+j] *= box_multiplier[i]
 
-
-        self.h = np.array(self.periodic_boundaries_extended.reshape((3,3)).T, order="C")
+        self.h = np.zeros((3,3))
+        for i in xrange(3):
+            for j in xrange(3):
+                self.h[j,i] = self.periodic_boundaries_extended[i*3+j]
         self.h_inv = np.array(np.linalg.inv(self.h), order="C")
         self.pbc_matrix = periodic_boundaries.reshape((3, 3))
 
