@@ -4,8 +4,15 @@
 import numpy as np
 import argparse
 import ipdb, sys
-from scipy.optimize import curve_fit
-import matplotlib.pylab as plt
+
+try:
+    from scipy.optimize import curve_fit
+except ImportError:
+    print >> sys.stderr, "No Scipy found"
+try:
+    import matplotlib.pylab as plt
+except ImportError:
+    print >> sys.stderr, "No Matplotlib found"
 
 
 def load_interval_samples(filename, lines, intervals, columns, time_columns):
@@ -78,7 +85,7 @@ def load_intervals_intelligently(filename):
             interval_number = intervals.size
         return interval_length, interval_number
 
-    data = np.loadtxt(filename, usecols=(0, 1, 2, 3, 4, 5, 6))
+    data = np.loadtxt(filename, usecols=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
     with open(filename, "r") as f:
         lines = f.readlines()
     try:
@@ -91,7 +98,7 @@ def load_intervals_intelligently(filename):
 
             
     data = data[:interval_number*interval_length]
-    data = data.reshape((interval_number, interval_length, 7))
+    data = data.reshape((interval_number, interval_length, 10))
     return data
 
 
@@ -189,10 +196,10 @@ def average_kmc(args):
             print format_string.format(t=time[i], msd=average[i,0:3], msdvar=variance[i,0:3], autocorr=average[i,3], autocorrvar=variance[i,3], jumps=average[i,4], jumpsvar=variance[i,4])
     else:
         print "#", " ".join(["{:>10}", "{:>10}", 3*"{:>12}", 2*"{:>6}"]).format(*comments[1:])
-        format_string = "{t[0]:10.2f} {t[1]:10.2f} {msd[0]:12.4f} {msd[1]:12.4f} {msd[2]:12.4f} {autocorr:6.2f} {jumps:6.2f}"
+        format_string = "{t[0]:10.2f} {t[1]:10.2f} {msd[0]:12.4f} {msd[1]:12.4f} {msd[2]:12.4f} {msd_var[0]:12.4f} {msd_var[1]:12.4f} {msd_var[2]:12.4f}{autocorr:6.2f} {jumps:6.2f}"
         time, average = result
         for i in range(average.shape[0]):
-            print(format_string.format(t=time[i], msd=average[i,:3], autocorr=average[i,3], jumps=average[i,4]))
+            print(format_string.format(t=time[i], msd=average[i,:3], msd_var=average[i,3:6],  autocorr=average[i,6], jumps=average[i,7]))
 
 
 def main(*args):
