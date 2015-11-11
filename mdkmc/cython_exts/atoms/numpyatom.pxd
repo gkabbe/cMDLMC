@@ -10,6 +10,8 @@ cdef double length_ptr(double *a1_pos, double *a2_pos, double *pbc) nogil
 
 #~ cdef double length_ptr_nonortho(double * a1_pos, double * a2_pos, double * h, double * h_inv)
 
+cdef diff_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:] diffvec, double [:,::1] h, double [:,::1] h_inv)
+
 cpdef double length_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:,::1] h, double [:,::1] h_inv)
 
 cdef double length_nonortho_bruteforce_ptr(double * a1_pos, double * a2_pos, double * h, double * h_inv) nogil
