@@ -35,7 +35,7 @@ def load_interval_samples(filename, lines, intervals, columns, time_columns):
     return data
 
     
-def load_intervals_intelligently(filename):
+def load_intervals_intelligently(filename, var_prot_single):
     def get_settings_from_settings_output(lines):
         settings = dict()
         for line in lines:
@@ -85,7 +85,10 @@ def load_intervals_intelligently(filename):
             interval_number = intervals.size
         return interval_length, interval_number
 
-    data = np.loadtxt(filename, usecols=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+    if var_prot_single:
+        data = np.loadtxt(filename, usecols=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+    else:
+        data = np.loadtxt(filename, usecols=(0, 1, 2, 3, 4, 5, 6))
     with open(filename, "r") as f:
         lines = f.readlines()
     try:
@@ -98,13 +101,16 @@ def load_intervals_intelligently(filename):
 
             
     data = data[:interval_number*interval_length]
-    data = data.reshape((interval_number, interval_length, 10))
+    if var_prot_single:
+        data = data.reshape((interval_number, interval_length, 10))
+    else:
+        data = data.reshape((interval_number, interval_length, 7))
     return data
 
 
-def avg(filename, variance, plot=False, verbose=False):
+def avg(filename, variance, var_prot_single, plot=False, verbose=False):
 
-    data = load_intervals_intelligently(filename)
+    data = load_intervals_intelligently(filename, var_prot_single)
     avg = data[:, :, 2:].mean(axis=0)
     time = data[0, :, 0:2]
 
@@ -183,8 +189,8 @@ def get_slope(args):
 
 def average_kmc(args):
     kmc_out = args.file
-    result = avg(kmc_out, variance=args.variance, plot=args.plot, verbose=args.verbose)
-    
+    result = avg(kmc_out, variance=args.variance, var_prot_single=args.var_prot_single, plot=args.plot, verbose=args.verbose)
+    var_prot_single=args.var_prot_single 
     comments = get_observable_names(kmc_out)
 
     if args.variance:
@@ -196,10 +202,16 @@ def average_kmc(args):
             print format_string.format(t=time[i], msd=average[i,0:3], msdvar=variance[i,0:3], autocorr=average[i,3], autocorrvar=variance[i,3], jumps=average[i,4], jumpsvar=variance[i,4])
     else:
         print "#", " ".join(["{:>10}", "{:>10}", 3*"{:>12}", 2*"{:>6}"]).format(*comments[1:])
-        format_string = "{t[0]:10.2f} {t[1]:10.2f} {msd[0]:12.4f} {msd[1]:12.4f} {msd[2]:12.4f} {msd_var[0]:12.4f} {msd_var[1]:12.4f} {msd_var[2]:12.4f}{autocorr:6.2f} {jumps:6.2f}"
+        if var_prot_single:
+            format_string = "{t[0]:10.2f} {t[1]:10.2f} {msd[0]:12.4f} {msd[1]:12.4f} {msd[2]:12.4f} {msd_var[0]:12.4f} {msd_var[1]:12.4f} {msd_var[2]:12.4f}{autocorr:6.2f} {jumps:6.2f}"
+        else:
+            format_string = "{t[0]:10.2f} {t[1]:10.2f} {msd[0]:12.4f} {msd[1]:12.4f} {msd[2]:12.4f} {autocorr:6.2f} {jumps:6.2f}"
         time, average = result
         for i in range(average.shape[0]):
-            print(format_string.format(t=time[i], msd=average[i,:3], msd_var=average[i,3:6],  autocorr=average[i,6], jumps=average[i,7]))
+            if var_prot_single:
+                print(format_string.format(t=time[i], msd=average[i,:3], msd_var=average[i,3:6],  autocorr=average[i,6], jumps=average[i,7]))
+            else:
+                print(format_string.format(t=time[i], msd=average[i,:3], autocorr=average[i,3], jumps=average[i,4]))
 
 
 def main(*args):
@@ -207,6 +219,7 @@ def main(*args):
     parser=argparse.ArgumentParser(description="Average KMC output. Assuming time in first column")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     parser.add_argument("--plot", "-p", action="store_true", help="Show plot")
+    parser.add_argument("--var_prot_single", action="store_true", default=False, help="average variaance, mode var_prot_single during kMC run necessary ")
     subparsers = parser.add_subparsers()
     parser_slope = subparsers.add_parser("slope", help="Only determine slope of MSD")
     parser_slope.add_argument("file", help="KMC output")

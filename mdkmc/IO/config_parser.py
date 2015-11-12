@@ -237,5 +237,11 @@ CONFIG_DICT = {
         "parse_fct": parse_bool,
         "default": False,
         "help": "Use numpy memmap, instead of loading the whole trajectory into RAM"
-    }
+    },
+    "var_prot_single":
+        {
+            "parse_fct": parse_bool,
+            "default": False,
+            "help": "Calculate variance od proton MSD for single proton wise, not box wise."
+        }
 }
