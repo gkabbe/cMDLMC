@@ -619,14 +619,14 @@ cdef class Helper:
     def jumprate_test(self, double x):
         return self.jumprate_fct.evaluate(x)
 
-    def print_transitions(self):
+    def print_transitions(self, int frame):
         cdef int i
-        for i in range(self.start_tmp.size()):
-            print self.start_tmp[i], self.destination_tmp[i], self.jump_probability_tmp[i]
-        print "In total", self.start_tmp.size(), "connections"
+        for i in range(self.start[frame].size()):
+            print self.start[frame][i], self.destination[frame][i], self.jump_probability[frame][i]
+        print "In total", self.start[frame].size(), "connections"
 
-    def return_transitions(self):
-        return self.start_tmp, self.destination_tmp, self.jump_probability_tmp
+    def return_transitions(self, int frame):
+        return self.start[frame], self.destination[frame], self.jump_probability[frame]
 
     def sweep_list(self, np.uint8_t [:] proton_lattice):
         cdef:
