@@ -113,7 +113,7 @@ def count_protons_and_oxygens(double[:,::1] Opos, np.uint8_t [:] proton_lattice,
 
 #Define Function Objects. These can later be substituted easily by kMC_helper
 cdef class JumprateFunction:
-    cdef double evaluate(self, double x) nogil:
+    cpdef double evaluate(self, double x):
         return 0
 
 
@@ -126,7 +126,7 @@ cdef class FermiFunction(JumprateFunction):
         self.b = b
         self.c = c
 
-    cdef double evaluate(self, double x) nogil:
+    cpdef double evaluate(self, double x):
         return self.a/(1+exp((x-self.b)/self.c))
 
 
@@ -141,7 +141,7 @@ cdef class AEFunction(JumprateFunction):
         self.xint = xint
         self.T = T
 
-    cdef double evaluate(self, double x) nogil:
+    cpdef double evaluate(self, double x):
         cdef double E
         if x <= self.x0:
             E = 0
@@ -150,6 +150,15 @@ cdef class AEFunction(JumprateFunction):
         else:
             E = 2*self.a * (self.xint-self.x0)*(x-self.xint) + self.a*(self.xint-self.x0)*(self.xint-self.x0)
         return self.A * exp(-E/(R*self.T))
+
+    cpdef double get_energy(self, double x):
+        if x <= self.x0:
+            return 0
+        elif self.x0 < x < self.xint:
+            return self.a * (x-self.x0) * (x-self.x0)
+        else:
+            return 2*self.a * (self.xint-self.x0)*(x-self.xint) + self.a*(self.xint-self.x0)*(self.xint-self.x0)
+
 
 cdef class AtomBox:
     """The AtomBox class takes care of all the distance and angle calculation within the kMC_helper."""
@@ -174,6 +183,9 @@ cdef class AtomBox:
         self.size = box_multiplier[0] * box_multiplier[1] * box_multiplier[2] * oxygen_trajectory.shape[1]
 
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
+        return 0
+
+    cpdef double distance(self, double [:] atompos_1, double [:] atompos_2):
         return 0
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
@@ -223,6 +235,9 @@ cdef class AtomBox_Cubic(AtomBox):
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return cnpa.length_ptr(atompos_1, atompos_2, &self.periodic_boundaries_extended[0])
 
+    cpdef double distance(self, double [:] atompos_1, double [:] atompos_2):
+        return cnpa.length_ptr(&atompos_1[0], &atompos_2[0], &self.periodic_boundaries_extended[0])
+
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3, &self.periodic_boundaries_extended[0])
 
@@ -252,6 +267,9 @@ cdef class AtomBox_Monoclin(AtomBox):
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return cnpa.length_nonortho_bruteforce_ptr(atompos_1, atompos_2, &self.h[0, 0], &self.h_inv[0, 0])
 
+    cpdef double distance(self, double [:] atompos_1, double [:] atompos_2):
+        return cnpa.length_nonortho_bruteforce_ptr(&atompos_1[0], &atompos_2[0], &self.h[0, 0], &self.h_inv[0, 0])
+
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return cnpa.angle_ptr_nonortho(atompos_2, atompos_1, atompos_2, atompos_3, &self.h[0, 0], &self.h_inv[0, 0])
 
@@ -279,8 +297,8 @@ cdef class Helper:
         int phosphorusnumber_unextended
         double r_cut, angle_threshold
         double neighbor_search_radius
-        JumprateFunction jumprate_fct
-        AtomBox atombox
+        public JumprateFunction jumprate_fct
+        public AtomBox atombox
         np.uint32_t saved_frame_counter
         public double [:, ::1] jumpmatrix
         bool calculate_jumpmatrix
