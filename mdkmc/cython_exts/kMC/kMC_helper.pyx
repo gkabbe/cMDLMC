@@ -12,7 +12,6 @@ from cython_gsl cimport *
 from libc.stdlib cimport malloc, free
 
 from libcpp.vector cimport vector
-from libcpp.map cimport map
 from libcpp cimport bool
 
 cimport mdkmc.cython_exts.atoms.numpyatom as cnpa
@@ -24,8 +23,7 @@ cdef extern from "math.h":
     double acos(double x) nogil
 
 from libc.stdio cimport *
-# from libc.stdlib cimport bsearch
-# from cython.parallel import prange
+
 
 ctypedef np.int_t DTYPE_t
 
@@ -33,100 +31,6 @@ cdef double PI = np.pi
 
 
 cdef double R = 1.9872041e-3   # universal gas constant in kcal/mol/K
-
-
-cdef double reservoir_function(double x, double width) nogil:
-    return 0.5*(1+cos(x/width*PI))
-
-
-cdef double dotprod_ptr(double* v1, double* v2) nogil:
-    return v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2]
-
-
-cdef double cdist(double [:] v1, double [:] v2, double [:] pbc) nogil:
-    cdef int i
-    cdef double *posdiff = [v2[0]-v1[0], v2[1]-v1[1], v2[2]-v1[2]]
-    for i in range(3):
-        while posdiff[i] > pbc[i]/2:
-            posdiff[i] -= pbc[i]
-        while posdiff[i] < -pbc[i]/2:
-            posdiff[i] += pbc[i]
-    return sqrt(posdiff[0]*posdiff[0] + posdiff[1]*posdiff[1] + posdiff[2]*posdiff[2])
-
-
-cdef double cdist_no_z(double [:] v1, double [:] v2, double [:] pbc) nogil:
-    cdef int i
-    cdef double *posdiff = [v2[0]-v1[0], v2[1]-v1[1], v2[2]-v1[2]]
-    for i in range(2):
-        while posdiff[i] > pbc[i]/2:
-            posdiff[i] -= pbc[i]
-        while posdiff[i] < -pbc[i]/2:
-            posdiff[i] += pbc[i]
-    return sqrt(posdiff[0]*posdiff[0] + posdiff[1]*posdiff[1] + posdiff[2]*posdiff[2])
-
-
-cdef posdiff_no_z(vector[double] &posdiff, double [:] v1, double [:] v2, double [:] pbc):
-    cdef int i
-    for i in range(3):
-        posdiff.push_back(v2[i]-v1[i])
-        while posdiff[i] > pbc[i]/2:
-            posdiff[i] -= pbc[i]
-        while posdiff[i] < -pbc[i]/2:
-            posdiff[i] += pbc[i]
-
-
-# cdef double angle_ptr(double *a1, double *a2, double *a3, double *a4, double* pbc) nogil:
-#     cdef:
-#         double v1[3]
-#         double v2[3]
-#         int i
-#
-#     for i in range(3):
-#         v1[i] = a2[i] - a1[i]
-#         v2[i] = a4[i] - a3[i]
-#
-#         while v1[i] > pbc[i]/2:
-#             v1[i] -= pbc[i]
-#         while v1[i] < -pbc[i]/2:
-#             v1[i] += pbc[i]
-#
-#         while v2[i] > pbc[i]/2:
-#             v2[i] -= pbc[i]
-#         while v2[i] < -pbc[i]/2:
-#             v2[i] += pbc[i]
-#     return acos(dotprod_ptr(v1, v2)/sqrt(dotprod_ptr(v1, v1))/sqrt(dotprod_ptr(v2, v2)))
-
-
-cdef double angle_factor(double angle):
-    if angle > PI/2:
-        return cos(angle - PI)
-    else:
-        return 0
-
-def dist(double [:] v1, double [:] v2, double [:] pbc):
-    cdef int i
-    cdef double *posdiff = [v2[0]-v1[0], v2[1]-v1[1], v2[2]-v1[2]]
-    for i in range(3):
-        while posdiff[i] > pbc[i]/2:
-            posdiff[i] -= pbc[i]
-        while posdiff[i] < -pbc[i]/2:
-            posdiff[i] += pbc[i]
-    return sqrt(posdiff[0]*posdiff[0] + posdiff[1]*posdiff[1] + posdiff[2]*posdiff[2])
-
-
-cpdef read_Opos(double [:, ::1] Oarr, datei, int atoms):
-    datei.readline()
-    datei.readline()
-
-    cdef int index = 0
-    cdef int i = 0
-    for i in range(atoms):
-        line = datei.readline()
-        if line.split()[0] == "O":
-            Oarr[index, 0] = float(line.split()[1])
-            Oarr[index, 1] = float(line.split()[2])
-            Oarr[index, 2] = float(line.split()[3])
-            index = index + 1
 
 
 def dist_numpy_all_inplace(double [:, ::1] displacement, double [:, ::1] arr1, double [:, ::1] arr2, double [:] pbc):
@@ -160,26 +64,6 @@ def dist_numpy_all_nonortho(double [:, ::1] displacement, double [:, ::1] arr1, 
         cnpa.diff_ptr_nonortho(&arr1[i,0], &arr2[i,0], &displacement[i,0], &h[0,0], &h_inv[0,0])
 
 
-def list_to_vector(l):
-    cdef vector[vector[int]] v
-
-    v=l
-
-    for i in range(v.size()):
-        for j in range(v[i].size()):
-            print v[i][j],
-        print ""
-
-
-# def extend_simulationbox_z(int zfac, double [:,::1] Opos, double pbc_z, int oxygennumber):
-#     cdef int i,j,z
-#     for z in xrange(1, zfac):
-#         for i in xrange(oxygennumber):
-#             Opos[z*oxygennumber+i, 0] = Opos[i, 0]
-#             Opos[z*oxygennumber+i, 1] = Opos[i, 1]
-#             Opos[z*oxygennumber+i, 2] = Opos[i, 2] + pbc_z*z
-#
-#
 def extend_simulationbox_cubic(double [:, :, :, :, ::1] Opos, double [:,::1] h, int multx, int multy, int multz, int initial_oxynumber):
     cdef int x,y,z,i,j
     for x in range(multx):
@@ -191,7 +75,6 @@ def extend_simulationbox_cubic(double [:, :, :, :, ::1] Opos, double [:,::1] h, 
                             Opos[x, y, z, i, j] = Opos[0, 0, 0, i, j] + x * h[0,j] + y * h[1,j] + z * h[2,j]
 
 def extend_simulationbox(np.ndarray [np.double_t, ndim=2] Opos, double [:, ::1] h, int [:] box_multiplier, int atomnumber, nonortho=False):
-    # cdef int oxygen_number = Opos.shape[0]
     if True in [multiplier > 1 for multiplier in box_multiplier]:
         if nonortho:
             v1 = h[:, 0]
@@ -290,10 +173,6 @@ cdef class AtomBox:
         self.box_multiplier = box_multiplier
         self.size = box_multiplier[0] * box_multiplier[1] * box_multiplier[2] * oxygen_trajectory.shape[1]
 
-    #cpdef double distance(int frame, int i, int j):
-    #   First, construct large box, then determine distance
-        # 
-        #return
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return 0
 
@@ -382,22 +261,17 @@ cdef class Helper:
         int jumps
         bool nonortho
         # Create containers for the oxygen index from which the proton jump start, for the index of
-        # the destination oxygen, and for the jump probability of the oxygen connection
-        # The _tmp vectors hold the information for a single frame, whereas the nested vectors hold
+        # the destination oxygen, and for the jump probability of the oxygen connection.
+        # The nested vectors hold
         # the indices and probabilities for the whole trajectory
         public vector[vector[np.int32_t]] start
         public vector[vector[np.int32_t]] destination
         public vector[vector[np.float32_t]] jump_probability
-        # vector[int] start_tmp
-        # vector[int] destination_tmp
-        # vector[double] jump_probability_tmp
         public vector[vector[int]] neighbors
         object logger
         int [:] box_multiplier
         double [:] pbc
         double [:, ::1] pbc_matrix
-        # double [:, :, ::1] oxygen_trajectory
-        # double [:, :, ::1] phosphorus_trajectory
         double [:, ::1] oxygen_frame_extended
         double [:, ::1] phosphorus_frame_extended
         int [:] P_neighbors
@@ -427,8 +301,6 @@ cdef class Helper:
                                                                    self.__class__.__name__))
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.jumps = 0
-        # self.oxygen_trajectory = oxygen_trajectory
-        # self.phosphorus_trajectory = phosphorus_trajectory
         self.oxygen_frame_extended = np.zeros((box_multiplier[0]*box_multiplier[1]*box_multiplier[2]
                                                *atombox.oxygen_trajectory.shape[1], atombox.oxygen_trajectory.shape[2]))
         self.phosphorus_frame_extended = np.zeros((box_multiplier[0]*box_multiplier[1]*box_multiplier[2]
@@ -457,7 +329,6 @@ cdef class Helper:
                 pbc_extended[i] = pbc[i] * box_multiplier[1]
             for i in range(6, 9):
                 pbc_extended[i] = pbc[i] * box_multiplier[2]
-            # self.pbc_matrix = np.array(self.pbc.reshape((3, 3)).T, order="C")
 
         self.pbc = pbc
 
@@ -494,8 +365,6 @@ cdef class Helper:
             int i,j
             double dist
             vector[int] neighbor_list
-            # double [:, ::1] oxygen_frame = self.oxygen_trajectory[framenumber]
-        # print "lets find the neihgbors"
         self.oxygen_frame_extended[:self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
         self.phosphorus_frame_extended[:self.phosphorusnumber_unextended] = self.atombox.phosphorus_trajectory[framenumber]
 
@@ -520,7 +389,6 @@ cdef class Helper:
             vector[np.int32_t] destination_tmp
             vector[np.float32_t] jump_probability_tmp
 
-        # print "let's get some jump rates!"
         self.oxygen_frame_extended[:self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
         self.phosphorus_frame_extended[:self.phosphorusnumber_unextended] = self.atombox.phosphorus_trajectory[framenumber]
 
@@ -548,7 +416,6 @@ cdef class Helper:
         self.destination.push_back(destination_tmp)
         self.jump_probability.push_back(jump_probability_tmp)
         self.saved_frame_counter += 1
-        # print "finished jo"
 
     cdef calculate_transitions_POOangle_noneighborlist(self, int framenumber, double r_cut, double angle_thresh):
         cdef:
@@ -653,30 +520,13 @@ cdef class Helper:
         if verbose:
             print "# Done"
 
-        # self.atombox.oxygen_trajectory = None
-        # self.atombox.phosphorus_trajectory = None
-        # if verbose:
-        #     print "# Deleted atombox"
-
     def sweep_from_vector(self, int frame, np.uint8_t [:] proton_lattice):
         cdef:
             int step, i, index_origin, index_destination
             int trajectory_length
             int steps
-        # trajectory_length = self.atombox.oxygen_trajectory.shape[0]
-        # print "frame:", frame
-        # print "sweep from vector"
-        # print self.saved_frame_counter
-        # print trajectory_length
-        # while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame+1:
-            # print "calculating transitions"
-            # self.calculate_transitions_POOangle(self.saved_frame_counter, self.r_cut, self.angle_threshold)
-            # print "transitions calculated:", self.saved_frame_counter
-        # print "done with transition calculation"
 
-        # print self.start.size()
         steps =  self.start[frame].size()
-        # print "steps:", steps
 
         for step in xrange(steps):
             i = gsl_rng_uniform_int(self.r, steps)
