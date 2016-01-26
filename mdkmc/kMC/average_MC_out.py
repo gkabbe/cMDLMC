@@ -161,7 +161,7 @@ def get_slope(args):
         return m*x + y
 
     filename, fit_startpoint = args.file, args.msd_fitstart
-    data = load_intervals_intelligently(filename)
+    data = load_intervals_intelligently(filename, args.var_prot_single)
 
     time = data[0, :, 1]
     y = data[:, :, 2:5].sum(axis=2).mean(axis=0)
@@ -183,8 +183,6 @@ def get_slope(args):
         plt.errorbar(time, y, y_err)
         plt.plot(time, time*m+y_0)
         plt.show()
-
-
 
 
 def average_kmc(args):
@@ -219,7 +217,7 @@ def main(*args):
     parser=argparse.ArgumentParser(description="Average KMC output. Assuming time in first column")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     parser.add_argument("--plot", "-p", action="store_true", help="Show plot")
-    parser.add_argument("--var_prot_single", action="store_true", default=False, help="average variaance, mode var_prot_single during kMC run necessary ")
+    parser.add_argument("--var_prot_single", action="store_true", default=False, help="average variance, mode var_prot_single during kMC run necessary ")
     subparsers = parser.add_subparsers()
     parser_slope = subparsers.add_parser("slope", help="Only determine slope of MSD")
     parser_slope.add_argument("file", help="KMC output")
