@@ -1,62 +1,16 @@
 #!/usr/bin/python -u
 # -*- coding: utf-8 -*-
-# from __future__ import print_function
 import os
 import sys
 import time
-from collections import OrderedDict
-import logging
-import re
-import ast
-
 import numpy as np
 import ipdb
-
 import argparse
 from textwrap import wrap
-
-from mdkmc.IO import xyz_parser
 from mdkmc.IO import BinDump
 from mdkmc.IO import config_parser
 from mdkmc.cython_exts.kMC import kMC_helper
 from mdkmc.cython_exts.atoms import numpyatom as npa
-
-# -----------------------Determine Loglevel here----------------------------------------
-# Choose between info, warning, debug
-loglevel = logging.WARNING
-logger = logging.getLogger(__name__)
-logger.setLevel(loglevel)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# create file handler which logs even debug messages
-fh = logging.FileHandler('MDMC.log')
-fh.setLevel(logging.DEBUG)
-fh.setFormatter(formatter)
-# create formatter
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.WARNING)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-# logger.addHandler(ch)
-# --------------------------------------------------------------------------------------
-
-
-# print "#", os.path.join(script_path,"../cython/kMC")
-
-
-class InputError(Exception):
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-def load_trajectory(traj, atomname, verbose=False):
-    atom_number = traj[0][traj[0]["name"] == atomname].size
-    atom_traj = (traj[traj["name"] == atomname]).reshape((traj.shape[0], atom_number))
-    return np.array(atom_traj["pos"], order="C")
 
 
 def load_atoms_from_numpy_trajectory(traj_fname, atomnames, clip=None, verbose=False):
@@ -102,43 +56,6 @@ def load_atoms_from_numpy_trajectory_as_memmap(traj_fname, atomnames, clip=None,
             memmap = memmap[:clip]
         single_atom_trajs.append(memmap)
     return single_atom_trajs
-
-
-def count_atoms_in_volume(atoms, ((xmin, xmax), (ymin, ymax), (zmin, zmax)), pbc):
-    # if volume.shape != (3,2):
-    # 	raise ValueError("Shape of Volume needs to be (3,2). [[xmin, xmax], [ymin, ymax], [zmin, zmax]]")
-    counter = 0
-    indices = []
-    for i, a in enumerate(atoms):
-        if xmin <= a[0] % pbc[0] < xmax and ymin <= a[1] % pbc[1] < ymax and zmin <= a[2] % pbc[2] < zmax:
-            counter += 1
-            indices.append(i)
-    return counter, indices
-
-
-def count_atoms_in_volume_z(atoms, ((xmin, xmax), (ymin, ymax), (zmin, zmax)), pbc):
-    counter = 0
-    indices = []
-    for i, a in enumerate(atoms):
-        if xmin <= a[0] % pbc[0] < xmax and ymin <= a[1] % pbc[1] < ymax and zmin <= a[2] < zmax:
-            counter += 1
-            indices.append(i)
-    return counter, indices
-
-
-def print_frame(*args):
-    atoms = args[0]
-    if len(args) == 2:
-        i = args[1]
-        atomnr = atoms.shape[1]
-        atom_selection = atoms[i]
-    else:
-        atomnr = atoms.shape[0]
-        atom_selection = atoms
-    print atomnr
-    print ""
-    for j in xrange(atomnr):
-        print "{:>2} {: 20.10f} {: 20.10f} {: 20.10f}".format("O", *atom_selection[j])
 
 
 def load_configfile_new(configfilename, verbose=False):
@@ -198,24 +115,6 @@ def count_protons_and_oxygens(Opos, proton_lattice, O_counter, H_counter, bin_bo
         O_counter[O_index] += 1
         if proton_lattice[i] > 0:
             H_counter[O_index] += 1
-
-
-def remove_com_movement(trajectory, verbose):
-    if verbose:
-        print "#removing COM movement"
-    for i, frame in enumerate(trajectory):
-        if verbose is True and i % 1000 == 0:
-            print "#Frame", i,
-            print "\r",
-        com = frame.sum(axis=0)/float(frame.shape[0])
-        frame -= com
-    if verbose:
-        print ""
-
-
-def remove_com_movement_frame(frame):
-    com = frame.sum(axis=0)/float(frame.shape[0])
-    frame -= com
 
 
 def extend_simulationbox(Opos, onumber, h, box_multiplier, nonortho=False):
@@ -314,9 +213,6 @@ def calculate_higher_MSD(displacement):
 
 class MDMC:
     def __init__(self, **kwargs):
-        # Create Loggers
-        self.logger = logging.getLogger("{}.{}".format(__name__, self.__class__.__name__))
-        self.logger.info("Creating an instance of {}.{}".format(__name__, self.__class__.__name__))
         try:
             get_gitversion()
         except ImportError:
@@ -365,21 +261,6 @@ class MDMC:
                 P_neighbors[i] = P_index
         return P_neighbors
 
-    def determine_PO_angles(self, O_frame, P_frame, P_neighbors, angles):
-        if self.nonortho:
-            for i in xrange(O_frame.shape[0]):
-                for j in xrange(i):
-                    if i != j and npa.length_nonortho_bruteforce(O_frame[i], O_frame[j], self.h, self.h_inv) < self.cutoff_radius:
-                        angles[i, j] = npa.angle_nonortho(O_frame[i], P_frame[P_neighbors[i]], O_frame[j], P_frame[P_neighbors[j]], self.h, self.h_inv)
-        else:
-            for i in xrange(O_frame.shape[0]):
-                for j in xrange(i):
-                    if i != j and npa.sqdist(O_frame[i], O_frame[j], self.pbc) < self.cutoff_radius:
-                        PO1 = npa.distance(O_frame[i], P_frame[P_neighbors[i]], self.pbc)
-                        PO2 = npa.distance(O_frame[j], P_frame[P_neighbors[j]], self.pbc)
-                        angles[i,j] = np.dot(PO1, PO2)/np.linalg.norm(PO1)/np.linalg.norm(PO2)
-
-                        #TODO print_settings fertig!
     def print_settings(self):
         print "# I'm using the following settings:"
         for k, v in self.__dict__.iteritems():
@@ -429,19 +310,6 @@ class MDMC:
             msd2, msd3, msd4 = None, None, None
         return displacement, MSD, msd_var, msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new
 
-
-    def init_observables_protons_variable(self, O_trajectory, zfac, bins):
-        r = np.zeros(3, np.float32)
-        zmin = O_trajectory[:, :, 2].min()
-        zmax = O_trajectory[:, :, 2].max()
-        zmax += (zfac-1)*self.pbc[2]
-
-        O_counter = np.zeros(bins, int)
-        H_counter = np.zeros(bins, int)
-        bin_bounds = np.linspace(zmin, zmax, bins+1)
-
-        return r, O_counter, H_counter, bin_bounds
-
     def reset_observables(self, proton_pos_snapshot, protonlattice, displacement, Opos, helper):
         for i, site in enumerate(protonlattice):
             if site > 0:
@@ -483,8 +351,6 @@ class MDMC:
             sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps(), speed, remaining_time, msd_higher=msd_higher)
         self.averaged_results[(sweep % self.reset_freq)/self.print_freq, 2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
-
-
     def print_observables_var(self, sweep, autocorrelation, helper, timestep_fs, start_time, MSD, msd_var, msd2=None, msd3=None, msd4=None):
         speed = float(sweep)/(time.time()-start_time)
         if sweep != 0:
@@ -501,10 +367,6 @@ class MDMC:
             sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], msd_var[0],  msd_var[1], msd_var[2], autocorrelation, helper.get_jumps(), speed, remaining_time, msd_higher=msd_higher)
         self.averaged_results[(sweep % self.reset_freq)/self.print_freq, 2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
-    def print_observables_reservoir(self, sweep, timestep_fs, r, jumps, start_time):
-        print >> self.output, " {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {:8d} {:10.2f}".format(
-            sweep, sweep*timestep_fs, r[0], r[1], r[2], jumps, float(sweep)/(time.time()-start_time))
-
     def print_OsHs(self, Os, proton_lattice, sweep, timestep_fs):
         proton_indices = np.where(proton_lattice > 0)[0]
         print Os.shape[0] + self.proton_number
@@ -513,58 +375,6 @@ class MDMC:
             print "O		{:20.8f}   {:20.8f}   {:20.8f}".format(*Os[i])
         for index in proton_indices:
             print "H		{:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index])
-
-    def extend_simulationbox_old(self, Opos, onumber, h, box_multiplier, pbc):
-        if True in [multiplier > 1 for multiplier in box_multiplier]:
-            if self.nonortho:
-                v1 = h[:, 0]
-                v2 = h[:, 1]
-                v3 = h[:, 2]
-                Oview = Opos.view()
-                Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], onumber, 3)
-                for x in xrange(box_multiplier[0]):
-                    for y in xrange(box_multiplier[1]):
-                        for z in xrange(box_multiplier[2]):
-                            if x+y+z != 0:
-                                for i in xrange(onumber):
-                                    Oview[x, y, z, i, :] = Oview[0, 0, 0, i] + x * v1 + y * v2 + z * v3
-            else:
-                Oview = Opos.view()
-                Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], onumber, 3)
-                for x in xrange(box_multiplier[0]):
-                    for y in xrange(box_multiplier[1]):
-                        for z in xrange(box_multiplier[2]):
-                            if x+y+z != 0:
-                                for i in xrange(onumber):
-                                    Oview[x, y, z, i, :] = Oview[0, 0, 0, i] + pbc * [x, y, z]
-
-    def get_average_transitionmatrix_reservoir(self, helper, O_trajectory,
-                                               parameters, timestep, pbc,
-                                               nointra=True, verbose=False):
-        if os.path.exists(self.trajectory+"tm_avg.npy"):
-            if verbose:
-                print "#average matrix already on disk"
-                print "#loading from", self.trajectory+"tm_avg.npy"
-            tm_avg = np.load(self.trajectory+"tm_avg.npy")
-            print "#",tm_avg.shape
-        else:
-            tm_avg = np.zeros((722, 722))
-            Opos = np.zeros((5*self.oxygennumber, 3), np.float32)
-
-            if verbose:
-                print "#calculating new average matrix"
-
-            for i in xrange(O_trajectory.shape[0]):
-                Opos[:144,:] = O_trajectory[i]
-                kMC_helper.extend_simulationbox_z(5, Opos, self.pbc[2], 144)
-                if i % 1000 == 0:
-                    print "#{}/{} frames".format(i, O_trajectory.shape[0]),
-                    print "\r",
-                helper.calculate_transitionsmatrix_reservoir(tm_avg, Opos, parameters, self.pbc, 4.0, 6.0)
-            tm_avg /= O_trajectory.shape[0]
-            np.save(self.trajectory+"tm_avg.npy", tm_avg)
-            print "\n#done"
-        return tm_avg
 
     def kmc_run(self):
         if self.seed is not None:
