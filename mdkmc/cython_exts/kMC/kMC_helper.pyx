@@ -1,19 +1,13 @@
 #cython: profile=False
 #cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=True, initializedcheck=False
-# TODO: Cleanup
 import time
-import numpy as np
 import types
-import logging
 
 cimport numpy as np
-cimport cython
 from cython_gsl cimport *
-from libc.stdlib cimport malloc, free
-
 from libcpp.vector cimport vector
 from libcpp cimport bool
-
+    from libc.stdio cimport *
 cimport mdkmc.cython_exts.atoms.numpyatom as cnpa
 
 cdef extern from "math.h":
@@ -22,15 +16,11 @@ cdef extern from "math.h":
     double cos(double x) nogil
     double acos(double x) nogil
 
-from libc.stdio cimport *
-
-
 ctypedef np.int_t DTYPE_t
-
 cdef double PI = np.pi
 
-
 cdef double R = 1.9872041e-3   # universal gas constant in kcal/mol/K
+
 
 
 def dist_numpy_all_inplace(double [:, ::1] displacement, double [:, ::1] arr1, double [:, ::1] arr2, double [:] pbc):
