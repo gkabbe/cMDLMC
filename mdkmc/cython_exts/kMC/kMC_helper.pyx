@@ -7,7 +7,7 @@ cimport numpy as np
 from cython_gsl cimport *
 from libcpp.vector cimport vector
 from libcpp cimport bool
-    from libc.stdio cimport *
+from libc.stdio cimport *
 cimport mdkmc.cython_exts.atoms.numpyatom as cnpa
 
 cdef extern from "math.h":
@@ -301,12 +301,6 @@ cdef class Helper:
         cdef:
             int i
             double [:] pbc_extended
-        self.logger = logging.getLogger("{}.{}.{}".format("__main__.MDMC",
-                                                          __name__,
-                                                          self.__class__.__name__))
-        self.logger.info("Creating an instance of {}.{}.{}".format("MDMC",
-                                                                   __name__,
-                                                                   self.__class__.__name__))
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.jumps = 0
         self.oxygen_frame_extended = np.zeros((box_multiplier[0]*box_multiplier[1]*box_multiplier[2]
