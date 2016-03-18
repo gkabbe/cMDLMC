@@ -2,6 +2,7 @@
 #cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=True, initializedcheck=False
 import time
 import types
+import numpy as np
 
 cimport numpy as np
 from cython_gsl cimport *
