@@ -93,7 +93,8 @@ setup(name='mdkmc',
                               'print_version=mdkmc.print_version:print_version',
                               'avg_mdmc=mdkmc.kMC.average_MC_out:main',
                               'msd=mdkmc.analysis.msd:main',
-                              'ohbond-corr=mdkmc.analysis.ohbond_autocorr:main'
+                              'ohbond-corr=mdkmc.analysis.ohbond_autocorr:main',
+                              'convergence=mdkmc.analysis.convergence:main'
                              ],
       },
       # scripts=["bin/MDMC.py"],
