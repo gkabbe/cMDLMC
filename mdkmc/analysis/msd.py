@@ -10,7 +10,7 @@ from scipy.optimize import curve_fit
 from mdkmc.atoms import numpyatom as npa
 from mdkmc.IO import BinDump
 
-def calculate_msd(atom_traj, pbc, intervalnumber, intervallength):
+def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False):
     """Input: trajectory in numpy format (only proton positions), periodic boundaries, number of intervals, interval length
     Output: tuple of averaged msd and msd variance
     Method by Knuth https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance"""
@@ -23,6 +23,10 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength):
     else:
         diff = intervalnumber * intervallength - totallength
         startdist = intervallength - int(ceil(diff / float(intervalnumber - 1)))
+    if verbose:
+        print "# Total length of trajectory:", totallength
+        print "# Number of intervals:", intervalnumber
+        print "# Interval distance:", startdist
 
     for i in xrange(intervalnumber):
         sqdist = npa.sqdist_np(atom_traj[i * startdist:i * startdist + intervallength, :, :],
