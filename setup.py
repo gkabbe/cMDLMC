@@ -97,6 +97,7 @@ setup(name='mdkmc',
                               'convergence=mdkmc.analysis.convergence:main',
                               'center_of_mass=mdkmc.atoms.numpyatom:show_com_over_trajectory',
                               'rdf=mdkmc.analysis.rdf:main'
+                              'free-energy=mdkmc.analysis.free_energy:main'
                              ],
       },
       # scripts=["bin/MDMC.py"],
