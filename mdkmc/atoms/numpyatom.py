@@ -224,6 +224,22 @@ def remove_com_movement_frame(npa_frame, verbose=False):
         M += atom_masses[atom["name"]]
     com /= M
     npa_frame["pos"] -= com
+    
+
+def calculate_com_position(npa_frame):
+    com = np.zeros(3)
+    M = 0
+    for atom in npa_frame:
+        com += atom_masses[atom["name"]] * atom["pos"]
+        M += atom_masses[atom["name"]]
+    com /= M
+    print com
+    
+
+def show_com_over_trajectory(*args):
+    trajectory = np.load(sys.argv[1])
+    for frame in trajectory:
+        calculate_com_position(frame)
 
 
 def remove_com_movement_traj(npa_traj, verbose=False):
