@@ -31,7 +31,10 @@ def select_atoms(xyzatom_traj, *atomnames):
         traj = xyzatom_traj[xyzatom_traj["name"] == atomname]["pos"]
         atomnumber = xyzatom_traj[0][xyzatom_traj[0]["name"] == atomname].size
         selections[atomname] = np.array(traj.reshape((frames, atomnumber, 3)), order="C")
-    return selections
+    if len(atomnames) > 1:
+        return selections
+    else:
+        return selections[atomnames[0]]
 
 
 def numpyprint(atoms, names=None, outfile=None):
