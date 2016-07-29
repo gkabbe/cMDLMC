@@ -50,6 +50,14 @@ def numpyprint(atoms, names=None, outfile=None):
         print >> outfile, "{:4} {: 20} {: 20} {: 20}".format("H" if x["name"] == "AH" else x["name"], x["pos"][0],
                                                              x["pos"][1], x["pos"][2])
 
+def distance_one_to_many(single_atom, many_atoms, pbc):
+    diff = many_atoms-single_atom
+    while (diff > pbc / 2).any():
+        diff = np.where(diff > pbc/2, diff-pbc, diff)
+    while (diff < -pbc / 2).any():
+        diff = np.where(diff < -pbc/2, diff+pbc, diff)
+    return diff
+
 
 def distance(a1_pos, a2_pos, pbc=None):
     dist = a2_pos - a1_pos
