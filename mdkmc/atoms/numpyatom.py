@@ -25,16 +25,25 @@ atom_masses["Se"] = 78.971
 
 
 def select_atoms(xyzatom_traj, *atomnames):
-    selections = dict()
+    selections = []
     frames = xyzatom_traj.shape[0]
     for atomname in atomnames:
         traj = xyzatom_traj[xyzatom_traj["name"] == atomname]["pos"]
         atomnumber = xyzatom_traj[0][xyzatom_traj[0]["name"] == atomname].size
-        selections[atomname] = np.array(traj.reshape((frames, atomnumber, 3)), order="C")
+        selections.append(np.array(traj.reshape((frames, atomnumber, 3)), order="C"))
     if len(atomnames) > 1:
         return selections
     else:
-        return selections[atomnames[0]]
+        return selections[0]
+
+
+def map_indices(frame, atomname):
+    """Returns indices of atomtype in original trajectory"""
+    indices = []
+    for i, atom in enumerate(frame):
+        if atom["name"] == atomname:
+            indices.append(i)
+    return indices
 
 
 def numpyprint(atoms, names=None, outfile=None):
