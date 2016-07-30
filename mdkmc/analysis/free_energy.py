@@ -47,12 +47,8 @@ def get_hbond_indices(oxygen_traj, proton_traj, pbc):
     pairs = []
     for i, prot in enumerate(proton_traj[0]):
         dists = np.sqrt((npa.distance_one_to_many(proton_traj[0, i], oxygen_traj[0], pbc)**2).sum(axis=-1))
-        ox1, ox2 = np.argsort(dists)[:, :2].T
-        ipdb.set_trace()
-        
-        # Now check if they stay the same?
-        
-        # pairs.append((ox1, ox2))
+        ox1, ox2 = np.argsort(dists)[:2]
+        pairs.append((ox1, ox2))
     return pairs
 
 def get_hbond_indices_all_traj(oxygen_traj, proton_traj, pbc):
@@ -87,18 +83,20 @@ def free_energy_when_proton_in_middle(traj, pbc):
 
 def free_energy_from_oxygen_pairs(traj, pbc):
     oxygen_traj = npa.select_atoms(traj, "O")
-    pairs = get_close_oxygen_indices(oxygen_traj, pbc)
+    proton_traj = npa.select_atoms(traj, "H")
+    pairs = get_hbond_indices(oxygen_traj, proton_traj, pbc)
     # Calculate distance between oxygen 0 and oxygen 1 over whole trajectory
     free_energies = []
     dists = []
     for i, j in pairs:
-        dists_over_traj = np.sqrt((npa.distance_one_to_many(oxygen_traj[:, i], oxygen_traj[:, j], pbc)**2).sum(axis=-1)) * ureg.angstrom
-        dists.append(dists_over_traj)
-        fe = free_energy(dists_over_traj, 510. * ureg.kelvin)
+        d_oo = np.sqrt((npa.distance_one_to_many(oxygen_traj[:, i], oxygen_traj[:, j], pbc)**2).sum(axis=-1)) * ureg.angstrom
+        d_oo = d_oo[d_oo <= 2.6 * ureg.angstrom]
+        dists.append(d_oo)
+        fe = free_energy(d_oo, 510. * ureg.kelvin)
         print fe.to("kcal") * N_A
         free_energies.append(fe)
-
-    ipdb.set_trace()
+        
+    print "Free energy:", np.asfarray([(f.to("kcal")*N_A).magnitude for f in free_energies]).mean(), "kcal/mol"
 
 
 def main(*args):
@@ -109,5 +107,5 @@ def main(*args):
         print "Usage: {} <filename.xyz> <pbc_x> <pbc_y> <pbc_z>".format(sys.argv[0])
         raise
     
-    # free_energy_from_oxygen_pairs(traj, pbc)
-    free_energy_when_proton_in_middle(traj, pbc)
+    free_energy_from_oxygen_pairs(traj, pbc)
+    #  free_energy_when_proton_in_middle(traj, pbc)
