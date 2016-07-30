@@ -3,6 +3,7 @@ import argparse
 import ipdb
 import warnings
 import matplotlib.pylab as plt
+import time
 
 from mdkmc.IO import BinDump
 import mdkmc.atoms.numpyatom as npa
@@ -24,17 +25,20 @@ def rdf(traj1, traj2, pbc, histo_kwargs):
     
     neighbor_lists = [np.where(distance(a, frame2, pbc) <= histo_kwargs["range"][1] + 2) for a in frame1]
     # ipdb.set_trace()
-    
+    start_time = time.time()
     diffs = []
     for i, (frame1, frame2) in enumerate(zip(traj1, traj2)):
         for j, atom in enumerate(frame1):
             diffs += list(distance(atom, frame2[neighbor_lists[j]], pbc))
         if i % 1000 == 0:
-            print i
+            print float(i)/(time.time()-start_time), "frames/sec"
             histo, edges = np.histogram(diffs, **histo_kwargs)
             histogram += histo
             diffs = []
     dists = (edges[:-1] + edges[1:])/2
+    
+    print "# Total time:", time.time() - start_time
+    
     return histogram, dists, edges
 
 
@@ -66,9 +70,9 @@ def main(*args):
     selection = npa.select_atoms(traj, *args.elements)
     
     if len(args.elements) >= 2:
-        elem1, elem2 = selection.values()
+        elem1, elem2 = selection[:2]
     else:
-        elem1, = selection.values()
+        elem1 = selection
         elem2 = elem1
         
     histo, dists, edges = rdf(elem1, elem2, pbc, histo_kwargs)
