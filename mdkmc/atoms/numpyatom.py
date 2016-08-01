@@ -59,7 +59,7 @@ def numpyprint(atoms, names=None, outfile=None):
         print >> outfile, "{:4} {: 20} {: 20} {: 20}".format("H" if x["name"] == "AH" else x["name"], x["pos"][0],
                                                              x["pos"][1], x["pos"][2])
 
-def distance_one_to_many(single_atom, many_atoms, pbc):
+def distance_vectorized(single_atom, many_atoms, pbc):
     diff = many_atoms-single_atom
     while (diff > pbc / 2).any():
         diff = np.where(diff > pbc/2, diff-pbc, diff)
@@ -196,6 +196,11 @@ def angle(a1_pos, a2_pos, a3_pos, pbc):
     a2_a3 = distance(a2_pos, a3_pos, pbc)
     return np.degrees(np.arccos(np.dot(a1_a2, a2_a3) / np.linalg.norm(a1_a2) / np.linalg.norm(a2_a3)))
 
+
+def angle_vectorized(a1_pos, a2_pos, a3_pos, pbc):
+    a1_a2 = distance_vectorized(a1_pos, a2_pos, pbc)
+    a2_a3 = distance_vectorized(a2_pos, a3_pos, pbc)
+    return np.degrees(np.arccos(np.einsum("ij, ij -> i", a1_a2, a2_a3) / np.sqrt(np.einsum("ij,ij->i", a1_a2, a1_a2)) / np.sqrt(np.einsum("ij,ij->i", a2_a3, a2_a3))))
 
 # angle between a1--a2 and a3--a4
 def angle_4(a1_pos, a2_pos, a3_pos, a4_pos, pbc):
