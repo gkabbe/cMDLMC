@@ -61,7 +61,7 @@ for ext_path in cython_exts:
 
 setup(name='mdkmc',
       version='0.1',
-      description='Implementation of the MD/KMC algorithm in Python',
+      description='Implementation of the cMD/LMC algorithm in Python',
       long_description=readme(),
       classifiers=[
           'Development Status :: 3 - Alpha',
@@ -80,7 +80,8 @@ setup(name='mdkmc',
           'ipdb',
           'cythongsl==0.2.1',
           'gitpython',
-          'cython'
+          'cython',
+          'pint==0.7.2'
       ],
       dependency_links=['https://github.com/twiecki/CythonGSL/tarball/master#egg=cython_gsl-0.2.1'],
       test_suite='nose.collector',

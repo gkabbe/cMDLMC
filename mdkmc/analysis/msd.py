@@ -6,9 +6,15 @@ import argparse
 from math import ceil
 import matplotlib.pylab as plt
 from scipy.optimize import curve_fit
+import pint
 
 from mdkmc.atoms import numpyatom as npa
 from mdkmc.IO import BinDump
+
+
+ureg = pint.UnitRegistry()
+
+
 
 def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False):
     """Input: trajectory in numpy format (only proton positions), periodic boundaries, number of intervals, interval length
@@ -70,10 +76,13 @@ def main(*args):
     subparsers = parser.add_subparsers(dest="subparser_name")
     parser.add_argument("filename", help="Trajectory filename")
     parser.add_argument("pbc", nargs=3, type=float, help="Periodic boundaries")
+    parser.add_argument("timestep", type=ureg.parse_expression, help="MD timestep (e.g. 0.5fs)")
+    parser.add_argument("--length_unit", type=ureg.parse_expression, default="angstrom", help="Length unit of atom coordinates")
     parser.add_argument("--trajectory_cut", type=int, help="Restrict trajectory to specified number of frames")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbosity")
     parser.add_argument("--plot", action="store_true", help="Plot results")
     parser.add_argument("--fit_from", type=int, help="Fit MSD from specified data point")
+    parser.add_argument("-u", "--output_unit", type=ureg.parse_expression, default="angstrom**2/ps", help="In which unit to output MSD and diffusion coefficient")
     parser_fixed = subparsers.add_parser("single", help="Intervals with fixed size")
     parser_fixed.add_argument("intervalnumber", type=int, help="Number of intervals over which to average")
     parser_fixed.add_argument("intervallength", type=int, help="Interval length")
@@ -90,7 +99,7 @@ def main(*args):
         trajectory = trajectory[:args.trajectory_cut]
 
     BinDump.mark_acidic_protons(trajectory, pbc, verbose=args.verbose)
-    proton_traj = npa.select_atoms(trajectory, "AH")["AH"]
+    proton_traj = npa.select_atoms(trajectory, "AH")
 
 
     if args.subparser_name == "multi":
@@ -119,7 +128,14 @@ def main(*args):
         step = 1
 
     if args.plot:
-        plt.errorbar(np.arange(0, msd_mean.shape[0], step), msd_mean[::step], yerr=np.sqrt(msd_var[::step]))
+        output_time_unit = ureg.parse_expression([k for k, v in args.output_unit.to_tuple()[1] if v == -1.0][0])
+        output_length_unit = ureg.parse_expression([k for k, v in args.output_unit.to_tuple()[1] if v == 2.0][0])
+        time_w_unit = np.arange(0, msd_mean.shape[0], step) * args.timestep
+        msd_w_unit = msd_mean[::step] * args.length_unit**2
+        yerr_w_unit = np.sqrt(msd_var[::step]) * args.length_unit**2
+        plt.errorbar(time_w_unit.to(output_time_unit).magnitude, msd_w_unit.to(output_length_unit**2).magnitude, yerr=yerr_w_unit.to(output_length_unit**2).magnitude)
+        plt.xlabel("Time / "+output_time_unit.units.__str__())
+        plt.ylabel(r"MSD / "+output_length_unit.units.__str__()+"**2")
 
     if args.fit_from:
         def fit_func(x, m, y):
@@ -128,18 +144,19 @@ def main(*args):
                                     sigma=np.sqrt(msd_var[args.fit_from:]), absolute_sigma=True)
         m, y_0 = params
         m_err, y_0_err = np.sqrt(cov_mat[0, 0]), np.sqrt(cov_mat[1, 1])
+        
+        m, m_err = m*args.length_unit**2/args.timestep, m_err*args.length_unit**2/args.timestep
 
-        print "\nSlope in angström²/timestep:"
-        print m, m_err
-        print "\nSlope in pm²/timestep:"
-        print m*1e4, m_err*1e4
-        print "\nDiffusion coefficient in angström²/timestep:"
-        print m/6, m_err/6
-        print "\nDiffusion coefficient in pm²/timestep:"
-        print m*1e4/6, m_err*1e4/6
+        print "\nSlope in {}:".format(args.output_unit)
+        print "({:.2e} ± {:.2e}) {}".format(m.to(args.output_unit).magnitude, m_err.to(args.output_unit).magnitude, args.output_unit)
+
+        print "\nDiffusion coefficient in {}:".format(args.output_unit)
+        print "({:.2e} ± {:.2e}) {}".format(m.to(args.output_unit).magnitude/6, m_err.to(args.output_unit).magnitude/6, args.output_unit)
 
         if args.plot:
-            plt.plot(np.arange(msd_mean.shape[0]), m*np.arange(msd_mean.shape[0])+y_0)
+            fit = m*np.arange(msd_mean.shape[0])*args.timestep+y_0*args.length_unit**2
+            t = np.arange(msd_mean.shape[0]) * args.timestep
+            plt.plot(t.to(output_time_unit), fit.to(output_length_unit**2))
 
     plt.show()
 
