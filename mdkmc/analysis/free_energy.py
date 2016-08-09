@@ -125,20 +125,52 @@ def free_energy_standard_hbond_criterion(traj, pbc):
     
     dists = np.array(dists) * ureg.angstrom
     result, error = free_energy(dists, 510*ureg.kelvin)
+    print "Result for conventional geometric H-Bond criterion:"
     print result.to("kcal") * N_A, error.to("kcal") * N_A
     ipdb.set_trace()
     
     
+def free_energy_mdkmc(traj, pbc):
+    oxygen_traj = npa.select_atoms(traj, "O")
+    phos_traj = npa.select_atoms(traj, "P")
+    proton_traj = npa.select_atoms(traj, "H")
+    p_neighbors = determine_PO_pairs(oxygen_traj, phos_traj, pbc)
+   
+    
+    chunk_size = 3000
+    exp_val = 0
+    dists = []
+    for start, end in zip(xrange(0, traj.shape[0], chunk_size), xrange(chunk_size, traj.shape[0], chunk_size)):
+        oh_bond_indices = get_hbond_indices_all_traj(oxygen_traj[start:end], proton_traj[start:end], pbc)
+        for i in xrange(proton_traj.shape[1]):
+            ox1 = oxygen_traj[xrange(start, end), oh_bond_indices[i][0]]
+            ox2 = oxygen_traj[xrange(start, end), oh_bond_indices[i][1]]
+            phos = phos_traj[xrange(start, end), p_neighbors[oh_bond_indices[i][0]]]
+            hb = is_hbond_mdkmc(ox1, ox2, phos, pbc)
+            if hb.any():
+                dist = np.sqrt((npa.distance_vectorized(ox1[hb], ox2[hb], pbc)**2).sum(axis=-1)) 
+                dists += list(dist)   
+        print start
+            # print counter, ":", fe
+    
+    dists = np.array(dists) * ureg.angstrom
+    result, error = free_energy(dists, 510*ureg.kelvin)
+    print "Result for POO geometric H-Bond criterion:"
+    print result.to("kcal") * N_A, error.to("kcal") * N_A
+    print result.to("eV"), error.to("eV")
+    ipdb.set_trace()
+    
+    
 def is_hbond(ox1, ox2, proton, pbc):
-    return reduce(np.logical_and, [npa.angle_vectorized(ox1, proton, ox2, pbc) <=60, np.linalg.norm(npa.distance_vectorized(ox1, proton, pbc), axis=-1) <= 1.3,
+    return reduce(np.logical_and, [npa.angle_vectorized(ox1, proton, ox2, pbc) <=60, np.linalg.norm(npa.distance_vectorized(ox1, proton, pbc), axis=-1) <= 1.2,
                                 np.linalg.norm(npa.distance_vectorized(ox2, proton, pbc), axis=-1) <= 2.2])
 
 
-def hbond_mdkmc(ox1, ox2, phos, pbc):
+def is_hbond_mdkmc(ox1, ox2, phos, pbc):
     poo_angle = npa.angle_vectorized(phos, ox1, ox2, pbc)
-    oo_dist = npa.distance_vectorized(ox1, ox2, pbc)
+    oo_dist = np.linalg.norm(npa.distance_vectorized(ox1, ox2, pbc), axis=-1)
 
-    return np.logical_and(poo_angle >= 90, oo_dist < 3.0)
+    return np.logical_and(poo_angle <= 90, oo_dist < 3.0)
 
 
 def main(*args):
@@ -151,4 +183,5 @@ def main(*args):
     
     # free_energy_from_oxygen_pairs(traj, pbc)
     free_energy_standard_hbond_criterion(traj, pbc)
+    # free_energy_mdkmc(traj, pbc)
     #  free_energy_when_proton_in_middle(traj, pbc)
