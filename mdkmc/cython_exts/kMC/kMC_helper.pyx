@@ -1,5 +1,5 @@
 #cython: profile=False
-#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=True, initializedcheck=False
+#cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
 import time
 import types
 import numpy as np
@@ -149,6 +149,32 @@ cdef class AEFunction(JumprateFunction):
             return self.a * (x-self.x0) * (x-self.x0)
         else:
             return 2*self.a * (self.xint-self.x0)*(x-self.xint) + self.a*(self.xint-self.x0)*(self.xint-self.x0)
+
+
+cdef class AEFunctionPaper(JumprateFunction):
+    cdef:
+        double A, a, b, d0, T
+
+    def __cinit__(self, double A, double a, double b, double d0, double T):
+        self.A = A
+        self.a = a
+        self.b = b
+        self.d0 = d0
+        self.T = T
+
+    cpdef double evaluate(self, double x):
+        cdef double E
+        if x <= self.d0:
+            E = 0
+        else:
+            E = self.a * (x-self.d0)/sqrt(self.b+1.0/(x-self.d0)/(x-self.d0))
+        return self.A * exp(-E/(R*self.T))
+
+    cpdef double get_energy(self, double x):
+        if x <= self.x0:
+            return 0
+        else:
+            return self.a * (x-self.d0)/sqrt(self.b+1.0/(x-self.d0)/(x-self.d0))
 
 
 cdef class AtomBox:
@@ -356,9 +382,16 @@ cdef class Helper:
             xint = jumprate_parameter_dict["xint"]
             T = jumprate_parameter_dict["T"]
             self.jumprate_fct = AEFunction(A, a, x0, xint, T)
+        elif jumprate_type == "AE_paper":
+            A = jumprate_parameter_dict["A"]
+            a = jumprate_parameter_dict["a"]
+            b = jumprate_parameter_dict["b"]
+            d0 = jumprate_parameter_dict["d0"]
+            T = jumprate_parameter_dict["T"]
+            self.jumprate_fct = AEFunctionPaper(A, a, b, d0, T)
         else:
             raise Exception("Jumprate type unknown. Please choose between "
-                            "MD_rates and AE_rates")
+                            "MD_rates, AE_rates and AE_paper")
 
     def __dealloc__(self):
         gsl_rng_free(self.r)
@@ -530,7 +563,7 @@ cdef class Helper:
             int steps
 
         steps =  self.start[frame].size()
-
+        
         for step in xrange(steps):
             i = gsl_rng_uniform_int(self.r, steps)
             index_origin = self.start[frame][i]
