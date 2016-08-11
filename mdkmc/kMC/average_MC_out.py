@@ -4,6 +4,9 @@
 import numpy as np
 import argparse
 import ipdb, sys
+import pint
+
+ureg = pint.UnitRegistry()
 
 try:
     from scipy.optimize import curve_fit
@@ -20,7 +23,7 @@ def load_interval_samples(filename, lines, intervals, columns, time_columns):
     time = np.loadtxt(filename, usecols=time_columns)
 
     if verbose == True:
-        print("#Shape of data:", data.shape)
+        print("# Shape of data:", data.shape)
 
     if intervals != None and intervals < data.shape[0]:
         data = data[:intervals * lines]
@@ -28,15 +31,17 @@ def load_interval_samples(filename, lines, intervals, columns, time_columns):
         intervals = data.shape[0]/lines
 
     if verbose == True:
-        print("#Intervals:", intervals)
+        print("# Intervals:", intervals)
 
     data = data.flatten().reshape(intervals, lines, len(columns))
     
     return data
 
     
-def load_intervals_intelligently(filename, var_prot_single):
+def load_intervals_intelligently(filename, var_prot_single, verbose=False):
     def get_settings_from_settings_output(lines):
+        if verbose:
+            print "Trying to determine KMC intervals from configuration file"
         settings = dict()
         for line in lines:
             if "print_freq" in line:
@@ -55,6 +60,8 @@ def load_intervals_intelligently(filename, var_prot_single):
             return None
 
     def get_settings_from_average_at_the_end(lines):
+        if verbose:
+            print "Trying to load averaged output"
         interval_length = 0
         total_lines = 0
         count_interval = False
@@ -77,6 +84,8 @@ def load_intervals_intelligently(filename, var_prot_single):
             return None
 
     def get_settings_from_msd_zeros(data, lines):
+        if verbose:
+            print "Trying to determine KMC intervals heuristically"
         intervals = np.where(data[:, 2] == 0)[0]
         interval_length = intervals[1]
         if "Averaged Results" in " ".join(lines):
@@ -159,29 +168,49 @@ def get_slope(args):
     Determine then mean and standard deviation of the resulting slopes."""
     def fit_func(x, m, y):
         return m*x + y
+        
+    msd_unit = args.length_unit**2/args.time_unit
 
     filename, fit_startpoint = args.file, args.msd_fitstart
-    data = load_intervals_intelligently(filename, args.var_prot_single)
+    data = load_intervals_intelligently(filename, args.var_prot_single, verbose=args.verbose)
 
-    time = data[0, :, 1]
-    y = data[:, :, 2:5].sum(axis=2).mean(axis=0)
-    y_err = np.sqrt(data[:, :, 2:5].sum(axis=2).var(axis=0))
-    params, cov_mat = curve_fit(fit_func, time[fit_startpoint:], y[fit_startpoint:], sigma=y_err[fit_startpoint:], absolute_sigma=True)
-    m, y_0 = params
-    m_err, y_0_err = np.sqrt(cov_mat[0, 0]), np.sqrt(cov_mat[1, 1])
+    if len(data.shape) == 3:
+        time = data[0, :, 1]
+        y_avg = data[:, :, 2:5].sum(axis=-1).mean(axis=0)
+        y_err = np.sqrt(data[:, :, 2:5].sum(axis=-1).var(axis=0))
+        if args.average_first:
+            params, cov_mat = curve_fit(fit_func, time[fit_startpoint:], y_avg[fit_startpoint:], sigma=y_err[fit_startpoint:], absolute_sigma=True)
+            m, y0 = params
+            m_err, y_0_err = np.sqrt(cov_mat[0, 0]), np.sqrt(cov_mat[1, 1])
+        else:
+            ms, y0s = [], []
+            for interval in data:
+                y = interval[:, 2:5].sum(axis=-1)
+                params, cov_mat = curve_fit(fit_func, time[fit_startpoint:], y[fit_startpoint:])
+                m, y0 = params
+                ms.append(m)
+                y0s.append(y0)
+            ms = np.asfarray(ms)
+            y0s = np.asfarray(y0s)
+            y0 = y0s.mean()
+            y0_err = np.std(y0s)
+            m = ms.mean()
+            m_err = np.std(ms)
 
-    print "Slope in angström²/ps:"
-    print m*1000, m_err*1000
-    print "Slope in pm²/ps:"
-    print m*1e7, m_err*1e7
-    print "Diffusion coefficient in angström²/ps:"
-    print m*1000./6, m_err*1000./6
-    print "Diffusion coefficient in pm²/ps:"
-    print m*1e7/6, m_err*1e7/6
+    m, m_err = m*msd_unit, m_err*msd_unit
+
+    print "Slope:"
+    print "({} ± {}) {}".format(m.to(args.output_unit).m, m_err.to(args.output_unit).m, args.output_unit)
+    print "Diffusion coefficient:"
+    print "({} ± {}) {}".format(m.to(args.output_unit).m/6, m_err.to(args.output_unit).m/6, args.output_unit)
 
     if args.plot:
-        plt.errorbar(time, y, y_err)
-        plt.plot(time, time*m+y_0)
+        plt.errorbar(time, y_avg, y_err)
+        plt.plot(time, time*m.m+y0)
+        plt.plot(time, (time-time[args.msd_fitstart])*(m.m+m_err.m)+y0+time[args.msd_fitstart]*m.m, "g--")
+        plt.plot(time, (time-time[args.msd_fitstart])*(m.m-m_err.m)+y0+time[args.msd_fitstart]*m.m, "g--")
+        plt.vlines(time[args.msd_fitstart], *plt.ylim(), label="Fit start", colors="r")
+        plt.legend()
         plt.show()
 
 
@@ -217,11 +246,15 @@ def main(*args):
     parser=argparse.ArgumentParser(description="Average KMC output. Assuming time in first column")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     parser.add_argument("--plot", "-p", action="store_true", help="Show plot")
+    parser.add_argument("--time_unit", default="fs", type=ureg.parse_expression, help="Time unit of MC output")
+    parser.add_argument("--length_unit", type=ureg.parse_expression, default="angstrom", help="Length unit of atom coordinates")
     parser.add_argument("--var_prot_single", action="store_true", default=False, help="average variance, mode var_prot_single during kMC run necessary ")
     subparsers = parser.add_subparsers()
     parser_slope = subparsers.add_parser("slope", help="Only determine slope of MSD")
     parser_slope.add_argument("file", help="KMC output")
+    parser_slope.add_argument("-a", "--average_first", action="store_true", help="Average MSD first, then determine slope")
     parser_slope.add_argument("--msd-fitstart", "-s", type=int, default=0, help="From which point in the MSD interval to start fitting")
+    parser_slope.add_argument("--output_unit", "-u", default="angstrom**2/ps", type=ureg.parse_expression, help="Unit of MSD result")
     parser_slope.set_defaults(func=get_slope)
     parser_all = subparsers.add_parser("average", help="Average all columns from KMC output")
     parser_all.add_argument("file", help="KMC output")
