@@ -22,6 +22,7 @@ def load_atoms_from_numpy_trajectory(traj_fname, atomnames, clip=None, verbose=F
         trajectory = trajectory[:clip]
     single_atom_trajs = []
     for atom in atomnames:
+        atom = atom.encode()
         atom_nr = trajectory[0][trajectory[0]["name"] == atom].size
         atom_traj = (trajectory[trajectory["name"] == atom]).reshape((trajectory.shape[0], atom_nr))
         atom_traj = np.array(atom_traj["pos"], order="C")
@@ -35,6 +36,7 @@ def load_atoms_from_numpy_trajectory_as_memmap(traj_fname, atomnames, clip=None,
     for atom in atomnames:
         root, ext = os.path.splitext(traj_fname)
         new_fname = "{}_{}.npy".format(root, atom)
+        atom = atom.encode()
         try:
             if verbose:
                 print("# Trying to load memmap from", new_fname)
@@ -457,7 +459,7 @@ class MDMC:
         helper.determine_neighbors(0)
         helper.store_transitions_in_vector(verbose=self.verbose)
 
-        self.averaged_results = np.zeros((self.reset_freq / self.print_freq, 7))
+        self.averaged_results = np.zeros((self.reset_freq // self.print_freq, 7))
 
         # Equilibration
         for sweep in range(self.equilibration_sweeps):
