@@ -281,7 +281,7 @@ class MDMC:
                 print("#         {} {} {}".format(*v[1]))
                 print("#         {} {} {}".format(*v[2]))
             else:
-                print("# {:20} {:>20}".format(k, v))
+                print("# {:20} {:>20}".format(k, str(v)))
 
     def init_proton_lattice(self, box_multiplier):
         proton_lattice = np.zeros(self.oxygennumber*box_multiplier[0]*box_multiplier[1]*box_multiplier[2], np.uint8)
@@ -326,7 +326,7 @@ class MDMC:
 
     def print_observable_names(self):
         if self.var_prot_single:
-	        print("# {:>10} {:>10} {:>18} {:>18} {:>18}   {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format(
+            print("# {:>10} {:>10} {:>18} {:>18} {:>18}   {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format(
                 "Sweeps", "Time", "MSD_x", "MSD_y", "MSD_z", "MSD_x_var", "MSD_y_var", "MSD_z_var" , "Autocorr", "Jumps", "Sweeps/Sec", "Remaining Time/Hours:Min"), file=self.output)
         else:
             print("# {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10} {:>12}".format(
@@ -347,7 +347,7 @@ class MDMC:
 # print >> self.output, " {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {msd_higher:}  {:8d} {:10d} {:10.2f} {:10}".format(
 #            sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps(), speed, remaining_time, msd_higher=msd_higher)
 #        self.averaged_results[(sweep % self.reset_freq)/self.print_freq, 2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
-	print(" {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f}   {msd_higher:}  {:8d} {:10d} {:10.2f} {:10}".format(		
+        print(" {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f}   {msd_higher:}  {:8d} {:10d} {:10.2f} {:10}".format(
             sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps(), speed, remaining_time, msd_higher=msd_higher), file=self.output)
         self.averaged_results[(sweep % self.reset_freq)/self.print_freq, 2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
@@ -363,7 +363,7 @@ class MDMC:
             msd_higher = "{:18.8f} {:18.8f} {:18.8f}".format(msd2, msd3, msd4)
         else:
             msd_higher = ""
-	print(" {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {:18.8f} {:18.8f} {:18.8f}  {msd_higher:}  {:8d} {:10d} {:10.2f} {:10}".format(		
+        print(" {:>10} {:>10}    {:18.8f} {:18.8f} {:18.8f} {:18.8f} {:18.8f} {:18.8f}  {msd_higher:}  {:8d} {:10d} {:10.2f} {:10}".format(        
             sweep, sweep*timestep_fs, MSD[0], MSD[1], MSD[2], msd_var[0],  msd_var[1], msd_var[2], autocorrelation, helper.get_jumps(), speed, remaining_time, msd_higher=msd_higher), file=self.output)
         self.averaged_results[(sweep % self.reset_freq)/self.print_freq, 2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
@@ -372,9 +372,9 @@ class MDMC:
         print(Os.shape[0] + self.proton_number)
         print("Time:", sweep*timestep_fs)
         for i in range(Os.shape[0]):
-            print("O		{:20.8f}   {:20.8f}   {:20.8f}".format(*Os[i]))
+            print("O        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[i]))
         for index in proton_indices:
-            print("H		{:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]))
+            print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]))
 
     def kmc_run(self):
         if self.seed is not None:
@@ -494,7 +494,7 @@ class MDMC:
                     MSD, msd2, msd3, msd4 = calculate_higher_MSD(displacement)
                 else:
                     if self.var_prot_single:        
-		                MSD, msd_var= calculate_MSD_var(MSD, displacement, msd_var)
+                        MSD, msd_var= calculate_MSD_var(MSD, displacement, msd_var)
                     else:
                         calculate_MSD(MSD, displacement)
                 autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)

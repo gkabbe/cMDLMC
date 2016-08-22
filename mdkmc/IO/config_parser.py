@@ -12,7 +12,7 @@ def get_jumprate_parameters(line):
     return param_dict
 
 def get_pbc(line):
-    pbc = np.array(list(map(float, line.split()[1:])))
+    pbc = np.fromiter(map(float, line.split()[1:]), dtype=np.float)
     if len(pbc) != 3 and len(pbc) != 9:
         raise ValueError("pbc length should be either 3 or 9")
     else:

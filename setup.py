@@ -12,7 +12,7 @@ from Cython.Build import cythonize
 def get_commit_hash():
     command = "git log -n 1 --format=%H%n%s%n%ad"
     try:
-        commit_hash, commit_message, commit_date = subprocess.check_output(command.split()).strip().split("\n")
+        commit_hash, commit_message, commit_date = subprocess.check_output(command.split()).strip().split(b"\n")
     except subprocess.CalledProcessError:
         print("Command '{}' could not be executed successfully.".format(command), file=sys.stderr)
     return commit_hash, commit_message, commit_date

@@ -363,7 +363,7 @@ cdef class Helper:
 
         self.atombox = atombox
 
-        if type(seed) != types.IntType:
+        if type(seed) != int:
             seed = time.time()
         gsl_rng_set(self.r, seed)
         if verbose:
