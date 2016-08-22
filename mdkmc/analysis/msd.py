@@ -30,11 +30,11 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False)
         diff = intervalnumber * intervallength - totallength
         startdist = intervallength - int(ceil(diff / float(intervalnumber - 1)))
     if verbose:
-        print "# Total length of trajectory:", totallength
-        print "# Number of intervals:", intervalnumber
-        print "# Interval distance:", startdist
+        print("# Total length of trajectory:", totallength)
+        print("# Number of intervals:", intervalnumber)
+        print("# Interval distance:", startdist)
 
-    for i in xrange(intervalnumber):
+    for i in range(intervalnumber):
         sqdist = npa.sqdist_np(atom_traj[i * startdist:i * startdist + intervallength, :, :],
                                atom_traj[i * startdist, :, :], pbc, axis_wise=True)
         sqdist = sqdist.mean(axis=1)  # average over atom number
@@ -55,7 +55,7 @@ def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay):
     msd_mean = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
     msd_var = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
     delta = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
-    for interval_length in xrange(0, total_length - subinterval_delay, subinterval_delay):
+    for interval_length in range(0, total_length - subinterval_delay, subinterval_delay):
         ind_helper = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
         sqdist = npa.sqdist_np_multibox(atom_traj[interval_length: total_length, :, :],
                                         atom_traj[interval_length, :, :], pbc, axis_wise=True)
@@ -94,8 +94,8 @@ def main(*args):
     trajectory = BinDump.npload_atoms(args.filename, create_if_not_existing=True, remove_com=True, verbose=args.verbose)
     if args.trajectory_cut:
         if args.verbose:
-            print "# Trajectory length: {} frames".format(trajectory.shape[0])
-            print "# Trajectory will be cut from frame 0 to frame {}".format(args.trajectory_cut)
+            print("# Trajectory length: {} frames".format(trajectory.shape[0]))
+            print("# Trajectory will be cut from frame 0 to frame {}".format(args.trajectory_cut))
         trajectory = trajectory[:args.trajectory_cut]
 
     BinDump.mark_acidic_protons(trajectory, pbc, verbose=args.verbose)
@@ -120,7 +120,7 @@ def main(*args):
     msd_mean, msd_var = msd_mean.sum(axis=1), msd_var.sum(axis=1) # sum over the three spatial coordinate axes
 
     for mm, mv in zip():
-        print mm, mv
+        print(mm, mv)
 
     if msd_mean.shape[0] > 50:
         step = msd_mean.shape[0] / 50
@@ -147,11 +147,11 @@ def main(*args):
         
         m, m_err = m*args.length_unit**2/args.timestep, m_err*args.length_unit**2/args.timestep
 
-        print "\nSlope in {}:".format(args.output_unit)
-        print "({:.2e} ± {:.2e}) {}".format(m.to(args.output_unit).magnitude, m_err.to(args.output_unit).magnitude, args.output_unit)
+        print("\nSlope in {}:".format(args.output_unit))
+        print("({:.2e} ± {:.2e}) {}".format(m.to(args.output_unit).magnitude, m_err.to(args.output_unit).magnitude, args.output_unit))
 
-        print "\nDiffusion coefficient in {}:".format(args.output_unit)
-        print "({:.2e} ± {:.2e}) {}".format(m.to(args.output_unit).magnitude/6, m_err.to(args.output_unit).magnitude/6, args.output_unit)
+        print("\nDiffusion coefficient in {}:".format(args.output_unit))
+        print("({:.2e} ± {:.2e}) {}".format(m.to(args.output_unit).magnitude/6, m_err.to(args.output_unit).magnitude/6, args.output_unit))
 
         if args.plot:
             fit = m*np.arange(msd_mean.shape[0])*args.timestep+y_0*args.length_unit**2

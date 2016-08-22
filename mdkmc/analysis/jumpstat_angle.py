@@ -177,7 +177,7 @@ from IO import BinDump
 #
 def determine_oxy_neighbor_pairs(O_frame, neighbor_frame, pbc):
 	neighbors = np.zeros(O_frame.shape[0], int)
-	for i in xrange(O_frame.shape[0]):
+	for i in range(O_frame.shape[0]):
 		nb_index = npa.nextNeighbor(O_frame[i], neighbor_frame, pbc)[0]
 		neighbors[i] = nb_index
 	return neighbors
@@ -235,7 +235,7 @@ def main(*args):
 	pbc= np.array(args.pbc)
 
 	if args.verbose == True:
-		print "#PBC used:", pbc
+		print("#PBC used:", pbc)
 
 	trajectory = BinDump.npload_atoms(args.filename, create_if_not_existing=True, verbose=args.verbose)
 	BinDump.mark_acidic_protons(trajectory, pbc, verbose=args.verbose)

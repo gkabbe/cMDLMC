@@ -16,7 +16,7 @@ from mdkmc.IO import BinDump
 
 def determine_PO_pairs(O_frame, P_frame, pbc):
     P_neighbors = np.zeros(O_frame.shape[0], int)
-    for i in xrange(O_frame.shape[0]):
+    for i in range(O_frame.shape[0]):
         P_index = npa.nextNeighbor(O_frame[i], P_frame, pbc)[0]
         P_neighbors[i] = P_index
     return P_neighbors
@@ -31,9 +31,9 @@ def jump_histo(filename, dmin, dmax, bins, progress, pbc, frames, Os, Hs, covevo
 
         jumpcounter = np.zeros(bins, int)
 
-        for frame in xrange(Os.shape[0]-1):
+        for frame in range(Os.shape[0]-1):
             if verbose == True and frame % 1000 == 0:
-                print "#Frame {}".format(frame), "\r",
+                print("#Frame {}".format(frame), "\r", end=' ')
             neighborchange = covevo[frame]!=covevo[frame+1]
             if neighborchange.any():
                     jump_protons = neighborchange.nonzero()[0]
@@ -46,12 +46,12 @@ def jump_histo(filename, dmin, dmax, bins, progress, pbc, frames, Os, Hs, covevo
                             else:
                                 O_dist = npa.length(Os[frame, O_after], Os[frame, O_before], pbc)
                             jumpcounter[(O_dist-dmin)/(dmax-dmin)*bins] += 1
-        print ""
-        print "#Proton jump histogram:"
-        for i in xrange(jumpcounter.size):
-                print "{:10} {:10}".format(dmin+(dmax-dmin)/bins*(.5+i), jumpcounter[i])
+        print("")
+        print("#Proton jump histogram:")
+        for i in range(jumpcounter.size):
+                print("{:10} {:10}".format(dmin+(dmax-dmin)/bins*(.5+i), jumpcounter[i]))
 
-        print "#Jumps total: {:}".format(jumpcounter.sum())
+        print("#Jumps total: {:}".format(jumpcounter.sum()))
 
 
 def main(*args):
@@ -79,16 +79,16 @@ def main(*args):
         nonortho = False
     elif len(args.pbc) == 9:
         if args.verbose == True:
-            print "#Got 9 pbc values. Assuming nonorthorhombic box"
+            print("#Got 9 pbc values. Assuming nonorthorhombic box")
         nonortho = True
         
     else:
-        print >> sys.stderr, "Wrong number of PBC arguments"
+        print("Wrong number of PBC arguments", file=sys.stderr)
         sys.exit(1)
     pbc= np.array(args.pbc)
 
     if args.verbose == True:
-        print "#PBC used:\n#", pbc
+        print("#PBC used:\n#", pbc)
 
     trajectory = BinDump.npload_atoms(args.filename, create_if_not_existing=True, verbose=args.verbose)
     BinDump.mark_acidic_protons(trajectory, pbc, nonortho=nonortho, verbose=args.verbose)

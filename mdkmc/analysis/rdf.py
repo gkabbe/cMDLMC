@@ -31,13 +31,13 @@ def rdf(traj1, traj2, pbc, histo_kwargs):
         for j, atom in enumerate(frame1):
             diffs += list(distance(atom, frame2[neighbor_lists[j]], pbc))
         if i % 1000 == 0:
-            print float(i)/(time.time()-start_time), "frames/sec"
+            print(float(i)/(time.time()-start_time), "frames/sec")
             histo, edges = np.histogram(diffs, **histo_kwargs)
             histogram += histo
             diffs = []
     dists = (edges[:-1] + edges[1:])/2
     
-    print "# Total time:", time.time() - start_time
+    print("# Total time:", time.time() - start_time)
     
     return histogram, dists, edges
 
@@ -81,10 +81,10 @@ def main(*args):
     V = pbc[0] * pbc[1] * pbc[2]
     rho = N/V
     
-    print "# Number of particles:", N
-    print "# Volume:", V
-    print "# Rho = N/V =", rho
-    print traj.shape
+    print("# Number of particles:", N)
+    print("# Volume:", V)
+    print("# Rho = N/V =", rho)
+    print(traj.shape)
     
     histo_norm = np.asfarray(histo) / (4./3*np.pi*rho*(edges[1:]**3-edges[:-1]**3)) / elem2.shape[1] / traj.shape[0]
     # histo_norm2 = np.asfarray(histo) / (4./3*np.pi*rho*dists**2*dr) / elem2.shape[1] / traj.shape[0]

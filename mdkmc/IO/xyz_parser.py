@@ -31,14 +31,14 @@ class XYZFile(object):
         self.datei.seek(0)
         self.datei.readline()
         self.datei.readline()
-        for index in xrange(self.atomnr):
+        for index in range(self.atomnr):
             line = self.datei.readline()
             atomname = line.split()[0]
-            if atomname in atomdict.keys():
+            if atomname in list(atomdict.keys()):
                 atomdict[atomname].add(index)
             else:
                 if verbose:
-                    print "# Adding", atomname, "to atomdict"
+                    print("# Adding", atomname, "to atomdict")
                 atomdict[atomname] = set([index])
         self.datei.seek(0)
 
@@ -48,42 +48,42 @@ class XYZFile(object):
         Os = []
         self.datei.readline()
         self.datei.readline()
-        for index in xrange(self.atomnr):
+        for index in range(self.atomnr):
             line = self.datei.readline()
             if index in self.atomdict["O"]:
-                Os.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
+                Os.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
         return Os
 
     def parse_frame_np(self, pos_array, atomname):
         self.datei.readline()
         self.datei.readline()
         i = 0
-        for index in xrange(self.atomnr):
+        for index in range(self.atomnr):
             line = self.datei.readline()
             if index in self.atomdict[atomname]:
-                pos_array[i] = map(float, line.split()[1:4])
+                pos_array[i] = list(map(float, line.split()[1:4]))
                 i += 1
 
     def parse_frames_np_inplace(self, arr, atomname, verbose=False):
         """Expects numpy array in the shape (frames, oxygennumber, 3)"""
         frames = arr.shape[0]
-        for frame in xrange(frames):
+        for frame in range(frames):
             line = self.datei.readline()
             if line == "":
                 return frame
             if frame % 1000 == 0:
                 if verbose:
-                    print "# Frame", frame,
-                    print "\r",
+                    print("# Frame", frame, end=' ')
+                    print("\r", end=' ')
             self.datei.readline()
             Oindex = 0
-            for atom in xrange(self.atomnr):
+            for atom in range(self.atomnr):
                 line = self.datei.readline()
                 if atom in self.atomdict[atomname]:
-                    arr[frame, Oindex, :] = map(float, line.split()[1:])
+                    arr[frame, Oindex, :] = list(map(float, line.split()[1:]))
                     Oindex += 1
         if verbose:
-            print ""
+            print("")
         return frames
 
     def parse_OHframe(self, *args):
@@ -98,24 +98,24 @@ class XYZFile(object):
             self.datei.readline()
             self.datei.readline()
 
-            for index in xrange(self.atomnr):
+            for index in range(self.atomnr):
                 line = self.datei.readline()
                 if index in Oinds:
-                    Os.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
+                    Os.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
                 elif index in Hinds:
-                    Hs.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
+                    Hs.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
             self.frame += 1
             return (Os, Hs)
 
         else:
             self.datei.readline()
             self.datei.readline()
-            for index in xrange(self.atomnr):
+            for index in range(self.atomnr):
                 line = self.datei.readline()
                 if "O" in line:
-                    Os.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
+                    Os.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
                 elif "H" in line:
-                    Hs.append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
+                    Hs.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
             self.frame += 1
             return (Os, Hs)
 
@@ -123,17 +123,17 @@ class XYZFile(object):
         # pdb.set_trace()
         atoms = dict()
         for atomname in atomnames:
-            if atomname in self.atomdict.keys():
+            if atomname in list(self.atomdict.keys()):
                 atoms[atomname] = []
         line = self.datei.readline()
         if line == "":
             raise EOFError
         self.datei.readline()
-        for index in xrange(self.atomnr):
+        for index in range(self.atomnr):
             line = self.datei.readline()
-            for atomname in atoms.keys():
+            for atomname in list(atoms.keys()):
                 if index in self.atomdict[atomname]:
-                    atoms[atomname].append(ac.Atom(line.split()[0], map(float, line.split()[1:4]), index))
+                    atoms[atomname].append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
         self.frame += 1
         return atoms
 
@@ -145,10 +145,10 @@ class XYZFile(object):
             if line == "":
                 raise EOFError
             self.datei.readline()
-            for index in xrange(self.atomnr):
+            for index in range(self.atomnr):
                 line = self.datei.readline()
                 atoms[index]["name"] = line.split()[0]
-                atoms[index]["pos"][:] = map(float, line.split()[1:4])
+                atoms[index]["pos"][:] = list(map(float, line.split()[1:4]))
         else:
             atomnr_selection = sum([len(self.atomdict[atomname]) for atomname in atomnames])
             atoms = np.zeros(atomnr_selection, dtype=npa.xyzatom)
@@ -157,13 +157,13 @@ class XYZFile(object):
                 raise EOFError
             self.datei.readline()
             j = 0
-            for index in xrange(self.atomnr):
+            for index in range(self.atomnr):
                 line = self.datei.readline()
                 # name = line.split()[0]
-                for atomname, atom_indices in self.atomdict.iteritems():
+                for atomname, atom_indices in self.atomdict.items():
                     if atomname in atomnames and index in atom_indices:
                         atoms[j]["name"] = atomname
-                        atoms[j]["pos"][:] = map(float, line.split()[1:4])
+                        atoms[j]["pos"][:] = list(map(float, line.split()[1:4]))
                         j += 1
         self.frame += 1
 
@@ -180,12 +180,12 @@ class XYZFile(object):
             except EOFError:
                 break
             if verbose and counter % 100 == 0:
-                print "# Frame {}, ({:.2f} fps)".format(counter, float(counter) / (time.time() - start_time)), "\r",
+                print("# Frame {}, ({:.2f} fps)".format(counter, float(counter) / (time.time() - start_time)), "\r", end=' ')
             counter += 1
         if verbose:
-            print ""
+            print("")
         if verbose:
-            print "# Total time: {} sec".format(time.time()-start_time)
+            print("# Total time: {} sec".format(time.time()-start_time))
 
         return np.array(traj, dtype=npa.xyzatom)
 
@@ -193,32 +193,32 @@ class XYZFile(object):
         frame_number = self.get_framenumber()
         memmap = np.lib.format.open_memmap(memmap_fname, dtype=dtype_xyz, shape=(frame_number, self.atomnr), mode="w+")
 
-        for i in xrange(frame_number):
+        for i in range(frame_number):
             memmap[i, :] = self.get_atoms_numpy(atomnames)
             if verbose and i % 1000 == 0:
-                print "# {:06d} / {:06d}\r".format(i, frame_number),
+                print("# {:06d} / {:06d}\r".format(i, frame_number), end=' ')
                 sys.stdout.flush()
         if verbose:
-            print ""
+            print("")
         return memmap
 
     def print_frame(self):
-        for i in xrange(self.atomnr + 2):
-            print self.datei.readline()[:-1]
+        for i in range(self.atomnr + 2):
+            print(self.datei.readline()[:-1])
 
     def print_selection(self, selection):
         atomnr = 0
-        for a in self.atomdict.keys():
+        for a in list(self.atomdict.keys()):
             if a in selection:
                 atomnr += len(self.atomdict[a])
-        print atomnr
-        print ""
+        print(atomnr)
+        print("")
         self.datei.readline()
         self.datei.readline()
-        for index in xrange(self.atomnr):
+        for index in range(self.atomnr):
             line = self.datei.readline()
             if line.split()[0] in selection:
-                print line[:-1]
+                print(line[:-1])
 
     def seek_frame(self, n):
         self.datei.seek(0)
@@ -232,7 +232,7 @@ class XYZFile(object):
         self.frame = n
 
     def framejump(self, n):
-        for i in xrange((self.atomnr + 2) * n):
+        for i in range((self.atomnr + 2) * n):
             self.datei.readline()
 
     def get_framenumber(self, verbose=False):
@@ -242,7 +242,7 @@ class XYZFile(object):
             linenumber = int(os.popen("wc -l " + self.filename).read().split()[0])
             framenumber = linenumber / (self.atomnr + 2)
             if verbose:
-                print "#{} frames".format(framenumber)
+                print("#{} frames".format(framenumber))
             return framenumber
 
     def rewind(self):

@@ -34,7 +34,7 @@ class TestMDMC(unittest.TestCase):
             helper.determine_neighbors(Os, 6.)
             helper.calculate_transitions_new(Os, 20.)
             start, dest, prob = helper.return_transitions()
-            sdp = zip(start, dest, prob)
+            sdp = list(zip(start, dest, prob))
             transition_matrix = np.zeros((Os.shape[0], Os.shape[0]))
             matrix_as_it_should_be = np.eye(Os.shape[0], k=1)+np.eye(Os.shape[0], k=-1)
             matrix_as_it_should_be[0,-1] = 1.0
@@ -52,26 +52,26 @@ class TestMDMC(unittest.TestCase):
         displacement = np.zeros((1,3))
 
         # Test unwrapped case
-        for i in xrange(100):
+        for i in range(100):
             oxy_lattice = np.zeros(10, int)
             oxy_lattice[i % 10] = 1
             MDMC.calculate_displacement(oxy_lattice, initial_proton_pos,
                                         oxy_positions, displacement, pbc, wrap=False)
-            print "Unwrapped displacement:", displacement
-            print np.linalg.norm(displacement[0]), i
+            print("Unwrapped displacement:", displacement)
+            print(np.linalg.norm(displacement[0]), i)
             self.assertTrue(np.linalg.norm(displacement[0])==i)
 
         initial_proton_pos[:] = 0
         # Test wrapped case
-        for i in xrange(100):
+        for i in range(100):
             oxy_lattice = np.zeros(10, int)
             oxy_lattice[i % 10] = 1
             MDMC.calculate_displacement(oxy_lattice, initial_proton_pos,
                                         oxy_positions, displacement, pbc, wrap=True)
             dist_target = i % 10
             dist_target = min(abs(dist_target), 10-abs(dist_target))
-            print "Wrapped displacement:", displacement, dist_target
-            print np.linalg.norm(displacement[0]),
+            print("Wrapped displacement:", displacement, dist_target)
+            print(np.linalg.norm(displacement[0]), end=' ')
             self.assertTrue(np.allclose(np.linalg.norm(displacement[0]), dist_target),
                             "{} {}".format(np.linalg.norm(displacement[0]), dist_target))
 
@@ -79,7 +79,7 @@ class TestMDMC(unittest.TestCase):
     def test_load_configfile_new(self):
         testfile1 = "config1.cfg"
         config_dict1 = MDMC.load_configfile_new(testfile1)
-        print config_dict1
+        print(config_dict1)
 
 
     def test_print_confighelp(self):

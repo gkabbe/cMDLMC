@@ -34,9 +34,9 @@ transitionmatrix[99,100] = 0.3
 
 lattice = np.zeros(transitionmatrix.shape[0], np.uint8)
 
-print "prerun"
+print("prerun")
 tasep.asep_matrix(lattice, transitionmatrix, sweeps/10, 1)
-print "run"
+print("run")
 counter, steps = tasep.asep_matrix(lattice, transitionmatrix, sweeps, 2)
 
 

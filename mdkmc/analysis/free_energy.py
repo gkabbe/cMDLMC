@@ -6,6 +6,7 @@ import matplotlib.pylab as plt
 
 from mdkmc.IO import BinDump
 from mdkmc.atoms import numpyatom as npa
+from functools import reduce
 
 
 ureg = pint.UnitRegistry()
@@ -97,10 +98,10 @@ def free_energy_from_oxygen_pairs(traj, pbc):
         d_oo = d_oo[d_oo <= 2.6 * ureg.angstrom]
         dists.append(d_oo)
         fe = free_energy(d_oo, 510. * ureg.kelvin)
-        print fe.to("kcal") * N_A
+        print(fe.to("kcal") * N_A)
         free_energies.append(fe)
         
-    print "Free energy:", np.asfarray([(f.to("kcal")*N_A).magnitude for f in free_energies]).mean(), "kcal/mol"
+    print("Free energy:", np.asfarray([(f.to("kcal")*N_A).magnitude for f in free_energies]).mean(), "kcal/mol")
 
 
 def free_energy_standard_hbond_criterion(traj, pbc):
@@ -110,23 +111,23 @@ def free_energy_standard_hbond_criterion(traj, pbc):
     chunk_size = 3000
     exp_val = 0
     dists = []
-    for start, end in zip(xrange(0, traj.shape[0], chunk_size), xrange(chunk_size, traj.shape[0], chunk_size)):
+    for start, end in zip(range(0, traj.shape[0], chunk_size), range(chunk_size, traj.shape[0], chunk_size)):
         oh_bond_indices = get_hbond_indices_all_traj(oxygen_traj[start:end], proton_traj[start:end], pbc)
-        for i in xrange(proton_traj.shape[1]):
-            ox1 = oxygen_traj[xrange(start, end), oh_bond_indices[i][0]]
-            ox2 = oxygen_traj[xrange(start, end), oh_bond_indices[i][1]]
+        for i in range(proton_traj.shape[1]):
+            ox1 = oxygen_traj[range(start, end), oh_bond_indices[i][0]]
+            ox2 = oxygen_traj[range(start, end), oh_bond_indices[i][1]]
             p = proton_traj[start:end, i]
             hb = is_hbond(ox1, ox2, p, pbc)
             if hb.any():
                 dist = np.sqrt((npa.distance_vectorized(ox1[hb], ox2[hb], pbc)**2).sum(axis=-1)) 
                 dists += list(dist)   
-        print start
+        print(start)
             # print counter, ":", fe
     
     dists = np.array(dists) * ureg.angstrom
     result, error = free_energy(dists, 510*ureg.kelvin)
-    print "Result for conventional geometric H-Bond criterion:"
-    print result.to("kcal") * N_A, error.to("kcal") * N_A
+    print("Result for conventional geometric H-Bond criterion:")
+    print(result.to("kcal") * N_A, error.to("kcal") * N_A)
     ipdb.set_trace()
     
     
@@ -140,24 +141,24 @@ def free_energy_mdkmc(traj, pbc):
     chunk_size = 3000
     exp_val = 0
     dists = []
-    for start, end in zip(xrange(0, traj.shape[0], chunk_size), xrange(chunk_size, traj.shape[0], chunk_size)):
+    for start, end in zip(range(0, traj.shape[0], chunk_size), range(chunk_size, traj.shape[0], chunk_size)):
         oh_bond_indices = get_hbond_indices_all_traj(oxygen_traj[start:end], proton_traj[start:end], pbc)
-        for i in xrange(proton_traj.shape[1]):
-            ox1 = oxygen_traj[xrange(start, end), oh_bond_indices[i][0]]
-            ox2 = oxygen_traj[xrange(start, end), oh_bond_indices[i][1]]
-            phos = phos_traj[xrange(start, end), p_neighbors[oh_bond_indices[i][0]]]
+        for i in range(proton_traj.shape[1]):
+            ox1 = oxygen_traj[range(start, end), oh_bond_indices[i][0]]
+            ox2 = oxygen_traj[range(start, end), oh_bond_indices[i][1]]
+            phos = phos_traj[range(start, end), p_neighbors[oh_bond_indices[i][0]]]
             hb = is_hbond_mdkmc(ox1, ox2, phos, pbc)
             if hb.any():
                 dist = np.sqrt((npa.distance_vectorized(ox1[hb], ox2[hb], pbc)**2).sum(axis=-1)) 
                 dists += list(dist)   
-        print start
+        print(start)
             # print counter, ":", fe
     
     dists = np.array(dists) * ureg.angstrom
     result, error = free_energy(dists, 510*ureg.kelvin)
-    print "Result for POO geometric H-Bond criterion:"
-    print result.to("kcal") * N_A, error.to("kcal") * N_A
-    print result.to("eV"), error.to("eV")
+    print("Result for POO geometric H-Bond criterion:")
+    print(result.to("kcal") * N_A, error.to("kcal") * N_A)
+    print(result.to("eV"), error.to("eV"))
     ipdb.set_trace()
     
     
@@ -178,7 +179,7 @@ def main(*args):
         pbc = np.asfarray([sys.argv[2], sys.argv[3], sys.argv[4]])
         traj = BinDump.npload_atoms(sys.argv[1], verbose=True)[:300000]
     except IndexError:
-        print "Usage: {} <filename.xyz> <pbc_x> <pbc_y> <pbc_z>".format(sys.argv[0])
+        print("Usage: {} <filename.xyz> <pbc_x> <pbc_y> <pbc_z>".format(sys.argv[0]))
         raise
     
     # free_energy_from_oxygen_pairs(traj, pbc)

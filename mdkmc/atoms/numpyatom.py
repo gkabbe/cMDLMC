@@ -49,15 +49,15 @@ def map_indices(frame, atomname):
 def numpyprint(atoms, names=None, outfile=None):
     if names != None:
         atoms = atoms[atoms["name"] == name]
-        print >> outfile, sum([len(atoms[atoms["name"] == name]) for name in names])
+        print(sum([len(atoms[atoms["name"] == name]) for name in names]), file=outfile)
     else:
-        print >> outfile, len(atoms)
+        print(len(atoms), file=outfile)
     if outfile == None:
         outfile = sys.stdout
-    print >> outfile, ""
+    print("", file=outfile)
     for x in atoms:
-        print >> outfile, "{:4} {: 20} {: 20} {: 20}".format("H" if x["name"] == "AH" else x["name"], x["pos"][0],
-                                                             x["pos"][1], x["pos"][2])
+        print("{:4} {: 20} {: 20} {: 20}".format("H" if x["name"] == "AH" else x["name"], x["pos"][0],
+                                                             x["pos"][1], x["pos"][2]), file=outfile)
 
 def distance_vectorized(single_atom, many_atoms, pbc):
     diff = many_atoms-single_atom
@@ -71,7 +71,7 @@ def distance_vectorized(single_atom, many_atoms, pbc):
 def distance(a1_pos, a2_pos, pbc=None):
     dist = a2_pos - a1_pos
     if pbc is not None:
-        for i in xrange(3):
+        for i in range(3):
             while dist[i] < -pbc[i] / 2:
                 dist[i] += pbc[i]
             while dist[i] > pbc[i] / 2:
@@ -117,19 +117,19 @@ def distance_pbc_nonortho_bruteforce(a1_pos, a2_pos, pbc):
     diffvec = distance_pbc_nonortho(a1_pos, a2_pos, pbc)
     pbc = pbc.reshape((3, 3))
     dists = []
-    for i in xrange(-1, 2):
-        for j in xrange(-1, 2):
-            for k in xrange(-1, 2):
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            for k in range(-1, 2):
                 d = diffvec + i * pbc[0] + j * pbc[1] + k * pbc[2]
                 dists.append((np.sqrt(np.dot(d, d)), d))
-                print dists[-1][0]
+                print(dists[-1][0])
     return min(dists, key=lambda x: x[0])[1]
 
 
 # Calculate squared distance
 def sqdist(a1_pos, a2_pos, pbc=None):
     dist = a1_pos - a2_pos
-    for i in xrange(3):
+    for i in range(3):
         while dist[i] < -pbc[i] / 2:
             dist[i] += pbc[i]
         while dist[i] > pbc[i] / 2:
@@ -178,7 +178,7 @@ def length(a1_pos, a2_pos, pbc=None):
 
 def nextNeighbor(a1_pos, atoms_pos, nonortho=False, pbc=None):
     mindist = 1e6
-    for i in xrange(atoms_pos.shape[0]):
+    for i in range(atoms_pos.shape[0]):
         if nonortho == True:
             diff = distance_pbc_nonortho(a1_pos, atoms_pos[i], pbc)
         else:
@@ -236,8 +236,8 @@ def get_acidic_proton_indices(atoms, pbc=None, nonortho=False, verbose=False):
             # ~ else:
             # ~ ipdb.set_trace()
     if verbose == True:
-        print "#acidic indices: ", acid_indices
-        print "#number of acidic protons: ", len(acid_indices)
+        print("#acidic indices: ", acid_indices)
+        print("#number of acidic protons: ", len(acid_indices))
     return acid_indices
 
 
@@ -258,7 +258,7 @@ def calculate_com_position(npa_frame):
         com += atom_masses[atom["name"]] * atom["pos"]
         M += atom_masses[atom["name"]]
     com /= M
-    print com
+    print(com)
     
 
 def show_com_over_trajectory(*args):
@@ -269,10 +269,10 @@ def show_com_over_trajectory(*args):
 
 def remove_com_movement_traj(npa_traj, verbose=False):
     if verbose == True:
-        print "#Removing Center of Mass Movement"
+        print("#Removing Center of Mass Movement")
     for i, frame in enumerate(npa_traj):
         if verbose == True and i % 1000 == 0:
-            print "#Frame {} / {}".format(i, npa_traj.shape[0]), "\r",
+            print("#Frame {} / {}".format(i, npa_traj.shape[0]), "\r", end=' ')
         remove_com_movement_frame(frame, verbose=verbose)
     if verbose == True:
-        print ""
+        print("")

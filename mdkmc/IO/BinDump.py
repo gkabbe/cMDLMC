@@ -32,7 +32,7 @@ def get_acidHs(atoms, pbc):
 
 def npget_acidHs(atoms, pbc, only_indices=False):
     if len(atoms.shape) > 2 or len(atoms.shape) == 0:
-        print "Expecting array with dimensions (No. of frames, no. of atoms) or (no. of atoms)"
+        print("Expecting array with dimensions (No. of frames, no. of atoms) or (no. of atoms)")
     elif len(atoms.shape) == 2:
         atoms = atoms[0]
     else:
@@ -67,13 +67,13 @@ def npsave_atoms(np_filename, trajectory, overwrite=False, compressed=False, nob
 
     if nobackup and "nobackup" not in np_filename:
         if verbose:
-            print "# Adding _nobackup to filename"
+            print("# Adding _nobackup to filename")
         np_filename += "_nobackup"
 
     if not overwrite:
         while os.path.exists(np_filename+suffix):
             if verbose:
-                print "# sFilename {} already existing".format(np_filename+suffix)
+                print("# sFilename {} already existing".format(np_filename+suffix))
             number = re.findall("(\((\d\d)\)){,1}$", np_filename)[0][1]
             if number == "":
                 np_filename += "(01)"
@@ -84,7 +84,7 @@ def npsave_atoms(np_filename, trajectory, overwrite=False, compressed=False, nob
     np_filename += suffix
 
     if verbose:
-        print "# Saving to {}".format(np_filename)
+        print("# Saving to {}".format(np_filename))
 
     if compressed:
         np.savez_compressed(np_filename, trajectory)
@@ -105,10 +105,10 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
     if os.path.splitext(filename)[1] == ".xyz":
         binfiles = find_binfiles(filename)
         if verbose:
-            print "# Found following binfiles: {}".format(binfiles)
+            print("# Found following binfiles: {}".format(binfiles))
         if len(binfiles) > 0:
             trajectory = np.load(binfiles[0])
-            if binfiles[0][-4:] == ".npz" and arg in trajectory.keys():
+            if binfiles[0][-4:] == ".npz" and arg in list(trajectory.keys()):
                 trajectory = trajectory[arg]
             if atomnames_list is not None:
                 selection = None
@@ -123,7 +123,7 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
                 trajectory = trajectory.reshape(trajectory.shape[0]/atomnumber, atomnumber)
         else:
             if verbose:
-                print "# Loading from file {}".format(filename)
+                print("# Loading from file {}".format(filename))
             xyz_file = XYZFile(filename, verbose=verbose)
             trajectory = xyz_file.get_trajectory_numpy(atomnames_list, verbose=verbose)
             if remove_com:
@@ -135,7 +135,7 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
             trajectory = np.load(filename)
         elif filename[-4:] == ".npz":
             if verbose:
-                print "# Compressed binary file archive. Loading {}.".format(arg)
+                print("# Compressed binary file archive. Loading {}.".format(arg))
             trajectory = np.load(filename)[arg]
 
     if return_tuple and atomnames_list is not None:
@@ -163,10 +163,10 @@ def npload_memmap(filename, verbose=False):
         memmap = np.lib.format.open_memmap(memmap_filename, mode="r")
     except IOError:
         if verbose:
-            print "# Loading file {}".format(filename)
+            print("# Loading file {}".format(filename))
         xyz_file = XYZFile(filename, verbose=verbose)
         if verbose:
-            print "# Saving new mem map under {}".format(memmap_filename)
+            print("# Saving new mem map under {}".format(memmap_filename))
         memmap = xyz_file.get_trajectory_memmap(memmap_filename, verbose=verbose)
         npa.remove_com_movement_traj(memmap, verbose=verbose)
     return memmap, memmap_filename
@@ -179,35 +179,35 @@ def mark_acidic_protons(traj, pbc, nonortho=False, verbose=False):
 
 def npsave_covevo(fname, Os, Hs, pbc, nonortho=False, verbose=False):
     """Saves the evolution of the covalent bonds of the hydrogen atoms with the oxygen atoms -> covevo"""
-    print "# Determining covevo.."
+    print("# Determining covevo..")
     start_time = time.time()
     covevo = np.zeros((Hs.shape[0], Hs.shape[1]), int)
 
     if nonortho:
         if verbose:
-            print "# Nonorthogonal periodic boundaries"
+            print("# Nonorthogonal periodic boundaries")
         hmat = np.array(pbc.reshape((3, 3)).T, order="C")
         hmat_inv = np.array(np.linalg.inv(hmat), order="C")
 
-        for i in xrange(covevo.shape[0]):
-            for j in xrange(covevo.shape[1]):
+        for i in range(covevo.shape[0]):
+            for j in range(covevo.shape[1]):
                 covevo[i, j] = cython_npa.nextNeighbor_nonortho(Hs[i, j], Os[i], hmat, hmat_inv)[0]
             if verbose and i % 100 == 0:
-                print "# Frame {: 6d} ({:5.0f} fps)".format(i, float(i)/(time.time()-start_time)),
-                print "\r",
-        print ""
+                print("# Frame {: 6d} ({:5.0f} fps)".format(i, float(i)/(time.time()-start_time)), end=' ')
+                print("\r", end=' ')
+        print("")
     else:
-        for i in xrange(covevo.shape[0]):
-            for j in xrange(covevo.shape[1]):
+        for i in range(covevo.shape[0]):
+            for j in range(covevo.shape[1]):
                 covevo[i, j] = cython_npa.nextNeighbor(Hs[i, j], Os[i], pbc=pbc)[0]
             if verbose and i % 100 == 0:
-                print "# Frame {: 6d} ({:5.0f} fps)".format(i, float(i)/(time.time()-start_time)),
-                print "\r",
-        print ""
+                print("# Frame {: 6d} ({:5.0f} fps)".format(i, float(i)/(time.time()-start_time)), end=' ')
+                print("\r", end=' ')
+        print("")
 
     if verbose:
-        print "# Saving covevo in {}".format(fname)
+        print("# Saving covevo in {}".format(fname))
     np.save(fname, covevo)
     if verbose:
-        print "# Total time: {} seconds".format(time.time()-start_time)
+        print("# Total time: {} seconds".format(time.time()-start_time))
     return covevo

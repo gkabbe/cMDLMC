@@ -13,7 +13,7 @@ from mdkmc.cython_exts.helper import analysis_helper as ah
 
 def get_P_neighbors(O_frame, P_frame, pbc):
     P_neighbors = np.zeros(O_frame.shape[0], int)
-    for i in xrange(O_frame.shape[0]):
+    for i in range(O_frame.shape[0]):
         P_index = npa.nextNeighbor(O_frame[i], P_frame, pbc=pbc)[0]
         P_neighbors[i] = P_index
     return P_neighbors
@@ -21,7 +21,7 @@ def get_P_neighbors(O_frame, P_frame, pbc):
 
 
 def compare(trajectory_path, pbc, recalc=False, anglecut=np.pi/2, distcut=3.0):
-    print "trying to open {}".format(trajectory_path)
+    print("trying to open {}".format(trajectory_path))
     trajectory = np.load(trajectory_path)
     trajectory_length = trajectory.shape[0]
     P_number = (trajectory[0]["name"] == "P").sum()
@@ -37,19 +37,19 @@ def compare(trajectory_path, pbc, recalc=False, anglecut=np.pi/2, distcut=3.0):
     covevo = np.load(covevo_filename)
     formatstr = "{:0"+str(int(np.round(np.log10(trajectory.shape[0]))))+"d}"
 
-    for i in xrange(1, trajectory_length):
-        for j in xrange(H_number):
+    for i in range(1, trajectory_length):
+        for j in range(H_number):
             if covevo[i-i, j] != covevo[i, j]:
                 jumpmat[covevo[i-i, j], covevo[i, j]] += 1
         if i % 1000 == 0:
-            print formatstr.format(i), "\r",
-    print ""
+            print(formatstr.format(i), "\r", end=' ')
+    print("")
     jumpmat_filename = os.path.splitext(trajectory_path)[0] + "_MDjumpmat"
     if not os.path.exists(jumpmat_filename) or recalc:
-        print "saving to {}".format(jumpmat_filename)
+        print("saving to {}".format(jumpmat_filename))
         np.savetxt(jumpmat_filename, jumpmat, fmt="%d")
     else:
-        print "{} already exists".format(jumpmat_filename)
+        print("{} already exists".format(jumpmat_filename))
         jumpmat = np.loadtxt(jumpmat_filename, dtype=int)
 
     #

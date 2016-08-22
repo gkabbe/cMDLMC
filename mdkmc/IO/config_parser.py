@@ -12,7 +12,7 @@ def get_jumprate_parameters(line):
     return param_dict
 
 def get_pbc(line):
-    pbc = np.array(map(float, line.split()[1:]))
+    pbc = np.array(list(map(float, line.split()[1:])))
     if len(pbc) != 3 and len(pbc) != 9:
         raise ValueError("pbc length should be either 3 or 9")
     else:
@@ -45,8 +45,8 @@ def parse_bool(line):
     elif val.upper() == "FALSE":
         return False
     else:
-        print val
-        raise(ValueError("Unknown value. Please use True or False"))
+        print(val)
+        raise ValueError
 
 
 CONFIG_DICT = {
@@ -205,7 +205,7 @@ CONFIG_DICT = {
         },
     "box_multiplier":
         {
-            "parse_fct": lambda line: map(int, line.split()[1:]),
+            "parse_fct": lambda line: list(map(int, line.split()[1:])),
             "default": [1, 1, 1],
             "help": "Extend the KMC box along one or more dimensions."
         },

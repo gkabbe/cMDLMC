@@ -23,4 +23,4 @@ for zahl in vektor:
 
 sqsum=sqrt(sqsum/(counter-1))
 
-print(str(summe)+" "+str(sqsum))
+print((str(summe)+" "+str(sqsum)))

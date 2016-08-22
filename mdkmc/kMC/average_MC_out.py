@@ -11,11 +11,11 @@ ureg = pint.UnitRegistry()
 try:
     from scipy.optimize import curve_fit
 except ImportError:
-    print >> sys.stderr, "No Scipy found"
+    print("No Scipy found", file=sys.stderr)
 try:
     import matplotlib.pylab as plt
 except ImportError:
-    print >> sys.stderr, "No Matplotlib found"
+    print("No Matplotlib found", file=sys.stderr)
 
 
 def load_interval_samples(filename, lines, intervals, columns, time_columns):
@@ -23,7 +23,7 @@ def load_interval_samples(filename, lines, intervals, columns, time_columns):
     time = np.loadtxt(filename, usecols=time_columns)
 
     if verbose == True:
-        print("# Shape of data:", data.shape)
+        print(("# Shape of data:", data.shape))
 
     if intervals != None and intervals < data.shape[0]:
         data = data[:intervals * lines]
@@ -31,7 +31,7 @@ def load_interval_samples(filename, lines, intervals, columns, time_columns):
         intervals = data.shape[0]/lines
 
     if verbose == True:
-        print("# Intervals:", intervals)
+        print(("# Intervals:", intervals))
 
     data = data.flatten().reshape(intervals, lines, len(columns))
     
@@ -41,7 +41,7 @@ def load_interval_samples(filename, lines, intervals, columns, time_columns):
 def load_intervals_intelligently(filename, var_prot_single, verbose=False):
     def get_settings_from_settings_output(lines):
         if verbose:
-            print "Trying to determine KMC intervals from configuration file"
+            print("Trying to determine KMC intervals from configuration file")
         settings = dict()
         for line in lines:
             if "print_freq" in line:
@@ -61,7 +61,7 @@ def load_intervals_intelligently(filename, var_prot_single, verbose=False):
 
     def get_settings_from_average_at_the_end(lines):
         if verbose:
-            print "Trying to load averaged output"
+            print("Trying to load averaged output")
         interval_length = 0
         total_lines = 0
         count_interval = False
@@ -85,7 +85,7 @@ def load_intervals_intelligently(filename, var_prot_single, verbose=False):
 
     def get_settings_from_msd_zeros(data, lines):
         if verbose:
-            print "Trying to determine KMC intervals heuristically"
+            print("Trying to determine KMC intervals heuristically")
         intervals = np.where(data[:, 2] == 0)[0]
         interval_length = intervals[1]
         if "Averaged Results" in " ".join(lines):
@@ -200,12 +200,12 @@ def get_slope(args):
     m, m_err = m*msd_unit, m_err*msd_unit
 
     if args.minimal:
-        print m.to(args.output_unit).m/6, m_err.to(args.output_unit).m/6
+        print(m.to(args.output_unit).m/6, m_err.to(args.output_unit).m/6)
     else:
-        print "Slope:"
-        print "({} ± {}) {}".format(m.to(args.output_unit).m, m_err.to(args.output_unit).m, args.output_unit)
-        print "Diffusion coefficient:"
-        print "({} ± {}) {}".format(m.to(args.output_unit).m/6, m_err.to(args.output_unit).m/6, args.output_unit)
+        print("Slope:")
+        print("({} ± {}) {}".format(m.to(args.output_unit).m, m_err.to(args.output_unit).m, args.output_unit))
+        print("Diffusion coefficient:")
+        print("({} ± {}) {}".format(m.to(args.output_unit).m/6, m_err.to(args.output_unit).m/6, args.output_unit))
 
     if args.plot:
         plt.errorbar(time, y_avg, y_err)
@@ -224,14 +224,14 @@ def average_kmc(args):
     comments = get_observable_names(kmc_out)
 
     if args.variance:
-        print "# {:10} {:10}"+6*" {:12}"+4*" {:6}".format(comments[0], comments[1], comments[2], comments[2]+"_var",  comments[3], comments[3]+"_var", comments[4], comments[4]+"_var", comments[5], comments[5]+"_var", comments[6], comments[6]+"_var")
+        print("# {:10} {:10}"+6*" {:12}"+4*" {:6}".format(comments[0], comments[1], comments[2], comments[2]+"_var",  comments[3], comments[3]+"_var", comments[4], comments[4]+"_var", comments[5], comments[5]+"_var", comments[6], comments[6]+"_var"))
         format_string = "{t[0]:10.2f} {t[1]:10.2f} {msd[0]:12.4f} {msdvar[0]:12.4f} {msd[1]:12.4f} {msdvar[1]:12.4f} {msd[2]:12.4f} {msdvar[2]:12.4f} {autocorr:6.2f} {autocorrvar:6.2f} {jumps:6.2f} {jumpsvar:6.2f}"
         time, average, variance = result
         
         for i in range(average.shape[0]):
-            print format_string.format(t=time[i], msd=average[i,0:3], msdvar=variance[i,0:3], autocorr=average[i,3], autocorrvar=variance[i,3], jumps=average[i,4], jumpsvar=variance[i,4])
+            print(format_string.format(t=time[i], msd=average[i,0:3], msdvar=variance[i,0:3], autocorr=average[i,3], autocorrvar=variance[i,3], jumps=average[i,4], jumpsvar=variance[i,4]))
     else:
-        print "#", " ".join(["{:>10}", "{:>10}", 3*"{:>12}", 2*"{:>6}"]).format(*comments[1:])
+        print("#", " ".join(["{:>10}", "{:>10}", 3*"{:>12}", 2*"{:>6}"]).format(*comments[1:]))
         if var_prot_single:
             format_string = "{t[0]:10.2f} {t[1]:10.2f} {msd[0]:12.4f} {msd[1]:12.4f} {msd[2]:12.4f} {msd_var[0]:12.4f} {msd_var[1]:12.4f} {msd_var[2]:12.4f}{autocorr:6.2f} {jumps:6.2f}"
         else:
@@ -239,9 +239,9 @@ def average_kmc(args):
         time, average = result
         for i in range(average.shape[0]):
             if var_prot_single:
-                print(format_string.format(t=time[i], msd=average[i,:3], msd_var=average[i,3:6],  autocorr=average[i,6], jumps=average[i,7]))
+                print((format_string.format(t=time[i], msd=average[i,:3], msd_var=average[i,3:6],  autocorr=average[i,6], jumps=average[i,7])))
             else:
-                print(format_string.format(t=time[i], msd=average[i,:3], autocorr=average[i,3], jumps=average[i,4]))
+                print((format_string.format(t=time[i], msd=average[i,:3], autocorr=average[i,3], jumps=average[i,4])))
 
 
 def main(*args):

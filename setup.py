@@ -14,7 +14,7 @@ def get_commit_hash():
     try:
         commit_hash, commit_message, commit_date = subprocess.check_output(command.split()).strip().split("\n")
     except subprocess.CalledProcessError:
-        print >> sys.stderr, "Command '{}' could not be executed successfully.".format(command)
+        print("Command '{}' could not be executed successfully.".format(command), file=sys.stderr)
     return commit_hash, commit_message, commit_date
 
 
@@ -48,7 +48,7 @@ ext_modules = []
 
 for ext_path in cython_exts:
     ext_name = ext_path.replace(os.path.sep, ".")[:-4]
-    print ext_path, ext_name
+    print(ext_path, ext_name)
     ext_modules.append(Extension(
         ext_name,
         [ext_path],
@@ -112,7 +112,7 @@ setup(name='mdkmc',
 # Write hash of current commit to file
 with open("mdkmc/version_hash.py", "w") as f:
     commit_hash, commit_message, commit_date = get_commit_hash()
-    print >> f, "commit_hash = \"{}\"".format(commit_hash)
-    print >> f, "commit_message = \"{}\"".format(commit_message)
-    print >> f, "commit_date = \"{}\"".format(commit_date)
+    print("commit_hash = \"{}\"".format(commit_hash), file=f)
+    print("commit_message = \"{}\"".format(commit_message), file=f)
+    print("commit_date = \"{}\"".format(commit_date), file=f)
 

@@ -25,13 +25,13 @@ def main(*args):
     covevo_filename = re.sub("\..{3}$", "", args.filename)+"_covevo.npy"
     if not os.path.exists(covevo_filename):
         if args.verbose == True:
-            print "#Covevo file not existing. Creating..."
+            print("#Covevo file not existing. Creating...")
         oxygens, hydrogens = BinDump.npload_atoms(args.filename, atomnames_list=["O", "H"],
                                                   return_tuple=True, verbose=args.verbose)
         oxygens, hydrogens = np.array(oxygens["pos"], order="C"), np.array(hydrogens["pos"], order="C")
         BinDump.npsave_covevo(covevo_filename, oxygens, hydrogens, pbc, verbose=args.verbose)
     if args.verbose == True:
-        print "#Loading Covevo File..."
+        print("#Loading Covevo File...")
     covevo = np.load(covevo_filename)
     
     covevo_avg = np.zeros((args.intervalnumber, args.intervallength), int)
@@ -43,17 +43,17 @@ def main(*args):
         diff = intervalnumber*intervallength-totallength
         startdist = intervallength-int(ceil(diff/float(intervalnumber-1)))
 
-    for i in xrange(intervalnumber):
+    for i in range(intervalnumber):
         if args.verbose == True:
-            print "# {} / {}".format(i, intervalnumber), "\r",
+            print("# {} / {}".format(i, intervalnumber), "\r", end=' ')
 	#ipdb.set_trace()
         covevo_avg[i] = (covevo[i*startdist:i*startdist+intervallength] == covevo[i*startdist]).sum(axis=1)
-    print ""
+    print("")
             
     result = covevo_avg.sum(axis=0)/float(covevo_avg.shape[0])
     
-    for i in xrange(result.shape[0]):
-        print result[i]
+    for i in range(result.shape[0]):
+        print(result[i])
 
 if __name__ == "__main__":
     main()

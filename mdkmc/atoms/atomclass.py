@@ -28,10 +28,10 @@ class Atom:
 		
 	def posdiff(self, atom2,periodic=None):
 		diff=[0,0,0]
-		for i in xrange(3):
+		for i in range(3):
 			diff[i]=atom2.pos[i]-self.pos[i]
 		if periodic is not None:
-			for i in xrange(3):
+			for i in range(3):
 				while diff[i]>periodic[i]/2:
 					diff[i]-=periodic[i]
 				while diff[i]<-periodic[i]/2:
@@ -56,12 +56,12 @@ class Atom:
 			selection = [selection]
 			def filter_function(a):
 				return a.name in selection
-		elif type(selection) == types.NoneType:
+		elif type(selection) == type(None):
 			def filter_function(a):
 				return True
 
 		newlist = sorted(atoms, key=lambda a: self.sqdist(a, pbc))
-		return filter(filter_function, newlist)
+		return list(filter(filter_function, newlist))
 			
 
 def angle(v1,v2):

@@ -9,7 +9,7 @@ pbc = np.array([29.122, 25.354, 12.363])
 jumprate_parameter_dict = {"a": 0.5, "b": 2.3, "c": 0.1}
 
 trajectory = np.array(trajectory["pos"], order="C")
-print trajectory.shape
+print(trajectory.shape)
 
 js = JS(trajectory, pbc, jumprate_parameter_dict)
 

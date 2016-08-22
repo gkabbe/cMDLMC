@@ -5,7 +5,7 @@ PERIODIC=[29.122, 25.354, 12.363]
 from atoms import atomclass as ac
 import numpy as np
 
-from xyzparser import XYZFile
+from .xyzparser import XYZFile
 
 class HexaXYZFile(XYZFile):
 
@@ -21,38 +21,38 @@ class HexaXYZFile(XYZFile):
 		Hs=[]
 		self.datei.readline()
 		self.datei.readline()
-		for index in xrange(self.atomnr):
+		for index in range(self.atomnr):
 			line = self.datei.readline()
 			if index in self.atomdict["O"]:
-				Os.append(ac.atom(line.split()[0],map(float,line.split()[1:4]),index))
+				Os.append(ac.atom(line.split()[0],list(map(float,line.split()[1:4])),index))
 			elif index in self.atomdict["acidic_H"]:
-				Hs.append(ac.atom(line.split()[0],map(float,line.split()[1:4]),index))
+				Hs.append(ac.atom(line.split()[0],list(map(float,line.split()[1:4])),index))
 		return (Os,Hs)
 
 	def parse_frame_Os_numpy(self, n):
 		arr = np.zeros((n,3))
 		self.datei.readline()	
 		i = 0
-		for index in xrange(self.atomnr):
+		for index in range(self.atomnr):
 			line = self.datei.readline()
 			if index in self.atomdict["O"]:
-				arr[i] = map(float, line.split()[1:4])
+				arr[i] = list(map(float, line.split()[1:4]))
 				i += 1
 		return arr
 
 	def parse_frames_Os_numpy_inplace(self, Oarr):
 		"""Expects numpy array in the shape (frames, oxygennumber, 3)"""
 		frames = Oarr.shape[0]
-		for frame in xrange(frames):
+		for frame in range(frames):
 			line = self.datei.readline()
 			if line == "":
 				return frame
 			self.datei.readline()
 			Oindex = 0
-			for atom in xrange(self.atomnr):
+			for atom in range(self.atomnr):
 				line = self.datei.readline()
 				if atom in self.atomdict["O"]:
-					Oarr[frame, Oindex, :] = map(float, line.split()[1:])
+					Oarr[frame, Oindex, :] = list(map(float, line.split()[1:]))
 					Oindex += 1
 		return frames
 
@@ -62,10 +62,10 @@ class HexaXYZFile(XYZFile):
 			return frame
 		self.datei.readline()
 		Oindex = 0
-		for atom in xrange(self.atomnr):
+		for atom in range(self.atomnr):
 			line = self.datei.readline()
 			if atom in self.atomdict["O"]:
-				Oarr[Oindex, :] = map(float, line.split()[1:])
+				Oarr[Oindex, :] = list(map(float, line.split()[1:]))
 				Oindex += 1
 		return frames
 

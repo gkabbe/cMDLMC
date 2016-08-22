@@ -14,13 +14,13 @@ import numpyatom as npa
 def get_nearest_neighbors_traj(Hs, Os, pbc, verbose=False):
 	# ipdb.set_trace()
 	nearest_neighbors = np.zeros((Hs.shape[0], Hs.shape[1]), int)
-	for i in xrange(Hs.shape[0]):
-		for j in xrange(Hs.shape[1]):
+	for i in range(Hs.shape[0]):
+		for j in range(Hs.shape[1]):
 			nearest_neighbors[i,j] = npa.nextNeighbor(Hs[i,j], Os[i], pbc)[0]
 		if verbose == True and i % 1000 == 0:
-			print "#{: 6d}/{: 6d}".format(i, Hs.shape[0]), "\r",
+			print("#{: 6d}/{: 6d}".format(i, Hs.shape[0]), "\r", end=' ')
 	if verbose == True:
-		print ""
+		print("")
 	return nearest_neighbors
 
 def jumpmatrix_MD(covevo, O_number, verbose=False):
@@ -28,16 +28,16 @@ def jumpmatrix_MD(covevo, O_number, verbose=False):
 	jumpmat = np.zeros((O_number, O_number), int)
 	
 	if verbose == True:
-		print "#evaluating jumps"
+		print("#evaluating jumps")
 
-	for i in xrange(1, covevo.shape[0]):
+	for i in range(1, covevo.shape[0]):
 		jump_indices = np.where(covevo[i] != covevo[i-1])[0]
 		if jump_indices.size > 0:
 			counter += 1
-			print "{} jumps".format(counter), "\r",
+			print("{} jumps".format(counter), "\r", end=' ')
 			for ind in jump_indices:
 				jumpmat[covevo[i-1, ind], covevo[i, ind]] += 1
-	print ""
+	print("")
 
 	return jumpmat
 
@@ -72,13 +72,13 @@ if __name__ == "__main__":
 	else:
 		temp = int(re.findall("\d+", args.filename)[0])
 	
-	print "#using temperature {}".format(temp)
+	print("#using temperature {}".format(temp))
 
 	kmcmat_filename = args.filename[:-4]+"_jumpMD.npy"
 	mdmat_filename = args.filename[:-4]+"_jumpkMC.npy"
 
 	if os.path.exists(kmcmat_filename) and os.path.exists(mdmat_filename):
-		answer = raw_input("{} and {} already exist. Load? (y,n)\n".format(kmcmat_filename, mdmat_filename))
+		answer = input("{} and {} already exist. Load? (y,n)\n".format(kmcmat_filename, mdmat_filename))
 		if answer.upper() == "Y":
 			jumpmat_MD = np.load(mdmat_filename)
 			jumpmat_kMC = np.load(kmcmat_filename)
@@ -95,11 +95,11 @@ if __name__ == "__main__":
 		proton_number = Hs.shape[1]
 
 		if args.verbose == True:
-			print "#Determined proton number:", proton_number
+			print("#Determined proton number:", proton_number)
 
 		covevo_filename = args.filename[:-4]+"_covevo.npy"
 		if os.path.exists(covevo_filename):
-			print "#found covevo in {}".format(covevo_filename)
+			print("#found covevo in {}".format(covevo_filename))
 			covevo = np.load(covevo_filename)
 		else:
 			covevo = BinDump.npsave_covevo(covevo_filename, Os, Hs, pbc, args.verbose)

@@ -10,18 +10,18 @@ import kMC_helper
 from kMC.MDMC import create_celllists_simple_z, neighborlists
 
 def print_frame(atoms):
-		print atoms.shape[0]
-		print ""
-		for j in xrange(atoms.shape[0]):
-			print "{:>2} {: 20.10f} {: 20.10f} {: 20.10f}".format("O", *atoms[j])
+		print(atoms.shape[0])
+		print("")
+		for j in range(atoms.shape[0]):
+			print("{:>2} {: 20.10f} {: 20.10f} {: 20.10f}".format("O", *atoms[j]))
 
 def extend_simulationbox(box_multiplier, Opos, pbc, oxygennumber):
 	Oview = Opos.view()
 	Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], oxygennumber, 3)
-	for x in xrange(box_multiplier[0]):
-		for y in xrange(box_multiplier[1]):
-			for z in xrange(box_multiplier[2]):
-				for i in xrange(oxygennumber):
+	for x in range(box_multiplier[0]):
+		for y in range(box_multiplier[1]):
+			for z in range(box_multiplier[2]):
+				for i in range(oxygennumber):
 					if x+y+z != 0:
 						Oview[x, y, z, i, :] = Oview[0,0,0,i] + pbc*[x,y,z]
 
@@ -72,11 +72,11 @@ tm_new = np.zeros((144, 144))
 # np.save("tm_old", tm_old)
 
 start_time = time.time()
-for i in xrange(75000):
+for i in range(75000):
 	if i%1000 == 0:
 		helper.determine_neighbors(Olarge, pbc, r_cut)
-		print float(i)/(time.time()-start_time)
-		print "\r",
+		print(float(i)/(time.time()-start_time))
+		print("\r", end=' ')
 
 	helper.calculate_transitionsmatrix_new(Os[i], tm_new, parameters_fs, pbc, r_cut)
 
