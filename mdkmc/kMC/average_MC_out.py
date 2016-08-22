@@ -199,10 +199,13 @@ def get_slope(args):
 
     m, m_err = m*msd_unit, m_err*msd_unit
 
-    print "Slope:"
-    print "({} ± {}) {}".format(m.to(args.output_unit).m, m_err.to(args.output_unit).m, args.output_unit)
-    print "Diffusion coefficient:"
-    print "({} ± {}) {}".format(m.to(args.output_unit).m/6, m_err.to(args.output_unit).m/6, args.output_unit)
+    if args.minimal:
+        print m.to(args.output_unit).m/6, m_err.to(args.output_unit).m/6
+    else:
+        print "Slope:"
+        print "({} ± {}) {}".format(m.to(args.output_unit).m, m_err.to(args.output_unit).m, args.output_unit)
+        print "Diffusion coefficient:"
+        print "({} ± {}) {}".format(m.to(args.output_unit).m/6, m_err.to(args.output_unit).m/6, args.output_unit)
 
     if args.plot:
         plt.errorbar(time, y_avg, y_err)
@@ -255,6 +258,7 @@ def main(*args):
     parser_slope.add_argument("-a", "--average_first", action="store_true", help="Average MSD first, then determine slope")
     parser_slope.add_argument("--msd-fitstart", "-s", type=int, default=0, help="From which point in the MSD interval to start fitting")
     parser_slope.add_argument("--output_unit", "-u", default="angstrom**2/ps", type=ureg.parse_expression, help="Unit of MSD result")
+    parser_slope.add_argument("--minimal", "-m", action="store_true", help="Only output numbers")
     parser_slope.set_defaults(func=get_slope)
     parser_all = subparsers.add_parser("average", help="Average all columns from KMC output")
     parser_all.add_argument("file", help="KMC output")
