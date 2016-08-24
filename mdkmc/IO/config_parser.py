@@ -110,14 +110,6 @@ CONFIG_DICT = {
                     "be reset? reset_freq should be a multiple of print_freq, in order to ease the averaging of the "
                     "final output."
         },
-    "neighbor_freq":
-        {
-            "parse_fct": parse_int,
-            "default": "no_default",
-            "help": "After how many sweeps will the nearest neighbor connections be determined anew? Large numbers "
-                    "will speed up the KMC run, but may distort the dynamics, as changes in the oxygen neighborhood "
-                    "are detected less frequently."
-        },
     "neighbor_search_radius":
         {
             "parse_fct": parse_float,

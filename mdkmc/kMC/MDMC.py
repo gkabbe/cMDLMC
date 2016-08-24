@@ -29,12 +29,6 @@ def load_atoms_from_numpy_trajectory(traj_fname, atomnames, clip=None, verbose=F
 
 def load_atoms_from_numpy_trajectory_as_memmap(traj_fname, atomnames, clip=None, verbose=False):
     trajectory, traj_fname = BinDump.npload_memmap(traj_fname, verbose=verbose)
-    if clip:
-        if verbose:
-            print("# Clipping trajectory to the first {} frames".format(clip))
-            trajectory_length = clip
-        else:
-            trajectory_length = trajectory.shape[0]
     single_atom_trajs = []
     for atom in atomnames:
         root, ext = os.path.splitext(traj_fname)
@@ -53,6 +47,8 @@ def load_atoms_from_numpy_trajectory_as_memmap(traj_fname, atomnames, clip=None,
             memmap = np.lib.format.open_memmap(new_fname, dtype=float, shape=atom_traj.shape, mode="w+")
             memmap[:] = atom_traj[:]
         if clip:
+            if verbose:
+                print("# Clipping trajectory to the first {} frames".format(clip))
             memmap = memmap[:clip]
         single_atom_trajs.append(memmap)
     return single_atom_trajs
@@ -106,15 +102,6 @@ def get_gitversion():
     print("# Hello. I am from commit {}".format(commit_hash))
     print("# Commit Date: {}".format(commit_date))
     print("# Commit Message: {}".format(commit_message))
-
-
-def count_protons_and_oxygens(Opos, proton_lattice, O_counter, H_counter, bin_bounds):
-    for i in range(proton_lattice.shape[0]):
-        O_z = Opos[i, 2]
-        O_index = np.searchsorted(bin_bounds, O_z)-1
-        O_counter[O_index] += 1
-        if proton_lattice[i] > 0:
-            H_counter[O_index] += 1
 
 
 def extend_simulationbox(Opos, onumber, h, box_multiplier, nonortho=False):
@@ -292,7 +279,6 @@ class MDMC:
 
     def init_observables_protons_constant(self):
         displacement = np.zeros((self.proton_number, 3))
-        msd_var= np.zeros(3)
         MSD = np.zeros(3)
         proton_pos_snapshot = np.zeros((self.proton_number, 3))
         proton_pos_new = np.zeros((self.proton_number, 3))
@@ -414,26 +400,13 @@ class MDMC:
             displacement, MSD, msd_var , msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant_var()
         else: 
             displacement, MSD, msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
-        #only update neighborlists after neighbor_freq position updates
-        neighbor_update = self.neighbor_freq*(self.skip_frames+1)
 
         if self.po_angle:
-            self.phosphorusnumber = self.P_trajectory.shape[1]
-            self.phosphorusnumber_extended = self.phosphorusnumber * self.box_multiplier[0] * self.box_multiplier[1] *self.box_multiplier[2]
             self.P_neighbors = self.determine_PO_pairs(framenumber=0, atombox=atombox)
-            self.angles = np.zeros((self.oxygennumber_extended, self.oxygennumber_extended))
-            #~ self.determine_PO_angles(self.O_trajectory[0], self.P_trajectory[0], self.P_neighbors, self.angles)
 
         if self.verbose:
             print("# Sweeps:", self.sweeps, file=self.output)
         self.print_settings()
-
-        Opos = np.zeros((self.box_multiplier[0]*self.box_multiplier[1]*self.box_multiplier[2]*self.oxygennumber, 3), np.float64)
-        if self.po_angle:
-            Ppos = np.zeros((self.box_multiplier[0]*self.box_multiplier[1]*self.box_multiplier[2]*self.phosphorusnumber, 3), np.float64)
-
-        # transitionmatrix = np.zeros((Opos.shape[0], Opos.shape[0]))
-        # jumpmatrix = np.zeros((Opos.shape[0], Opos.shape[0]), int)
 
         start_time = time.time()
 
@@ -476,8 +449,6 @@ class MDMC:
                     frame = sweep % self.O_trajectory.shape[0]
                 else:
                     frame = np.random.randint(self.O_trajectory.shape[0])
-                    # if sweep % neighbor_update == 0:
-                    #     helper.determine_neighbors(frame)
 
             if sweep % self.reset_freq == 0:
                 protonlattice_snapshot, proton_pos_snapshot, displacement = \
