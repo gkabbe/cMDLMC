@@ -81,7 +81,9 @@ setup(name='mdkmc',
           'cythongsl==0.2.1',
           'gitpython',
           'cython',
-          'pint==0.7.2'
+          'pint==0.7.2',
+          'scipy',
+          'matplotlib'
       ],
       dependency_links=['https://github.com/twiecki/CythonGSL/tarball/master#egg=cython_gsl-0.2.1'],
       test_suite='nose.collector',
