@@ -44,16 +44,6 @@ class XYZFile(object):
 
         return atomdict
 
-    def parse_frame_Os(self):
-        Os = []
-        self.datei.readline()
-        self.datei.readline()
-        for index in range(self.atomnr):
-            line = self.datei.readline()
-            if index in self.atomdict["O"]:
-                Os.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
-        return Os
-
     def parse_frame_np(self, pos_array, atomname):
         self.datei.readline()
         self.datei.readline()
@@ -63,79 +53,6 @@ class XYZFile(object):
             if index in self.atomdict[atomname]:
                 pos_array[i] = list(map(float, line.split()[1:4]))
                 i += 1
-
-    def parse_frames_np_inplace(self, arr, atomname, verbose=False):
-        """Expects numpy array in the shape (frames, oxygennumber, 3)"""
-        frames = arr.shape[0]
-        for frame in range(frames):
-            line = self.datei.readline()
-            if line == "":
-                return frame
-            if frame % 1000 == 0:
-                if verbose:
-                    print("# Frame", frame, end=' ')
-                    print("\r", end=' ')
-            self.datei.readline()
-            Oindex = 0
-            for atom in range(self.atomnr):
-                line = self.datei.readline()
-                if atom in self.atomdict[atomname]:
-                    arr[frame, Oindex, :] = list(map(float, line.split()[1:]))
-                    Oindex += 1
-        if verbose:
-            print("")
-        return frames
-
-    def parse_OHframe(self, *args):
-        Os = []
-        Hs = []
-
-        if len(args) == 2:
-
-            Oinds = args[0]
-            Hinds = args[1]
-
-            self.datei.readline()
-            self.datei.readline()
-
-            for index in range(self.atomnr):
-                line = self.datei.readline()
-                if index in Oinds:
-                    Os.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
-                elif index in Hinds:
-                    Hs.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
-            self.frame += 1
-            return (Os, Hs)
-
-        else:
-            self.datei.readline()
-            self.datei.readline()
-            for index in range(self.atomnr):
-                line = self.datei.readline()
-                if "O" in line:
-                    Os.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
-                elif "H" in line:
-                    Hs.append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
-            self.frame += 1
-            return (Os, Hs)
-
-    def get_atoms(self, *atomnames):
-        # pdb.set_trace()
-        atoms = dict()
-        for atomname in atomnames:
-            if atomname in list(self.atomdict.keys()):
-                atoms[atomname] = []
-        line = self.datei.readline()
-        if line == "":
-            raise EOFError
-        self.datei.readline()
-        for index in range(self.atomnr):
-            line = self.datei.readline()
-            for atomname in list(atoms.keys()):
-                if index in self.atomdict[atomname]:
-                    atoms[atomname].append(ac.Atom(line.split()[0], list(map(float, line.split()[1:4])), index))
-        self.frame += 1
-        return atoms
 
     def get_atoms_numpy(self, atomnames=None):
         # pdb.set_trace()
@@ -188,19 +105,6 @@ class XYZFile(object):
             print("# Total time: {} sec".format(time.time()-start_time))
 
         return np.array(traj, dtype=npa.xyzatom)
-
-    def get_trajectory_memmap(self, memmap_fname, atomnames=None, verbose=False):
-        frame_number = self.get_framenumber()
-        memmap = np.lib.format.open_memmap(memmap_fname, dtype=dtype_xyz, shape=(frame_number, self.atomnr), mode="w+")
-
-        for i in range(frame_number):
-            memmap[i, :] = self.get_atoms_numpy(atomnames)
-            if verbose and i % 1000 == 0:
-                print("# {:06d} / {:06d}\r".format(i, frame_number), end=' ')
-                sys.stdout.flush()
-        if verbose:
-            print("")
-        return memmap
 
     def print_frame(self):
         for i in range(self.atomnr + 2):
