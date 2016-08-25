@@ -92,8 +92,8 @@ def npsave_atoms(np_filename, trajectory, overwrite=False, compressed=False, nob
         np.save(np_filename, trajectory)
 
 
-def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, create_if_not_existing=False,
-                 return_tuple=False, verbose=False):
+def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, 
+                 create_if_not_existing=False, return_tuple=False, verbose=True):
     def find_binfiles(filename):
         binfiles = []
         for ending in [".npy", ".npz"]:
@@ -104,9 +104,9 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
 
     if os.path.splitext(filename)[1] == ".xyz":
         binfiles = find_binfiles(filename)
-        if verbose:
-            print("# Found following binfiles: {}".format(binfiles))
         if len(binfiles) > 0:
+            if verbose:
+                print("# Found following binary files: {}".format(binfiles))
             trajectory = np.load(binfiles[0])
             if binfiles[0][-4:] == ".npz" and arg in list(trajectory.keys()):
                 trajectory = trajectory[arg]
@@ -123,6 +123,7 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, cr
                 trajectory = trajectory.reshape(trajectory.shape[0]/atomnumber, atomnumber)
         else:
             if verbose:
+                print("# Found no binary files!")
                 print("# Loading from file {}".format(filename))
             xyz_file = XYZFile(filename, verbose=verbose)
             trajectory = xyz_file.get_trajectory_numpy(atomnames_list, verbose=verbose)
