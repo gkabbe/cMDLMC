@@ -8,6 +8,7 @@ import argparse
 import os
 import re
 import inspect
+import ipdb
 
 script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 from mdkmc.cython_exts.atoms import numpyatom as npa
@@ -72,8 +73,8 @@ def main(*args):
     args = parser.parse_args()
 
     # Thank you to http://stackoverflow.com/questions/881696/unbuffered-stdout-in-python-as-in-python-u-from-within-the-program
-    unbuffered = os.fdopen(sys.stdout.fileno(), 'w', 0)
-    sys.stdout = unbuffered
+    # unbuffered = os.fdopen(sys.stdout.fileno(), 'w', 0)
+    # sys.stdout = unbuffered
     
     if len(args.pbc) == 3:
         nonortho = False
@@ -88,26 +89,27 @@ def main(*args):
     pbc= np.array(args.pbc)
 
     if args.verbose == True:
-        print("#PBC used:\n#", pbc)
+        print("# PBC used:\n#", pbc)
 
     trajectory = BinDump.npload_atoms(args.filename, create_if_not_existing=True, verbose=args.verbose)
     BinDump.mark_acidic_protons(trajectory, pbc, nonortho=nonortho, verbose=args.verbose)
-    atoms = npa.select_atoms(trajectory, "O", "AH")
-    Os = atoms["O"]
-    Hs = atoms["AH"]
+    Os, Hs = npa.select_atoms(trajectory, "O", "AH")
 
     covevo_filename = re.sub("\..{3}$", "", args.filename)+"_covevo.npy"
     if not os.path.exists(covevo_filename):
+        print("# Creating array of nearest oxygen neighbor over time for all protons")
         BinDump.npsave_covevo(covevo_filename, Os, Hs, pbc, nonortho=nonortho, verbose=args.verbose)
+    else:
+        print("# Found array with nearest oxygen neighbor over time:", covevo_filename)
 
     covevo = np.load(covevo_filename)
 
     if args.mode == "jumpprobs":
-        jsh.jump_probs(Os, Hs, covevo, pbc, args.dmin, args.dmax, args.bins, verbose=args.verbose, nonortho=nonortho)
+        jsh.jump_probs(Os, Hs, covevo, pbc, args.dmin, args.dmax, args.bins, verbose=True, nonortho=nonortho)
     elif args.mode == "O_RDF":
         pass
     else:
-        jump_histo(args.filename, args.dmin, args.dmax, args.bins, args.verbose, pbc, args.frames, Os, Hs, covevo, verbose=args.verbose, nonortho=nonortho)
+        jump_histo(args.filename, args.dmin, args.dmax, args.bins, args.verbose, pbc, args.frames, Os, Hs, covevo, verbose=True, nonortho=nonortho)
 
 if __name__ == "__main__":
     main()
