@@ -8,14 +8,8 @@ import pint
 
 ureg = pint.UnitRegistry()
 
-try:
-    from scipy.optimize import curve_fit
-except ImportError:
-    print("No Scipy found", file=sys.stderr)
-try:
-    import matplotlib.pylab as plt
-except ImportError:
-    print("No Matplotlib found", file=sys.stderr)
+from scipy.optimize import curve_fit
+import matplotlib.pylab as plt
 
 
 def load_interval_samples(filename, lines, intervals, columns, time_columns):
@@ -128,18 +122,6 @@ def avg(filename, variance, var_prot_single, plot=False, verbose=False):
         return time, avg, var
     else:
         return time, avg
-
-
-def read_from_configfile(config_filename):
-    data = dict()
-    with open(config_filename, "r") as f:
-        for line in f:
-            if line.lstrip()[0] != "#":
-                if len(line.split()) > 2:
-                    data[line.split()[0]] = line.split()[1:]
-                else:
-                    data[line.split()[0]] = line.split()[1]
-    return data
     
 
 def get_observable_names(outfilename):
