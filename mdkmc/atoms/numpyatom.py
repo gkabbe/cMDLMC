@@ -236,8 +236,8 @@ def get_acidic_proton_indices(atoms, pbc=None, nonortho=False, verbose=False):
             # ~ else:
             # ~ ipdb.set_trace()
     if verbose == True:
-        print("#acidic indices: ", acid_indices)
-        print("#number of acidic protons: ", len(acid_indices))
+        print("# Acidic indices: ", acid_indices)
+        print("# Number of acidic protons: ", len(acid_indices))
     return acid_indices
 
 
