@@ -202,8 +202,8 @@ def npsave_covevo(fname, Os, Hs, pbc, nonortho=False, verbose=False):
             for j in range(covevo.shape[1]):
                 covevo[i, j] = cython_npa.nextNeighbor(Hs[i, j], Os[i], pbc=pbc)[0]
             if verbose and i % 100 == 0:
-                print("# Frame {: 6d} ({:5.0f} fps)".format(i, float(i)/(time.time()-start_time)), end=' ')
-                print("\r", end=' ')
+                print("# Frame {: 6d} ({:5.0f} fps)".format(i, float(i)/(time.time()-start_time)), end='\r')
+                print("")
         print("")
 
     if verbose:
