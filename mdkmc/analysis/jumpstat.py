@@ -11,18 +11,19 @@ import inspect
 import ipdb
 
 script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-from mdkmc.cython_exts.atoms import numpyatom as npa
+from mdkmc.cython_exts.atoms import numpyatom as cnpa
 from mdkmc.cython_exts.kMC import jumpstat_helper as jsh
 from mdkmc.IO import BinDump
+from mdkmc.atoms import numpyatom as npa
 
 def determine_PO_pairs(O_frame, P_frame, pbc):
     P_neighbors = np.zeros(O_frame.shape[0], int)
     for i in range(O_frame.shape[0]):
-        P_index = npa.nextNeighbor(O_frame[i], P_frame, pbc)[0]
+        P_index = cnpa.nextNeighbor(O_frame[i], P_frame, pbc)[0]
         P_neighbors[i] = P_index
     return P_neighbors
     
-def jump_histo(filename, dmin, dmax, bins, progress, pbc, frames, Os, Hs, covevo, verbose=False, nonortho=False):
+def jump_histo(dmin, dmax, bins, pbc, frames, Os, Hs, covevo, verbose=False, nonortho=False):
         """Counts proton jumps at different distances"""
         start_time = time.time()
         
@@ -43,9 +44,9 @@ def jump_histo(filename, dmin, dmax, bins, progress, pbc, frames, Os, Hs, covevo
                             O_before = covevo[frame, i]
                             O_after = covevo[frame+1, i]
                             if nonortho == True:
-                                O_dist = npa.length_nonortho_bruteforce(Os[frame, O_after], Os[frame, O_before], h, h_inv)
+                                O_dist = cnpa.length_nonortho_bruteforce(Os[frame, O_after], Os[frame, O_before], h, h_inv)
                             else:
-                                O_dist = npa.length(Os[frame, O_after], Os[frame, O_before], pbc)
+                                O_dist = cnpa.length(Os[frame, O_after], Os[frame, O_before], pbc)
                             jumpcounter[(O_dist-dmin)/(dmax-dmin)*bins] += 1
         print("")
         print("#Proton jump histogram:")
@@ -53,6 +54,25 @@ def jump_histo(filename, dmin, dmax, bins, progress, pbc, frames, Os, Hs, covevo
                 print("{:10} {:10}".format(dmin+(dmax-dmin)/bins*(.5+i), jumpcounter[i]))
 
         print("#Jumps total: {:}".format(jumpcounter.sum()))
+
+
+def jump_probs2(Os, Hs, proton_neighbors, pbc, dmin, dmax, bins, nonortho, verbose=True):
+    # edges_jumps, histo_jumps = np.histogram(bins=bins, range=(dmin, dmax))
+    # _, histo_nojumps = np.histogram(bins=bins, range=(dmin, dmax))
+    jumpprobs = np.zeros(bins, dtype=float)
+    
+    for oxygen_frame, next_oxygen_frame, covevo_frame, covevo_next_frame in zip(
+                                    Os[:-1], Os[1:], proton_neighbors[:-1], proton_neighbors[1:]):
+        neighborchange = covevo_frame != covevo_next_frame
+        if neighborchange.any():
+            donor_acceptor_index, = neighborchange.nonzero()
+            donor_indices, acceptor_indices = covevo_frame[donor_acceptor_index], covevo_next_frame[donor_acceptor_index]
+            donors, acceptors = oxygen_frame[donors], oxygen_frame[acceptors]
+            ipdb.set_trace()
+                
+            
+        
+        
 
 
 def main(*args):
@@ -68,14 +88,11 @@ def main(*args):
     parser.add_argument("--verbose", "-v", action = "store_true", default="False", help="Verbosity")
     parser.add_argument("--debug", "-d", action = "store_true", default="False", help="Debug?")
     parser.add_argument("--frames", "-f", type=int, default=0, help = "Number of frames in xyz file")
-    parser.add_argument("--mode", "-m", choices=["jumpprobs", "jumphisto", "O_RDF"], default="jumpprobs", help = "Choose whether to calculate probability histogram \
+    parser.add_argument("--mode", "-m", choices=["jumpprobs", "jumphisto", "O_RDF"], 
+        default="jumpprobs", help = "Choose whether to calculate probability histogram \
         or the histogram of proton jumps for different oxygen distances")
     args = parser.parse_args()
 
-    # Thank you to http://stackoverflow.com/questions/881696/unbuffered-stdout-in-python-as-in-python-u-from-within-the-program
-    # unbuffered = os.fdopen(sys.stdout.fileno(), 'w', 0)
-    # sys.stdout = unbuffered
-    
     if len(args.pbc) == 3:
         nonortho = False
     elif len(args.pbc) == 9:
@@ -93,7 +110,7 @@ def main(*args):
 
     trajectory = BinDump.npload_atoms(args.filename, create_if_not_existing=True, verbose=args.verbose)
     BinDump.mark_acidic_protons(trajectory, pbc, nonortho=nonortho, verbose=args.verbose)
-    Os, Hs = npa.select_atoms(trajectory, "O", "AH")
+    Os, Hs = cnpa.select_atoms(trajectory, "O", "AH")
 
     covevo_filename = re.sub("\..{3}$", "", args.filename)+"_covevo.npy"
     if not os.path.exists(covevo_filename):
@@ -105,11 +122,11 @@ def main(*args):
     covevo = np.load(covevo_filename)
 
     if args.mode == "jumpprobs":
-        jsh.jump_probs(Os, Hs, covevo, pbc, args.dmin, args.dmax, args.bins, verbose=True, nonortho=nonortho)
+        jump_probs2(Os, Hs, covevo, pbc, args.dmin, args.dmax, args.bins, verbose=True, nonortho=nonortho)
     elif args.mode == "O_RDF":
         pass
     else:
-        jump_histo(args.filename, args.dmin, args.dmax, args.bins, args.verbose, pbc, args.frames, Os, Hs, covevo, verbose=True, nonortho=nonortho)
+        jump_histo(args.dmin, args.dmax, args.bins, args.verbose, pbc, args.frames, Os, Hs, covevo, verbose=True, nonortho=nonortho)
 
 if __name__ == "__main__":
     main()
