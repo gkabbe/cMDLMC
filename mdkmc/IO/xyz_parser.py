@@ -106,6 +106,19 @@ class XYZFile(object):
 
         return np.array(traj, dtype=npa.xyzatom)
 
+    def get_trajectory_memmap(self, memmap_fname, atomnames=None, verbose=False):
+        frame_number = self.get_framenumber()
+        memmap = np.lib.format.open_memmap(memmap_fname, dtype=dtype_xyz, shape=(frame_number, self.atomnr), mode="w+")
+
+        for i in range(frame_number):
+            memmap[i, :] = self.get_atoms_numpy(atomnames)
+            if verbose and i % 1000 == 0:
+                print("# {:06d} / {:06d}\r".format(i, frame_number), end=' ')
+                sys.stdout.flush()
+        if verbose:
+            print("")
+        return memmap
+
     def print_frame(self):
         for i in range(self.atomnr + 2):
             print(self.datei.readline()[:-1])
