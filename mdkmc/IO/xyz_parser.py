@@ -10,7 +10,9 @@ from mdkmc.atoms import atomclass as ac
 from mdkmc.atoms import numpyatom as npa
 from mdkmc.atoms.numpyatom import xyzatom as dtype_xyz
 
+
 class XYZFile(object):
+
     def __init__(self, filename, framenumber=None, verbose=False):
         self.filename = filename
         self.datei = open(self.filename, "r")
@@ -87,7 +89,6 @@ class XYZFile(object):
         return atoms
 
     def get_trajectory_numpy(self, atomnames=None, verbose=False):
-        # pdb.set_trace()
         start_time = time.time()
         traj = []
         counter = 0
@@ -97,23 +98,31 @@ class XYZFile(object):
             except EOFError:
                 break
             if verbose and counter % 100 == 0:
-                print("# Frame {}, ({:.2f} fps)".format(counter, float(counter) / (time.time() - start_time)), "\r", end=' ')
+                print("# Frame {}, ({:.2f} fps)".format(counter, float(
+                    counter) / (time.time() - start_time)), "\r", end=' ')
             counter += 1
         if verbose:
             print("")
         if verbose:
-            print("# Total time: {} sec".format(time.time()-start_time))
+            print("# Total time: {} sec".format(time.time() - start_time))
 
         return np.array(traj, dtype=npa.xyzatom)
 
     def get_trajectory_memmap(self, memmap_fname, atomnames=None, verbose=False):
         frame_number = self.get_framenumber()
-        memmap = np.lib.format.open_memmap(memmap_fname, dtype=dtype_xyz, shape=(frame_number, self.atomnr), mode="w+")
+        memmap = np.lib.format.open_memmap(memmap_fname, dtype=dtype_xyz,
+                                           shape=(frame_number, self.atomnr), mode="w+")
 
+        start_time = time.time()
         for i in range(frame_number):
             memmap[i, :] = self.get_atoms_numpy(atomnames)
-            if verbose and i % 1000 == 0:
-                print("# {:06d} / {:06d}\r".format(i, frame_number), end=' ')
+            if verbose and i > 0 and i % 1000 == 0:
+                print("# {:06d} / {:06d} "
+                      "... {:.1f} min remaining".format(i, frame_number,
+                                                        (frame_number - i) / i *
+                                                        (time.time() - start_time)
+                                                        ),
+                      end="\r")
                 sys.stdout.flush()
         if verbose:
             print("")
