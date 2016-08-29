@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 PERIODIC=[29.122, 25.354, 12.363]
 

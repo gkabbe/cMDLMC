@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 from math import sqrt, cos, acos, degrees
 import types
