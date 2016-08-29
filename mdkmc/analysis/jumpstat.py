@@ -67,9 +67,10 @@ def jump_probs2(Os, Hs, proton_neighbors, pbc, dmin, dmax, bins, nonortho, verbo
         if neighborchange.any():
             donor_acceptor_index, = neighborchange.nonzero()
             donor_indices, acceptor_indices = covevo_frame[donor_acceptor_index], covevo_next_frame[donor_acceptor_index]
-            donors, acceptors = oxygen_frame[donors], oxygen_frame[acceptors]
+            donors, acceptors = oxygen_frame[donor_indices], oxygen_frame[acceptor_indices]
+            distances = np.sqrt((npa.distance_vectorized(donors, acceptors, pbc)**2).sum(axis=-1))
+            histo_jumps, edges_jumps = np.histogram(distances, bins=bins, range=(dmin, dmax))
             ipdb.set_trace()
-                
             
         
         
