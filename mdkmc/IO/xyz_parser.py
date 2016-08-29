@@ -157,7 +157,7 @@ class XYZFile(object):
             return self.framenumber
         else:
             linenumber = int(os.popen("wc -l " + self.filename).read().split()[0])
-            framenumber = linenumber / (self.atomnr + 2)
+            framenumber = linenumber // (self.atomnr + 2)
             if verbose:
                 print("#{} frames".format(framenumber))
             return framenumber
