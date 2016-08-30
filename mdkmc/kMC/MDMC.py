@@ -93,7 +93,7 @@ def print_confighelp(args):
     parser_dict = config_parser.CONFIG_DICT
     for k, v in parser_dict.items():
         keylen = len(k)
-        delim_len = (text_width - 2 - keylen) / 2
+        delim_len = (text_width - 2 - keylen) // 2
         print("{delim} {keyword} {delim}".format(keyword=k.upper(), delim=delim_len * "-"))
         print("")
         print("\n".join(wrap(v["help"], width=text_width)))
