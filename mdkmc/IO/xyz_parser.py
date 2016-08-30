@@ -7,7 +7,7 @@ import re
 
 import ipdb
 import numpy as np
-from numba import jit
+import tables
 
 from mdkmc.atoms import numpyatom as npa
 from mdkmc.atoms.numpyatom import xyzatom as dtype_xyz
@@ -257,35 +257,26 @@ def get_positions(xyz_fname):
 #    return arr.reshape((-1, atomnumber))
 
 
-def parse(f, atomnr, chunk=None):
+def parse(f, atom_number, chunk=None):
     def filter_lines(f, frame_len):
         for i, line in enumerate(f):
             if i % frame_len not in (0, 1):
                 yield line
 
-    data = np.genfromtxt(filter_lines(f, atomnr + 2),
-                         dtype=dtype_xyz, max_rows=chunk * atomnr).reshape((-1, atomnr))
+    data = np.genfromtxt(filter_lines(f, atom_number + 2),
+                         dtype=dtype_xyz, max_rows=chunk * atom_number).reshape((-1, atom_number))
 
     return data
 
+def save_trajectory_to_hdf5(xyz_fname, atom_names):
+    with open("xyz_fname", "r") as f:
+        atom_number = int(f.readline())
+    
+    a = tables.Atom.from_dtype(np.dtype("float32"))
+    filters = tables.Filters(complevel=5, complib="blosc")
+    hdf5_fname = os.path.splitext(xyz_fname)[0] + ".hdf5"
 
-# @jit
-# def get_trajectory_numpy(trajectory, atomnames=None, verbose=False):
-#    start_time = time.time()
-#    traj = []
-#    counter = 0
-#    while 1:
-#        try:
-#            traj.append(self.get_atoms_numpy(atomnames))
-#        except EOFError:
-#            break
-#        if verbose and counter % 100 == 0:
-#            print("# Frame {}, ({:.2f} fps)".format(counter, float(
-#                counter) / (time.time() - start_time)), "\r", end=' ')
-#        counter += 1
-#    if verbose:
-#        print("")
-#    if verbose:
-#        print("# Total time: {} sec".format(time.time() - start_time))
-#
-#    return np.array(traj, dtype=npa.xyzatom)
+    with tables.open_file(hdf5_fname, "a") as f:
+        f.create_group("/", filters=filters)
+        for atom_name in atom_names:
+            f.create_earray("/", atom_name, atom=a)
