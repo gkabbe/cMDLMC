@@ -9,25 +9,9 @@ import time
 import re
 import inspect
 
-script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-#~ sys.path.append(os.path.join(script_path, "../cython/atoms"))
 from mdkmc.cython_exts.atoms import numpyatom as cython_npa
 from mdkmc.IO.xyz_parser import XYZFile
 from mdkmc.atoms import numpyatom as npa
-
-
-def get_acidHs(atoms, pbc):
-    Hs = []
-    acidHs = []
-    for atom in atoms:
-        if atom.name == "H":
-            Hs.append(atom)
-
-    for H in Hs:
-        if (H.next_neighbor(atoms, pbc))[0].name == "O":
-            acidHs.append(H.index)
-
-    return acidHs
 
 
 def npget_acidHs(atoms, pbc, only_indices=False):
@@ -40,7 +24,8 @@ def npget_acidHs(atoms, pbc, only_indices=False):
     acidH_indices = []
     atoms_pos = np.array(atoms["pos"], order="C")
     for i, atom in enumerate(atoms_pos):
-        if atoms[i]["name"] == "H" and atoms[cython_npa.nextNeighbor(atom, atoms_pos, pbc, exclude_identical_position=True)[0]]["name"] == "O":
+        if atoms[i]["name"] == "H" and atoms[cython_npa.nextNeighbor(
+                atom, atoms_pos, pbc, exclude_identical_position=True)[0]]["name"] == "O":
             acidH_indices.append(i)
     if only_indices:
         return acidH_indices
@@ -48,15 +33,7 @@ def npget_acidHs(atoms, pbc, only_indices=False):
         return atoms_pos[acidH_indices]
 
 
-def get_Os(atoms):
-    Os=[]
-    for atom in atoms:
-        if atom.name == "O":
-            Os.append(atom.index)
-    return Os
-
-
-def npsave_atoms(np_filename, trajectory, overwrite=False, compressed=False, nobackup=True, verbose=False):
+def npsave_atoms(np_filename, trajectory, nobackup=True, verbose=False):
 
     if compressed:
         suffix = ".npz"
@@ -71,9 +48,9 @@ def npsave_atoms(np_filename, trajectory, overwrite=False, compressed=False, nob
         np_filename += "_nobackup"
 
     if not overwrite:
-        while os.path.exists(np_filename+suffix):
+        while os.path.exists(np_filename + suffix):
             if verbose:
-                print("# sFilename {} already existing".format(np_filename+suffix))
+                print("# Filename {} already existing".format(np_filename + suffix))
             number = re.findall("(\((\d\d)\)){,1}$", np_filename)[0][1]
             if number == "":
                 np_filename += "(01)"
@@ -92,7 +69,7 @@ def npsave_atoms(np_filename, trajectory, overwrite=False, compressed=False, nob
         np.save(np_filename, trajectory)
 
 
-def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True, 
+def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True,
                  create_if_not_existing=False, return_tuple=False, verbose=True):
     def find_binfiles(filename):
         binfiles = []
@@ -120,7 +97,7 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True,
                         selection = np.logical_or(selection, trajectory["name"] == atomname)
                     atomnumber += (trajectory[0]["name"] == atomname).sum()
                 trajectory = trajectory[selection]
-                trajectory = trajectory.reshape(trajectory.shape[0]/atomnumber, atomnumber)
+                trajectory = trajectory.reshape(trajectory.shape[0] / atomnumber, atomnumber)
         else:
             if verbose:
                 print("# Found no binary files!")
@@ -153,7 +130,7 @@ def npload_atoms(filename, arg="arr_0", atomnames_list=None, remove_com=True,
 def npload_memmap(filename, verbose=False):
     root, ext = os.path.splitext(filename)
     if ext == ".xyz":
-        if not "nobackup" in root:
+        if "nobackup" not in root:
             memmap_filename = "_".join([root, "nobackup.npy"])
         else:
             memmap_filename = "".join([root, ".npy"])
@@ -162,7 +139,7 @@ def npload_memmap(filename, verbose=False):
 
     try:
         memmap = np.lib.format.open_memmap(memmap_filename, mode="r")
-    except IOError:
+    except (IOError, FileNotFoundError):
         if verbose:
             print("# Loading file {}".format(filename))
         xyz_file = XYZFile(filename, verbose=verbose)
@@ -194,7 +171,8 @@ def npsave_covevo(fname, Os, Hs, pbc, nonortho=False, verbose=False):
             for j in range(covevo.shape[1]):
                 covevo[i, j] = cython_npa.nextNeighbor_nonortho(Hs[i, j], Os[i], hmat, hmat_inv)[0]
             if verbose and i % 100 == 0:
-                print("# Frame {: 6d} ({:5.0f} fps)".format(i, float(i)/(time.time()-start_time)), end=' ')
+                print("# Frame {: 6d} ({:5.0f} fps)".format(
+                    i, float(i) / (time.time() - start_time)), end=' ')
                 print("\r", end=' ')
         print("")
     else:
@@ -202,7 +180,8 @@ def npsave_covevo(fname, Os, Hs, pbc, nonortho=False, verbose=False):
             for j in range(covevo.shape[1]):
                 covevo[i, j] = cython_npa.nextNeighbor(Hs[i, j], Os[i], pbc=pbc)[0]
             if verbose and i % 100 == 0:
-                print("# Frame {: 6d} ({:5.0f} fps)".format(i, float(i)/(time.time()-start_time)), end='\r')
+                print("# Frame {: 6d} ({:5.0f} fps)".format(
+                    i, float(i) / (time.time() - start_time)), end='\r')
                 print("")
         print("")
 
@@ -210,5 +189,5 @@ def npsave_covevo(fname, Os, Hs, pbc, nonortho=False, verbose=False):
         print("# Saving covevo in {}".format(fname))
     np.save(fname, covevo)
     if verbose:
-        print("# Total time: {} seconds".format(time.time()-start_time))
+        print("# Total time: {} seconds".format(time.time() - start_time))
     return covevo
