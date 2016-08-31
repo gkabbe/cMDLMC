@@ -11,6 +11,7 @@ def get_jumprate_parameters(line):
     param_dict = eval(dict_string)
     return param_dict
 
+
 def get_pbc(line):
     pbc = np.fromiter(map(float, line.split()[1:]), dtype=np.float)
     if len(pbc) != 3 and len(pbc) != 9:
@@ -145,7 +146,7 @@ CONFIG_DICT = {
     "angle_threshold":
         {
             "parse_fct": parse_float,
-            "default": PI/2,
+            "default": PI / 2,
             "help": "When using angle dependent jump rates, this option determines up to which value of theta the "
                     "jumprates will be set to zero. Theta is the angle between the vector connecting an oxygen and its "
                     "nearest heavy atom neighbor (whose type can be defined via \"o_neighbor\") and the vector "
@@ -219,17 +220,11 @@ CONFIG_DICT = {
                     "of the Arrhenius equation, which converts the activation energy to a jumprate."
         },
     "higher_msd":
-	{
-	     "parse_fct": parse_bool,
-	     "default": False,
-         "help": "Calculates higher MSDs."
-	},
-    "memmap":
     {
-        "parse_fct": parse_bool,
-        "default": False,
-        "help": "Use numpy memmap, instead of loading the whole trajectory into RAM"
-    },
+            "parse_fct": parse_bool,
+            "default": False,
+            "help": "Calculates higher MSDs."
+            },
     "var_prot_single":
         {
             "parse_fct": parse_bool,
