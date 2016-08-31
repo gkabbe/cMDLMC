@@ -37,20 +37,38 @@ def parse(f, frame_len, *atom_names, no_of_atoms=None, no_of_frames=None):
     return data.reshape(output_shape)
 
 
-def save_trajectory_to_hdf5(xyz_fname, *atom_names):
+def save_trajectory_to_hdf5(xyz_fname, *atom_names, hdf5_fname=None, chunk=1000, verbose=False):
     with open(xyz_fname, "rb") as f:
-        atom_number = int(f.readline())
+        frame_len = int(f.readline()) + 2
         f.seek(0)
-        first_frame = parse(f, atom_number, chunk = 1)
+        first_frame = parse(f, frame_len, no_of_frames=1)
         atom_nr_dict = dict()
         for name in atom_names:
             atom_nr_dict[name] = (first_frame[0]["name"] == name).sum()
-    
+
     a = tables.Atom.from_dtype(np.dtype("float32"))
     filters = tables.Filters(complevel=5, complib="blosc")
-    hdf5_fname = os.path.splitext(xyz_fname)[0] + ".hdf5"
+    if not hdf5_fname:
+        hdf5_fname = os.path.splitext(xyz_fname)[0] + ".hdf5"
 
-    with tables.open_file(hdf5_fname, "a") as f:
-        f.create_group("/", filters=filters)
+    with tables.open_file(hdf5_fname, "a", filters=filters) as hdf5:
         for name in atom_names:
-            f.create_earray("/", atom_name, atom=a, shape=(0, atom_nr_dict[name], 3))
+            hdf5.create_earray("/", name, atom=a, shape=(0, atom_nr_dict[name], 3))
+
+        with open(xyz_fname, "rb") as f:
+            counter = 0
+            start_time = time.time()
+            while True:
+                pos_all_atoms = parse(f, frame_len, *atom_names,
+                                      no_of_atoms=sum(atom_nr_dict.values()),
+                                      no_of_frames=chunk)
+                if pos_all_atoms.shape[0] == 0:
+                    break
+                for name in atom_names:
+                    pos_single_atom = pos_all_atoms[:, pos_all_atoms[0]["name"] == name]
+                    print(pos_single_atom.shape)
+                    hdf5.get_node("/", name).append(pos_single_atom["pos"])
+                    # print(hdf5.get_node("/", name))
+                counter += chunk
+                print("# Parsed frames: {:06d}. {:.2f} fps".format(
+                    counter, counter / (time.time() - start_time)), end="\r")
