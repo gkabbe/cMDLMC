@@ -13,21 +13,29 @@ from mdkmc.atoms import numpyatom as npa
 from mdkmc.atoms.numpyatom import xyzatom as dtype_xyz
 
 
-def parse(f, atom_number, chunk=None, filter_=None):
+def parse(f, frame_len, *atom_names, no_of_atoms=None, no_of_frames=None):
     def filter_lines(f, frame_len):
         for i, line in enumerate(f):
             if i % frame_len not in (0, 1):
                 yield line
-                
-    if filter_:
-        filter_ = filter_(filter_lines(f, atom_number + 2))
+                if (i + 1) // frame_len == no_of_frames:
+                    break
+
+    def filter_atoms(f, atom_names):
+        for line in f:
+            if line.split()[0].decode("utf-8") in atom_names:
+                yield line
+
+    if len(atom_names) > 0:
+        filter_ = filter_atoms(filter_lines(f, frame_len), atom_names)
+        output_shape = (-1, no_of_atoms)
     else:
-        filter_ = filter_lines(f, atom_number + 2)
+        filter_ = filter_lines(f, frame_len)
+        output_shape = (-1, frame_len - 2)
 
-    data = np.genfromtxt(filter_, dtype=dtype_xyz, 
-                         max_rows=chunk * atom_number).reshape((-1, atom_number))
+    data = np.genfromtxt(filter_, dtype=dtype_xyz)
+    return data.reshape(output_shape)
 
-    return data
 
 def save_trajectory_to_hdf5(xyz_fname, *atom_names):
     with open(xyz_fname, "rb") as f:
