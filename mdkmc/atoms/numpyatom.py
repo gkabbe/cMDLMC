@@ -205,6 +205,12 @@ def remove_com_movement_frame(npa_frame, verbose=False):
     npa_frame["pos"] -= com
 
 
+def remove_center_of_mass_movement_fast(npa_traj):
+    mass_array = np.array([atom_masses[name] for name in npa_traj[0]["name"]])[None, :, None]
+    center_of_mass = (mass_array * npa_traj["pos"]).sum(axis=1)[:, None, :] / mass_array.sum()
+    npa_traj["pos"] -= center_of_mass
+
+
 def calculate_com_position(npa_frame):
     com = np.zeros(3)
     M = 0
