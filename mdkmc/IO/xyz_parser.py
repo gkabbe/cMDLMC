@@ -88,3 +88,36 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False)
     slice_ = slice(0, None)
     trajectories = [f.get_node("/trajectories", atom_name)[slice_] for atom_name in atom_names]
     return trajectories
+
+
+def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
+                           verbose=False):
+    with open(xyz_fname, "rb") as f:
+        frame_length = int(f.readline()) + 2
+        f.seek(0)
+        if verbose:
+            print("# Determining trajectory length...")
+        f.seek(0)
+
+        data = parse_xyz(f, frame_length)
+
+        if remove_com_movement:
+            npa.remove_center_of_mass_movement_fast(data)
+
+        if not npz_fname:
+            npz_fname = os.path.splitext(xyz_fname)[0] + ".npy"
+        np.savez(npz_fname, trajectory=data)
+
+
+def load_trajectory_from_npz(npz_fname, *atom_names, clip=None, verbose=False):
+    trajectory = np.load(npz_fname)["trajectory"]
+    if clip:
+        if verbose:
+            print("# Clipping trajectory to the first {} frames".format(clip))
+        trajectory = trajectory[:clip]
+    single_atom_trajs = []
+    for atom in atom_names:
+        atom_traj = trajectory[:, trajectory[0]["name"] == atom]
+        atom_traj = np.array(atom_traj["pos"], order="C")
+        single_atom_trajs.append(atom_traj)
+    return single_atom_trajs
