@@ -13,22 +13,20 @@ from mdkmc.atoms import numpyatom as npa
 from mdkmc.atoms.numpyatom import xyzatom as dtype_xyz
 
 
-def parse(f, frame_len, *atom_names, no_of_atoms=None, no_of_frames=None):
+def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
     def filter_lines(f, frame_len):
         for i, line in enumerate(f):
             if i % frame_len not in (0, 1):
                 yield line
                 if (i + 1) // frame_len == no_of_frames:
                     break
-
-    def filter_atoms(f, atom_names):
-        for line in f:
-            if line.split()[0].decode("utf-8") in atom_names:
-                yield line
-
-    if len(atom_names) > 0:
-        filter_ = filter_atoms(filter_lines(f, frame_len), atom_names)
-        output_shape = (-1, no_of_atoms)
+    if selection:
+        def filter_selection(f, s):
+            for i, line in enumerate(f):
+                if i % (frame_len - 2) in s:
+                    yield line
+        filter_ = filter_selection(filter_lines(f, frame_len), selection)
+        output_shape = (-1, len(selection))
     else:
         filter_ = filter_lines(f, frame_len)
         output_shape = (-1, frame_len - 2)
