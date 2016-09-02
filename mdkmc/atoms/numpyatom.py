@@ -160,7 +160,7 @@ def length(a1_pos, a2_pos, pbc=None):
     return math.sqrt(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2])
 
 
-def nextNeighbor(a1_pos, atoms_pos, nonortho=False, pbc=None):
+def next_neighbor(a1_pos, atoms_pos, nonortho=False, pbc=None):
     mindist = 1e6
     if nonortho:
         for i in range(atoms_pos.shape[0]):
@@ -218,7 +218,7 @@ def get_acidic_proton_indices(atoms, pbc=None, nonortho=False, verbose=False):
     H_indices = np.where(atoms["name"] == "H")[0]
     not_H_atoms = atoms[atoms["name"] != "H"]
     for i, H in enumerate(H_atoms):
-        nn_index, next_neighbor = nextNeighbor(H["pos"], not_H_atoms["pos"], nonortho=nonortho, pbc=pbc)
+        nn_index, next_neighbor = next_neighbor(H["pos"], not_H_atoms["pos"], nonortho=nonortho, pbc=pbc)
         # ~ipdb.set_trace()
         if not_H_atoms["name"][nn_index] == "O":
             acid_indices.append(H_indices[i])

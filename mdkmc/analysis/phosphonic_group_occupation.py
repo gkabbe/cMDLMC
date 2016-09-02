@@ -110,7 +110,7 @@ def proton_oxygen_distance_correlation(covevo, PO3_groups, Os, Hs, pbc):
                     for Oind in PO3_groups[PO3_group_index]:
                         if Oind != new_neighbor:
                             O_indices.append(Oind)
-                            H_ind = npa.nextNeighbor(Os[i, Oind], Hs[i], pbc=pbc)[0]
+                            H_ind = npa.next_neighbor(Os[i, Oind], Hs[i], pbc=pbc)[0]
                             H_indices.append(H_ind)
                     for k in range(1, 3):
                         if npa.length(Os[i, O_indices[k]], Hs[i, H_indices[k]], pbc) > 1.3:
@@ -153,7 +153,7 @@ def proton_phosphor_distance_correlation(covevo, PO3_groups, Os, Ps, pbc):
                     for Oind in PO3_groups[PO3_group_index]:
                         if Oind != new_neighbor:
                             O_indices.append(Oind)
-                            H_ind = npa.nextNeighbor(Os[i, Oind], Hs[i], pbc=pbc)[0]
+                            H_ind = npa.next_neighbor(Os[i, Oind], Hs[i], pbc=pbc)[0]
                             H_indices.append(H_ind)
                     for k in range(1, 3):
                         if npa.length(Os[i, O_indices[k]], Hs[i, H_indices[k]], pbc) > 1.3:
