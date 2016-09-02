@@ -7,57 +7,10 @@ import numpy as np
 import ipdb
 import argparse
 from textwrap import wrap
-from mdkmc.IO import BinDump
 from mdkmc.IO import config_parser
 from mdkmc.cython_exts.kMC import kMC_helper
 from mdkmc.cython_exts.atoms import numpyatom as npa
 
-
-def load_atoms_from_numpy_trajectory(traj_fname, atomnames, clip=None, verbose=False):
-    trajectory = BinDump.npload_atoms(traj_fname, create_if_not_existing=True, remove_com=True,
-                                      verbose=verbose)
-    if clip:
-        if verbose:
-            print("# Clipping trajectory to the first {} frames".format(clip))
-        trajectory = trajectory[:clip]
-    single_atom_trajs = []
-    for atom in atomnames:
-        atom = atom.encode()
-        atom_nr = trajectory[0][trajectory[0]["name"] == atom].size
-        atom_traj = (trajectory[trajectory["name"] == atom]).reshape((trajectory.shape[0], atom_nr))
-        atom_traj = np.array(atom_traj["pos"], order="C")
-        single_atom_trajs.append(atom_traj)
-    return single_atom_trajs
-
-
-def load_atoms_from_numpy_trajectory_as_memmap(traj_fname, atomnames, clip=None, verbose=False):
-    trajectory, traj_fname = BinDump.npload_memmap(traj_fname, verbose=verbose)
-    single_atom_trajs = []
-    for atom in atomnames:
-        root, ext = os.path.splitext(traj_fname)
-        new_fname = "{}_{}.npy".format(root, atom)
-        atom = atom.encode()
-        try:
-            if verbose:
-                print("# Trying to load memmap from", new_fname)
-            memmap = np.lib.format.open_memmap(new_fname)
-        except IOError:
-            if verbose:
-                print("# Could not find trajectory {}. Creating new.".format(new_fname))
-            atom_nr = trajectory[0][trajectory[0]["name"] == atom].size
-            atom_traj = (trajectory[trajectory["name"] == atom]
-                         ).reshape((trajectory.shape[0], atom_nr))
-            atom_traj = np.array(atom_traj["pos"], order="C")
-
-            memmap = np.lib.format.open_memmap(
-                new_fname, dtype=float, shape=atom_traj.shape, mode="w+")
-            memmap[:] = atom_traj[:]
-        if clip:
-            if verbose:
-                print("# Clipping trajectory to the first {} frames".format(clip))
-            memmap = memmap[:clip]
-        single_atom_trajs.append(memmap)
-    return single_atom_trajs
 
 
 def load_configfile_new(configfilename, verbose=False):
