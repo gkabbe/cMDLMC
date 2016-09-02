@@ -30,7 +30,7 @@ class TestMDMC(unittest.TestCase):
             pbc_extended = pbc * boxmult
             #choose parameters so jump prob is 1 for d <=3.5 and 0 else
             helper = kh.Helper(pbc_extended, nonortho=0, jumprate_parameter_dict=fermi_params, verbose=True)
-            mdmc.extend_simulationbox(Os, 101, h, boxmult, nonortho=False)
+            mdmc.extend_simulation_box(Os, 101, h, boxmult, nonortho=False)
             helper.determine_neighbors(Os, 6.)
             helper.calculate_transitions_new(Os, 20.)
             start, dest, prob = helper.return_transitions()

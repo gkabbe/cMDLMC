@@ -13,10 +13,10 @@ from mdkmc.cython_exts.kMC import kMC_helper
 from mdkmc.cython_exts.atoms import numpyatom as npa
 
 
-def load_configfile(configfilename, verbose=False):
+def load_configfile(config_filename, verbose=False):
     parser_dict = config_parser.CONFIG_DICT
     config_dict = dict()
-    with open(configfilename, "r") as f:
+    with open(config_filename, "r") as f:
         for line in f:
             if line[0] != "#":
                 if len(line.split()) > 1:
@@ -57,14 +57,14 @@ def print_confighelp(args):
         print("")
 
 
-def get_gitversion():
+def get_git_version():
     from mdkmc.version_hash import commit_hash, commit_date, commit_message
     print("# Hello. I am from commit {}".format(commit_hash))
     print("# Commit Date: {}".format(commit_date))
     print("# Commit Message: {}".format(commit_message))
 
 
-def extend_simulationbox(oxygen_coordinates, oxygen_number, h, box_multiplier, nonortho=False):
+def extend_simulation_box(oxygen_coordinates, oxygen_number, h, box_multiplier, nonortho=False):
     if True in [multiplier > 1 for multiplier in box_multiplier]:
         if nonortho:
             v1 = h[:, 0]
@@ -110,47 +110,47 @@ def calculate_displacement_nonortho(proton_lattice, proton_lattice_snapshot,
     kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_lattice_snapshot, h, h_inv)
 
 
-def calculate_autocorrelation(protonlattice_old, protonlattice_new):
+def calculate_autocorrelation(proton_lattice_old, proton_lattice_new):
     autocorrelation = 0
-    for i in range(protonlattice_new.size):
-        if protonlattice_old[i] == protonlattice_new[i] != 0:
+    for i in range(proton_lattice_new.size):
+        if proton_lattice_old[i] == proton_lattice_new[i] != 0:
             autocorrelation += 1
     return autocorrelation
 
 
-def calculate_MSD(MSD, displacement):
-    MSD *= 0
+def calculate_mean_squared_displacement(mean_squared_displacement, displacement):
+    mean_squared_displacement *= 0
     for d in displacement:
-        MSD += d * d
-    MSD /= displacement.shape[0]
+        mean_squared_displacement += d * d
+    mean_squared_displacement /= displacement.shape[0]
 
 
-def calculate_MSD_var(MSD, displacement, msd_var):
-    MSD *= 0
-    msd_var *= 0
+def calculate_mean_squared_displacement_with_variance(mean_squared_displacement, displacement, msd_variance):
+    mean_squared_displacement *= 0
+    msd_variance *= 0
     for d in displacement:
-        MSD += d * d
-    MSD /= displacement.shape[0]
+        mean_squared_displacement += d * d
+    mean_squared_displacement /= displacement.shape[0]
     for i in range(displacement.shape[1]):
-        msd_var[i] = (displacement[:, i] * displacement[:, i]).var()
-    return MSD, msd_var
+        msd_variance[i] = (displacement[:, i] * displacement[:, i]).var()
+    return mean_squared_displacement, msd_variance
 
 
-def calculate_higher_MSD(displacement):
-    MSD = np.zeros((3))
-    msd2 = 0
-    msd3 = 0
-    msd4 = 0
+def calculate_higher_mean_squared_displacement(displacement):
+    msd_1 = np.zeros((3))
+    msd_2 = 0
+    msd_3 = 0
+    msd_4 = 0
     for d in displacement:
-        MSD += d * d
-        msd2 += (MSD[0] + MSD[1] + MSD[2]) ** 0.5
-        msd3 += (MSD[0] + MSD[1] + MSD[2]) ** 1.5
-        msd4 += (MSD[0] + MSD[1] + MSD[2]) ** 2
-    MSD /= displacement.shape[0]
-    msd2 /= displacement.shape[0]
-    msd3 /= displacement.shape[0]
-    msd4 /= displacement.shape[0]
-    return MSD, msd2, msd3, msd4
+        msd_1 += d * d
+        msd_2 += (msd_1[0] + msd_1[1] + msd_1[2]) ** 0.5
+        msd_3 += (msd_1[0] + msd_1[1] + msd_1[2]) ** 1.5
+        msd_4 += (msd_1[0] + msd_1[1] + msd_1[2]) ** 2
+    msd_1 /= displacement.shape[0]
+    msd_2 /= displacement.shape[0]
+    msd_3 /= displacement.shape[0]
+    msd_4 /= displacement.shape[0]
+    return msd_1, msd_2, msd_3, msd_4
 
 
 def load_atoms(filename, auxiliary_file, clip, *atom_names, verbose=False):
@@ -197,7 +197,7 @@ def load_atoms(filename, auxiliary_file, clip, *atom_names, verbose=False):
 class MDMC:
     def __init__(self, configfile):
         try:
-            get_gitversion()
+            get_git_version()
         except ImportError:
             print("# No commit information found", file=sys.stderr)
         file_kwargs = load_configfile(configfile, verbose=True)
@@ -231,20 +231,20 @@ class MDMC:
         else:
             self.jumprate_params_fs["a"] *= self.md_timestep_fs
 
-    def determine_phosphorus_oxygen_pairs(self, framenumber, atombox):
-        P_neighbors = np.zeros(self.oxygennumber_extended, int)
-        Os = atombox.get_extended_frame(atombox.oxygen_trajectory[framenumber])
-        Ps = atombox.get_extended_frame(atombox.phosphorus_trajectory[framenumber])
+    def determine_phosphorus_oxygen_pairs(self, frame_number, atom_box):
+        phosphorus_neighbors = np.zeros(self.oxygennumber_extended, int)
+        oxygen_atoms = atom_box.get_extended_frame(atom_box.oxygen_trajectory[frame_number])
+        phosphorus_atoms = atom_box.get_extended_frame(atom_box.phosphorus_trajectory[frame_number])
 
         if self.nonortho:
-            for i in range(Os.shape[0]):
-                P_index = npa.nextNeighbor_nonortho(Os[i], Ps, atombox.h, atombox.h_inv)[0]
-                P_neighbors[i] = P_index
+            for i in range(oxygen_atoms.shape[0]):
+                P_index = npa.nextNeighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, atom_box.h, atom_box.h_inv)[0]
+                phosphorus_neighbors[i] = P_index
         else:
-            for i in range(Os.shape[0]):
-                P_index = npa.nextNeighbor(Os[i], Ps, atombox.periodic_boundaries_extended)[0]
-                P_neighbors[i] = P_index
-        return P_neighbors
+            for i in range(oxygen_atoms.shape[0]):
+                P_index = npa.nextNeighbor(oxygen_atoms[i], phosphorus_atoms, atom_box.periodic_boundaries_extended)[0]
+                phosphorus_neighbors[i] = P_index
+        return phosphorus_neighbors
 
     def print_settings(self):
         print("# I'm using the following settings:")
@@ -295,19 +295,19 @@ class MDMC:
             msd2, msd3, msd4 = None, None, None
         return displacement, MSD, msd_var, msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new
 
-    def reset_observables(self, proton_pos_snapshot, protonlattice, displacement, Opos, helper):
-        for i, site in enumerate(protonlattice):
+    def reset_observables(self, proton_position_snapshot, proton_lattice, displacement, oxygen_positions, helper):
+        for i, site in enumerate(proton_lattice):
             if site > 0:
-                proton_pos_snapshot[site - 1] = Opos[i]
+                proton_position_snapshot[site - 1] = oxygen_positions[i]
 
-        protonlattice_snapshot = np.copy(protonlattice)
+        protonlattice_snapshot = np.copy(proton_lattice)
 
         helper.reset_jumpcounter()
 
         if not self.periodic_wrap:
             displacement[:] = 0
 
-        return protonlattice_snapshot, proton_pos_snapshot, displacement
+        return protonlattice_snapshot, proton_position_snapshot, displacement
 
     def print_observable_names(self):
         if self.var_prot_single:
@@ -347,8 +347,8 @@ class MDMC:
                                                    autocorrelation, helper.get_jumps(), speed,
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
-        self.averaged_results[(sweep % self.reset_freq) // self.print_freq,
-        2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
+        self.averaged_results[(sweep % self.reset_freq) // self.print_freq, 2:] += MSD[0], MSD[1], MSD[
+            2], autocorrelation, helper.get_jumps()
 
     def print_observables_var(self, sweep, autocorrelation, helper, timestep_fs,
                               start_time, MSD, msd_var, msd2=None, msd3=None, msd4=None):
@@ -372,8 +372,8 @@ class MDMC:
                                                    autocorrelation, helper.get_jumps(), speed,
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
-        self.averaged_results[(sweep % self.reset_freq) / self.print_freq,
-        2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
+        self.averaged_results[(sweep % self.reset_freq) / self.print_freq, 2:] += MSD[0], MSD[1], MSD[
+            2], autocorrelation, helper.get_jumps()
 
     def print_OsHs(self, Os, proton_lattice, sweep, timestep_fs):
         proton_indices = np.where(proton_lattice > 0)[0]
@@ -406,7 +406,7 @@ class MDMC:
                                                       np.array(self.box_multiplier, dtype=np.int32))
 
         if self.po_angle:
-            self.P_neighbors = self.determine_phosphorus_oxygen_pairs(framenumber=0, atombox=atombox)
+            self.P_neighbors = self.determine_phosphorus_oxygen_pairs(frame_number=0, atom_box=atombox)
 
         if self.var_prot_single:
             displacement, MSD, msd_var, msd2, msd3, msd4, \
@@ -479,12 +479,12 @@ class MDMC:
                                                         atombox.oxygen_trajectory[frame]),
                                                     displacement, atombox.h, atombox.h_inv)
                 if self.higher_msd:
-                    MSD, msd2, msd3, msd4 = calculate_higher_MSD(displacement)
+                    MSD, msd2, msd3, msd4 = calculate_higher_mean_squared_displacement(displacement)
                 else:
                     if self.var_prot_single:
-                        MSD, msd_var = calculate_MSD_var(MSD, displacement, msd_var)
+                        MSD, msd_var = calculate_mean_squared_displacement_with_variance(MSD, displacement, msd_var)
                     else:
-                        calculate_MSD(MSD, displacement)
+                        calculate_mean_squared_displacement(MSD, displacement)
                 autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
                 if not self.xyz_output:
                     if self.var_prot_single:
@@ -521,21 +521,21 @@ class MDMC:
               file=self.output)
 
 
-def start_kmc(args):
+def start_lmc(args):
     md_mc = MDMC(configfile=args.config_file)
     md_mc.kmc_run()
 
 
 def main(*args):
     parser = argparse.ArgumentParser(
-        description="MDMC Test", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        description="cMD/LMC", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers()
     parser_config_help = subparsers.add_parser("config_help", help="config file help")
     parser_config_load = subparsers.add_parser(
-        "config_load", help="Load config file and start KMC run")
+        "config_load", help="Load config file and start cMD/LMC run")
     parser_config_load.add_argument("config_file", help="Config file")
     parser_config_help.set_defaults(func=print_confighelp)
-    parser_config_load.set_defaults(func=start_kmc)
+    parser_config_load.set_defaults(func=start_lmc)
     args = parser.parse_args()
     args.func(args)
 
