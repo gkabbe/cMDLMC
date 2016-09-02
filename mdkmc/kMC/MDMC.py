@@ -64,50 +64,50 @@ def get_gitversion():
     print("# Commit Message: {}".format(commit_message))
 
 
-def extend_simulationbox(Opos, onumber, h, box_multiplier, nonortho=False):
+def extend_simulationbox(oxygen_coordinates, oxygen_number, h, box_multiplier, nonortho=False):
     if True in [multiplier > 1 for multiplier in box_multiplier]:
         if nonortho:
             v1 = h[:, 0]
             v2 = h[:, 1]
             v3 = h[:, 2]
-            Oview = Opos.view()
-            Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], onumber, 3)
+            Oview = oxygen_coordinates.view()
+            Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], oxygen_number, 3)
             for x in range(box_multiplier[0]):
                 for y in range(box_multiplier[1]):
                     for z in range(box_multiplier[2]):
                         if x + y + z != 0:
-                            for i in range(onumber):
+                            for i in range(oxygen_number):
                                 Oview[x, y, z, i, :] = Oview[0, 0, 0, i] + x * v1 + y * v2 + z * v3
         else:
             ipdb.set_trace()
-            Oview = Opos.view()
-            Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], onumber, 3)
+            Oview = oxygen_coordinates.view()
+            Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], oxygen_number, 3)
             kMC_helper.extend_simulationbox(Oview, h,
                                             box_multiplier)
 
 
-def calculate_displacement(proton_lattice, proton_pos_snapshot,
-                           Opos_new, displacement, pbc, wrap=True):
-    proton_pos_new = np.zeros(proton_pos_snapshot.shape)
-    for O_index, proton_index in enumerate(proton_lattice):
+def calculate_displacement(proton_lattice, proton_lattice_snapshot,
+                           oxygen_coordinates_new, displacement, pbc, wrap=True):
+    proton_pos_new = np.zeros(proton_lattice_snapshot.shape)
+    for oxygen_index, proton_index in enumerate(proton_lattice):
         if proton_index > 0:
-            proton_pos_new[proton_index - 1] = Opos_new[O_index]
+            proton_pos_new[proton_index - 1] = oxygen_coordinates_new[oxygen_index]
     if wrap:
         kMC_helper.dist_numpy_all_inplace(displacement, proton_pos_new,
-                                          proton_pos_snapshot, pbc)
+                                          proton_lattice_snapshot, pbc)
     else:
-        displacement += kMC_helper.dist_numpy_all(proton_pos_new, proton_pos_snapshot, pbc)
-        proton_pos_snapshot[:] = proton_pos_new  # [:] is important (inplace operation)
+        displacement += kMC_helper.dist_numpy_all(proton_pos_new, proton_lattice_snapshot, pbc)
+        proton_lattice_snapshot[:] = proton_pos_new  # [:] is important (inplace operation)
 
 
-def calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot,
+def calculate_displacement_nonortho(proton_lattice, proton_lattice_snapshot,
                                     Opos_new, displacement,
                                     h, h_inv):
-    proton_pos_new = np.zeros(proton_pos_snapshot.shape)
+    proton_pos_new = np.zeros(proton_lattice_snapshot.shape)
     for O_index, proton_index in enumerate(proton_lattice):
         if proton_index > 0:
             proton_pos_new[proton_index - 1] = Opos_new[O_index]
-    kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_pos_snapshot, h, h_inv)
+    kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_lattice_snapshot, h, h_inv)
 
 
 def calculate_autocorrelation(protonlattice_old, protonlattice_new):
