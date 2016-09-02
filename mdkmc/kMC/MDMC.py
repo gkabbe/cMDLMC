@@ -12,8 +12,7 @@ from mdkmc.cython_exts.kMC import kMC_helper
 from mdkmc.cython_exts.atoms import numpyatom as npa
 
 
-
-def load_configfile_new(configfilename, verbose=False):
+def load_configfile(configfilename, verbose=False):
     parser_dict = config_parser.CONFIG_DICT
     config_dict = dict()
     with open(configfilename, "r") as f:
@@ -156,46 +155,48 @@ def calculate_higher_MSD(displacement):
 
 class MDMC:
 
-    def __init__(self, **kwargs):
+class MDMC:
+    def __init__(self, configfile):
         try:
             get_gitversion()
         except ImportError:
-            print("# No Commit information found", file=sys.stderr)
-        if "configfile" in list(kwargs.keys()):
-            # Load settings from config file
-            file_kwargs = load_configfile_new(kwargs["configfile"], verbose=True)
-            if ("verbose", True) in file_kwargs.items():
-                print("# Config file specified. Loading settings from there.")
+            print("# No commit information found", file=sys.stderr)
+        file_kwargs = load_configfile(configfile, verbose=True)
+        if ("verbose", True) in file_kwargs.items():
+            print("# Config file specified. Loading settings from there.")
 
-            # Save settings as object variable
-            self.__dict__.update(file_kwargs)
+        # Save settings as object variable
+        self.__dict__.update(file_kwargs)
 
-            if self.memmap:
-                if self.po_angle:
-                    self.O_trajectory, self.P_trajectory = \
-                        load_atoms_from_numpy_trajectory_as_memmap(self.filename,
-                                                                   ["O", self.o_neighbor],
-                                                                   clip=self.clip_trajectory,
-                                                                   verbose=self.verbose)
-                else:
-                    self.O_trajectory = \
-                        load_atoms_from_numpy_trajectory_as_memmap(self.filename, ["O"],
-                                                                   clip=self.clip_trajectory,
-                                                                   verbose=self.verbose)
-            else:
-                if self.po_angle:
-                    self.O_trajectory, self.P_trajectory = \
-                        load_atoms_from_numpy_trajectory(self.filename, ["O", self.o_neighbor],
-                                                         clip=self.clip_trajectory,
-                                                         verbose=self.verbose)
-                else:
-                    self.O_trajectory = load_atoms_from_numpy_trajectory(self.filename, ["O"],
-                                                                         clip=self.clip_trajectory,
-                                                                         verbose=self.verbose)
+        if self.po_angle:
+            self.O_trajectory, self.P_trajectory = load_atoms(self.filename, self.auxiliary_file, self.clip_trajectory,
+                                                              "O", "P",
+                                                              verbose=self.verbose)
         else:
-            pass
+            self.O_trajectory = load_atoms(self.filename, self.auxiliary_file, self.clip_trajectory, "O",
+                                           verbose=self.verbose)
 
-    def determine_PO_pairs(self, framenumber, atombox):
+        if self.seed is not None:
+            np.random.seed(self.seed)
+        else:
+            self.seed = np.random.randint(2 ** 32)
+            np.random.seed(self.seed)
+
+        self.oxygennumber = self.O_trajectory.shape[1]
+        self.oxygennumber_extended = self.O_trajectory.shape[
+                                         1] * self.box_multiplier[0] * self.box_multiplier[1] * self.box_multiplier[2]
+
+        # Multiply Arrhenius prefactor (unit 1/fs) with MD time step (unit fs), to get the correct rates
+        if "A" in list(self.jumprate_params_fs.keys()):
+            self.jumprate_params_fs["A"] *= self.md_timestep_fs
+        else:
+            self.jumprate_params_fs["a"] *= self.md_timestep_fs
+        proton_lattice = self.init_proton_lattice(self.box_multiplier)
+
+        if self.po_angle:
+            self.P_neighbors = self.determine_phosphorus_oxygen_pairs(framenumber=0, atombox=atombox)
+
+    def determine_phosphorus_oxygen_pairs(self, framenumber, atombox):
         P_neighbors = np.zeros(self.oxygennumber_extended, int)
         Os = atombox.get_extended_frame(atombox.oxygen_trajectory[framenumber])
         Ps = atombox.get_extended_frame(atombox.phosphorus_trajectory[framenumber])
@@ -312,7 +313,7 @@ class MDMC:
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
         self.averaged_results[(sweep % self.reset_freq) / self.print_freq,
-                              2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
+        2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
     def print_observables_var(self, sweep, autocorrelation, helper, timestep_fs,
                               start_time, MSD, msd_var, msd2=None, msd3=None, msd4=None):
@@ -337,7 +338,7 @@ class MDMC:
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
         self.averaged_results[(sweep % self.reset_freq) / self.print_freq,
-                              2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
+        2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
     def print_OsHs(self, Os, proton_lattice, sweep, timestep_fs):
         proton_indices = np.where(proton_lattice > 0)[0]
@@ -349,22 +350,7 @@ class MDMC:
             print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]))
 
     def kmc_run(self):
-        if self.seed is not None:
-            np.random.seed(self.seed)
-        else:
-            self.seed = np.random.randint(2**32)
-            np.random.seed(self.seed)
-            #~ print "#Using seed {}".format(self.seed)
-        self.oxygennumber = self.O_trajectory.shape[1]
-        self.oxygennumber_extended = self.O_trajectory.shape[
-            1] * self.box_multiplier[0] * self.box_multiplier[1] * self.box_multiplier[2]
-
-        if "A" in list(self.jumprate_params_fs.keys()):
-            self.jumprate_params_fs["A"] *= self.md_timestep_fs
-        else:
-            self.jumprate_params_fs["a"] *= self.md_timestep_fs
-        proton_lattice = self.init_proton_lattice(self.box_multiplier)
-        # Check PBC and determine whether cell is orthorhombic or non-orthorhombic
+        # Check periodic boundaries and determine whether cell is orthorhombic or non-orthorhombic
         if len(self.pbc) == 3:
             self.nonortho = False
             if self.po_angle:
@@ -384,14 +370,11 @@ class MDMC:
                 atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
                                                       np.array(self.box_multiplier, dtype=np.int32))
         if self.var_prot_single:
-            displacement, MSD, msd_var, msd2, msd3, msd4,\
-                proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant_var()
+            displacement, MSD, msd_var, msd2, msd3, msd4, \
+            proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant_var()
         else:
-            displacement, MSD, msd2, msd3, msd4,\
-                proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
-
-        if self.po_angle:
-            self.P_neighbors = self.determine_PO_pairs(framenumber=0, atombox=atombox)
+            displacement, MSD, msd2, msd3, msd4, \
+            proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
 
         if self.verbose:
             print("# Sweeps:", self.sweeps, file=self.output)
@@ -424,8 +407,6 @@ class MDMC:
                     frame = sweep
                 else:
                     frame = np.random.randint(self.O_trajectory.shape[0])
-                    # if sweep % neighbor_update == 0:
-                    #     helper.determine_neighbors(frame % self.O_trajectory.shape[0])
             helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
 
         if not self.xyz_output:
@@ -474,15 +455,13 @@ class MDMC:
                                                start_time, MSD, msd2, msd3, msd4)
                 else:
                     self.print_OsHs(atombox.oxygen_trajectory[
-                                    frame], proton_lattice, frame, self.md_timestep_fs)
+                                        frame], proton_lattice, frame, self.md_timestep_fs)
             # helper.sweep_list(proton_lattice)
             if self.jumpmatrix_filename is not None:
                 helper.sweep_from_vector_jumpmatrix(frame, proton_lattice)
             else:
                 helper.sweep_from_vector(frame, proton_lattice)
 
-                # jumps = helper.sweep_gsl(proton_lattice, transitionmatrix)
-                #~ jumps = helper.sweep_list_jumpmat(proton_lattice, jumpmatrix)
         if self.jumpmatrix_filename is not None:
             np.savetxt(self.jumpmatrix_filename, helper.jumpmatrix)
 
