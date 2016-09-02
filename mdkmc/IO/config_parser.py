@@ -46,15 +46,22 @@ def parse_bool(line):
     elif val.upper() == "FALSE":
         return False
     else:
-        print(val)
-        raise ValueError
+        raise ValueError("Expected value is \"True\" or \"False\". Got {} instead".format(val))
 
 
 CONFIG_DICT = OrderedDict([
     ("filename",
         {
             "parse_fct": parse_string,
-            "default": "no_default",
+            "default": None,
+            "help": "Name of the coordinate file. If it has the ending .xyz, a new file with the "
+                    "compressed coordinates and the ending .hd5 will be created."
+                    "The hdf5 file can also be specified directly."
+        }),
+    ("auxiliary_file",
+        {
+            "parse_fct": parse_string,
+            "default": None,
             "help": "Name of the coordinate file. If it has the ending .xyz, a new file with the "
                     "compressed coordinates and the ending .hd5 will be created."
                     "The hdf5 file can also be specified directly."
@@ -76,8 +83,8 @@ CONFIG_DICT = OrderedDict([
         {
             "parse_fct": parse_string,
             "default": "no_default",
-            "help": "Choose between jumprates determined from static DFT activation energy calculations (AE_rates) "
-                    "and jumprates determined from AIMD simulations (MD_rates)."
+            "help": "Choose between jump rates determined from static DFT activation energy calculations (AE_rates) "
+                    "and jump rates determined from AIMD simulations (MD_rates)."
         }),
     ("sweeps",
         {
@@ -150,22 +157,22 @@ CONFIG_DICT = OrderedDict([
             "parse_fct": parse_float,
             "default": PI / 2,
             "help": "When using angle dependent jump rates, this option determines up to which value of theta the "
-                    "jumprates will be set to zero. Theta is the angle between the vector connecting an oxygen and its "
+                    "jump rates will be set to zero. Theta is the angle between the vector connecting an oxygen and its "
                     "nearest heavy atom neighbor (whose type can be defined via \"o_neighbor\") and the vector "
-                    "connecting the two oxygens between which the jumprate is determined. Default is ninety degrees."
+                    "connecting the two oxygens between which the jump rate is determined. Default is ninety degrees."
         }),
     ("cutoff_radius",
         {
             "parse_fct": parse_float,
             "default": 4.0,
-            "help": "Cutoff radius for the determination of jumprates. If two oxygens have a larger distance, the "
-                    "jumprate will be set to zero."
+            "help": "Cutoff radius for the determination of jump rates. If two oxygens have a larger distance, the "
+                    "jump rate will be set to zero."
         }),
     ("po_angle",
         {
             "parse_fct": parse_bool,
             "default": True,
-            "help": "Whether to use angle_dependent jumprates or not."
+            "help": "Whether to use angle_dependent jump rates or not."
         }),
     ("shuffle",
         {
@@ -214,12 +221,12 @@ CONFIG_DICT = OrderedDict([
         {
             "parse_fct": get_jumprate_parameters,
             "default": "no_default",
-            "help": "Specify the parameters used for the calculation of the distance dependent jumprate. If the"
-                    "jumprate type is \"MD_rates\", a dict containing values for a, b, and c is expected (parameters"
-                    "for a fermi like step function f(d) = a/(1+exp((x-b)/c) ). If the jumprate type is \"AE_rates\","
+            "help": "Specify the parameters used for the calculation of the distance dependent jump rate. If the"
+                    "jump rate type is \"MD_rates\", a dict containing values for a, b, and c is expected (parameters"
+                    "for a fermi like step function f(d) = a/(1+exp((x-b)/c) ). If the jump rate type is \"AE_rates\","
                     "the expected parameters are A, a, x0, xint and T. a, x0 and xint are fit parameters for the "
                     "function describing the activation energy over the oxygen distance, whereas A and T are parameters"
-                    "of the Arrhenius equation, which converts the activation energy to a jumprate."
+                    "of the Arrhenius equation, which converts the activation energy to a jump rate."
         }),
     ("higher_msd",
         {
@@ -227,6 +234,7 @@ CONFIG_DICT = OrderedDict([
             "default": False,
             "help": "Calculates higher MSDs."
         }),
+    # TODO: rename var_prot_single
     ("var_prot_single",
         {
             "parse_fct": parse_bool,
