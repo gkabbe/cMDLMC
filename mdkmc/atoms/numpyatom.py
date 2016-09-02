@@ -5,13 +5,7 @@ import math
 import sys
 import ipdb
 
-
 xyzatom = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
-pdbatom = np.dtype(
-    [("rec", np.str_, 4), ("serialnr", np.int32), ("name", np.str_, 4), ("locind", np.str_, 1), ("resname", np.str_, 3),
-     ("chainid", np.str_, 1), ("rsn", np.int32), \
-     ("rescode", np.str_, 1), ("pos", np.float64, (3,)), ("occ", np.float64), ("tempfac", np.float64),
-     ("segment", np.str_, 4), ("element", np.str_, 2), ("charge", np.str_, 2)])
 
 atom_masses = dict()
 atom_masses["H"] = 1.008
@@ -46,37 +40,27 @@ def map_indices(frame, atomname):
     return indices
 
 
-def numpyprint(atoms, names=None, outfile=None):
-    if names != None:
+def numpy_print(atoms, names=None, outfile=None):
+    if names is not None:
         atoms = atoms[atoms["name"] == name]
         print(sum([len(atoms[atoms["name"] == name]) for name in names]), file=outfile)
     else:
         print(len(atoms), file=outfile)
-    if outfile == None:
+    if outfile is None:
         outfile = sys.stdout
     print("", file=outfile)
     for x in atoms:
         print("{:4} {: 20} {: 20} {: 20}".format("H" if x["name"] == "AH" else x["name"], x["pos"][0],
-                                                             x["pos"][1], x["pos"][2]), file=outfile)
+                                                 x["pos"][1], x["pos"][2]), file=outfile)
 
-def distance_vectorized(single_atom, many_atoms, pbc):
-    diff = many_atoms-single_atom
+
+def distance(single_atom, many_atoms, pbc):
+    diff = many_atoms - single_atom
     while (diff > pbc / 2).any():
-        diff = np.where(diff > pbc/2, diff-pbc, diff)
+        diff = np.where(diff > pbc / 2, diff - pbc, diff)
     while (diff < -pbc / 2).any():
-        diff = np.where(diff < -pbc/2, diff+pbc, diff)
+        diff = np.where(diff < -pbc / 2, diff + pbc, diff)
     return diff
-
-
-def distance(a1_pos, a2_pos, pbc=None):
-    dist = a2_pos - a1_pos
-    if pbc is not None:
-        for i in range(3):
-            while dist[i] < -pbc[i] / 2:
-                dist[i] += pbc[i]
-            while dist[i] > pbc[i] / 2:
-                dist[i] -= pbc[i]
-    return dist
 
 
 def distance_pbc_nonortho(a1_pos, a2_pos, pbc):
@@ -178,16 +162,18 @@ def length(a1_pos, a2_pos, pbc=None):
 
 def nextNeighbor(a1_pos, atoms_pos, nonortho=False, pbc=None):
     mindist = 1e6
-    for i in range(atoms_pos.shape[0]):
-        if nonortho == True:
+    if nonortho:
+        for i in range(atoms_pos.shape[0]):
             diff = distance_pbc_nonortho(a1_pos, atoms_pos[i], pbc)
-        else:
-            diff = distance(a1_pos, atoms_pos[i], pbc)
-        dist = diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]
-        if dist < mindist:
-            mindist = dist
-            minind = i
-    return minind, atoms_pos[i]
+            dist = diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]
+            if dist < mindist:
+                mindist = dist
+                minind = i
+    else:
+        diff = distance(a1_pos, atoms_pos, pbc)
+        sq_dist = np.sum(diff * diff, axis=-1)
+        min_index = np.argmin(sq_dist)
+    return min_index, atoms_pos[min_index]
 
 
 # angle between a1--a2 and a2--a3
@@ -200,7 +186,10 @@ def angle(a1_pos, a2_pos, a3_pos, pbc):
 def angle_vectorized(a1_pos, a2_pos, a3_pos, pbc):
     a1_a2 = distance_vectorized(a1_pos, a2_pos, pbc)
     a2_a3 = distance_vectorized(a2_pos, a3_pos, pbc)
-    return np.degrees(np.arccos(np.einsum("ij, ij -> i", a1_a2, a2_a3) / np.sqrt(np.einsum("ij,ij->i", a1_a2, a1_a2)) / np.sqrt(np.einsum("ij,ij->i", a2_a3, a2_a3))))
+    return np.degrees(np.arccos(
+        np.einsum("ij, ij -> i", a1_a2, a2_a3) / np.sqrt(np.einsum("ij,ij->i", a1_a2, a1_a2)) / np.sqrt(
+            np.einsum("ij,ij->i", a2_a3, a2_a3))))
+
 
 # angle between a1--a2 and a3--a4
 def angle_4(a1_pos, a2_pos, a3_pos, a4_pos, pbc):
@@ -235,7 +224,7 @@ def get_acidic_proton_indices(atoms, pbc=None, nonortho=False, verbose=False):
             acid_indices.append(H_indices[i])
             # ~ else:
             # ~ ipdb.set_trace()
-    if verbose == True:
+    if verbose:
         print("# Acidic indices: ", acid_indices)
         print("# Number of acidic protons: ", len(acid_indices))
     return acid_indices
@@ -249,7 +238,7 @@ def remove_com_movement_frame(npa_frame, verbose=False):
         M += atom_masses[atom["name"]]
     com /= M
     npa_frame["pos"] -= com
-    
+
 
 def calculate_com_position(npa_frame):
     com = np.zeros(3)
@@ -259,7 +248,7 @@ def calculate_com_position(npa_frame):
         M += atom_masses[atom["name"]]
     com /= M
     print(com)
-    
+
 
 def show_com_over_trajectory(*args):
     trajectory = np.load(sys.argv[1])
@@ -268,11 +257,11 @@ def show_com_over_trajectory(*args):
 
 
 def remove_com_movement_traj(npa_traj, verbose=False):
-    if verbose == True:
+    if verbose:
         print("#Removing Center of Mass Movement")
     for i, frame in enumerate(npa_traj):
-        if verbose == True and i % 1000 == 0:
+        if verbose and i % 1000 == 0:
             print("#Frame {} / {}".format(i, npa_traj.shape[0]), "\r", end=' ')
         remove_com_movement_frame(frame, verbose=verbose)
-    if verbose == True:
+    if verbose:
         print("")
