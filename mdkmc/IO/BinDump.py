@@ -10,7 +10,6 @@ import re
 import inspect
 
 from mdkmc.cython_exts.atoms import numpyatom as cython_npa
-from mdkmc.IO.xyz_parser import XYZFile
 from mdkmc.atoms import numpyatom as npa
 
 
