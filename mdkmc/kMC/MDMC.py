@@ -230,10 +230,6 @@ class MDMC:
             self.jumprate_params_fs["A"] *= self.md_timestep_fs
         else:
             self.jumprate_params_fs["a"] *= self.md_timestep_fs
-        proton_lattice = self.init_proton_lattice(self.box_multiplier)
-
-        if self.po_angle:
-            self.P_neighbors = self.determine_phosphorus_oxygen_pairs(framenumber=0, atombox=atombox)
 
     def determine_phosphorus_oxygen_pairs(self, framenumber, atombox):
         P_neighbors = np.zeros(self.oxygennumber_extended, int)
@@ -408,12 +404,18 @@ class MDMC:
             else:
                 atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
                                                       np.array(self.box_multiplier, dtype=np.int32))
+
+        if self.po_angle:
+            self.P_neighbors = self.determine_phosphorus_oxygen_pairs(framenumber=0, atombox=atombox)
+
         if self.var_prot_single:
             displacement, MSD, msd_var, msd2, msd3, msd4, \
             proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant_var()
         else:
             displacement, MSD, msd2, msd3, msd4, \
             proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
+
+        proton_lattice = self.init_proton_lattice(self.box_multiplier)
 
         if self.verbose:
             print("# Sweeps:", self.sweeps, file=self.output)
