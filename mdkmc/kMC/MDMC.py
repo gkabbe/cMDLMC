@@ -347,7 +347,7 @@ class MDMC:
                                                    autocorrelation, helper.get_jumps(), speed,
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
-        self.averaged_results[(sweep % self.reset_freq) / self.print_freq,
+        self.averaged_results[(sweep % self.reset_freq) // self.print_freq,
         2:] += MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
     def print_observables_var(self, sweep, autocorrelation, helper, timestep_fs,
