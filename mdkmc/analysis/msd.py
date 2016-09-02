@@ -35,7 +35,7 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False)
         print("# Interval distance:", startdist)
 
     for i in range(intervalnumber):
-        sqdist = npa.sqdist_np(atom_traj[i * startdist:i * startdist + intervallength, :, :],
+        sqdist = npa.squared_distance(atom_traj[i * startdist:i * startdist + intervallength, :, :],
                                atom_traj[i * startdist, :, :], pbc, axis_wise=True)
         sqdist = sqdist.mean(axis=1)  # average over atom number
         delta = sqdist - msd_mean

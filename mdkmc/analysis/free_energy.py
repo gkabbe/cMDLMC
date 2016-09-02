@@ -17,8 +17,8 @@ N_A = 6.022140857e23 / ureg.mole
 
 
 def angle_vectorized(a1_pos, a2_pos, a3_pos, pbc):
-    a2_a1= npa.distance_vectorized(a2_pos, a1_pos, pbc)
-    a2_a3 = npa.distance_vectorized(a2_pos, a3_pos, pbc)
+    a2_a1= npa.distance(a2_pos, a1_pos, pbc)
+    a2_a3 = npa.distance(a2_pos, a3_pos, pbc)
     return np.degrees(np.arccos(np.einsum("ij, ij -> i", a2_a1, a2_a3) / np.sqrt(np.einsum("ij,ij->i", a2_a1, a2_a1)) / np.sqrt(np.einsum("ij,ij->i", a2_a3, a2_a3))))
 
 
@@ -36,7 +36,7 @@ def determine_PO_pairs(ox_traj, p_traj, pbc):
     P_neighbors = np.zeros(ox_traj.shape[1], int)
 
     for i, ox in enumerate(ox_traj[0]):
-        P_index = npa.nextNeighbor(ox, p_traj[0], pbc=pbc)[0]
+        P_index = npa.next_neighbor(ox, p_traj[0], pbc=pbc)[0]
         P_neighbors[i] = P_index
     return P_neighbors
     
@@ -44,7 +44,7 @@ def determine_PO_pairs(ox_traj, p_traj, pbc):
 def get_close_oxygen_indices(oxygen_traj, pbc):
     pairs = []
     for i, ox in enumerate(oxygen_traj[0]):
-        dists = np.sqrt((npa.distance_vectorized(ox, oxygen_traj[0, np.arange(oxygen_traj.shape[1]) != i], pbc)**2).sum(axis=-1))
+        dists = np.sqrt((npa.distance(ox, oxygen_traj[0, np.arange(oxygen_traj.shape[1]) != i], pbc) ** 2).sum(axis=-1))
         pair_index = np.argmin(dists)
         if pair_index >= i:
             pair_index += 1
@@ -55,7 +55,7 @@ def get_close_oxygen_indices(oxygen_traj, pbc):
 def get_hbond_indices(oxygen_traj, proton_traj, pbc):
     pairs = []
     for i, prot in enumerate(proton_traj[0]):
-        dists = np.sqrt((npa.distance_vectorized(proton_traj[0, i], oxygen_traj[0], pbc)**2).sum(axis=-1))
+        dists = np.sqrt((npa.distance(proton_traj[0, i], oxygen_traj[0], pbc) ** 2).sum(axis=-1))
         ox1, ox2 = np.argsort(dists)[:2]
         pairs.append((ox1, ox2))
     return pairs
@@ -63,7 +63,7 @@ def get_hbond_indices(oxygen_traj, proton_traj, pbc):
 def get_hbond_indices_all_traj(oxygen_traj, proton_traj, pbc):
     pairs = []
     for i, prot in enumerate(proton_traj[0]):
-        dists = np.sqrt((npa.distance_vectorized(proton_traj[:, None, i], oxygen_traj, pbc)**2).sum(axis=-1))
+        dists = np.sqrt((npa.distance(proton_traj[:, None, i], oxygen_traj, pbc) ** 2).sum(axis=-1))
         ox1, ox2 = np.argsort(dists)[:, :2].T
         pairs.append((ox1, ox2))
     return pairs
@@ -79,9 +79,9 @@ def free_energy_when_proton_in_middle(traj, pbc):
     oxygen_pairs = get_hbond_indices(oxygen_traj, proton_traj, pbc)
     
     for i, (ox1, ox2) in enumerate(oxygen_pairs):
-        r_oh = np.sqrt((npa.distance_vectorized(proton_traj[:, i], oxygen_traj[:, ox1], pbc)**2).sum(axis=-1))
-        r_ho = np.sqrt((npa.distance_vectorized(proton_traj[:, i], oxygen_traj[:, ox2], pbc)**2).sum(axis=-1))
-        r_oo = np.sqrt((npa.distance_vectorized(oxygen_traj[:, ox1], oxygen_traj[:, ox2], pbc)**2).sum(axis=-1))
+        r_oh = np.sqrt((npa.distance(proton_traj[:, i], oxygen_traj[:, ox1], pbc) ** 2).sum(axis=-1))
+        r_ho = np.sqrt((npa.distance(proton_traj[:, i], oxygen_traj[:, ox2], pbc) ** 2).sum(axis=-1))
+        r_oo = np.sqrt((npa.distance(oxygen_traj[:, ox1], oxygen_traj[:, ox2], pbc) ** 2).sum(axis=-1))
         ipdb.set_trace()
     
     
@@ -94,7 +94,7 @@ def free_energy_from_oxygen_pairs(traj, pbc):
     free_energies = []
     dists = []
     for i, j in pairs:
-        d_oo = np.sqrt((npa.distance_vectorized(oxygen_traj[:, i], oxygen_traj[:, j], pbc)**2).sum(axis=-1)) * ureg.angstrom
+        d_oo = np.sqrt((npa.distance(oxygen_traj[:, i], oxygen_traj[:, j], pbc) ** 2).sum(axis=-1)) * ureg.angstrom
         d_oo = d_oo[d_oo <= 2.6 * ureg.angstrom]
         dists.append(d_oo)
         fe = free_energy(d_oo, 510. * ureg.kelvin)
@@ -119,7 +119,7 @@ def free_energy_standard_hbond_criterion(traj, pbc):
             p = proton_traj[start:end, i]
             hb = is_hbond(ox1, ox2, p, pbc)
             if hb.any():
-                dist = np.sqrt((npa.distance_vectorized(ox1[hb], ox2[hb], pbc)**2).sum(axis=-1)) 
+                dist = np.sqrt((npa.distance(ox1[hb], ox2[hb], pbc) ** 2).sum(axis=-1))
                 dists += list(dist)   
         print(start)
             # print counter, ":", fe
@@ -149,7 +149,7 @@ def free_energy_mdkmc(traj, pbc):
             phos = phos_traj[range(start, end), p_neighbors[oh_bond_indices[i][0]]]
             hb = is_hbond_mdkmc(ox1, ox2, phos, pbc)
             if hb.any():
-                dist = np.sqrt((npa.distance_vectorized(ox1[hb], ox2[hb], pbc)**2).sum(axis=-1)) 
+                dist = np.sqrt((npa.distance(ox1[hb], ox2[hb], pbc) ** 2).sum(axis=-1))
                 dists += list(dist)   
         print(start)
             # print counter, ":", fe
@@ -163,13 +163,13 @@ def free_energy_mdkmc(traj, pbc):
     
     
 def is_hbond(ox1, ox2, proton, pbc):
-    return reduce(np.logical_and, [npa.angle_vectorized(ox1, proton, ox2, pbc) <=60, np.linalg.norm(npa.distance_vectorized(ox1, proton, pbc), axis=-1) <= 1.2,
-                                np.linalg.norm(npa.distance_vectorized(ox2, proton, pbc), axis=-1) <= 2.2])
+    return reduce(np.logical_and, [npa.angle_vectorized(ox1, proton, ox2, pbc) <= 60, np.linalg.norm(npa.distance(ox1, proton, pbc), axis=-1) <= 1.2,
+                                   np.linalg.norm(npa.distance(ox2, proton, pbc), axis=-1) <= 2.2])
 
 
 def is_hbond_mdkmc(ox1, ox2, phos, pbc):
     poo_angle = npa.angle_vectorized(phos, ox1, ox2, pbc)
-    oo_dist = np.linalg.norm(npa.distance_vectorized(ox1, ox2, pbc), axis=-1)
+    oo_dist = np.linalg.norm(npa.distance(ox1, ox2, pbc), axis=-1)
 
     return np.logical_and(poo_angle <= 90, oo_dist < 3.0)
 

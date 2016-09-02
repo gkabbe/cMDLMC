@@ -122,7 +122,7 @@ def sqdist(a1_pos, a2_pos, pbc=None):
     return dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2]
 
 
-def sqdist_np(a1_pos, a2_pos, pbc, axis_wise=False):
+def squared_distance(a1_pos, a2_pos, pbc, axis_wise=False):
     """Calculate squared distance using numpy vector operations"""
     dist = a1_pos - a2_pos
     while (dist > pbc / 2).any():
@@ -184,8 +184,8 @@ def angle(a1_pos, a2_pos, a3_pos, pbc):
 
 
 def angle_vectorized(a1_pos, a2_pos, a3_pos, pbc):
-    a1_a2 = distance_vectorized(a1_pos, a2_pos, pbc)
-    a2_a3 = distance_vectorized(a2_pos, a3_pos, pbc)
+    a1_a2 = distance(a1_pos, a2_pos, pbc)
+    a2_a3 = distance(a2_pos, a3_pos, pbc)
     return np.degrees(np.arccos(
         np.einsum("ij, ij -> i", a1_a2, a2_a3) / np.sqrt(np.einsum("ij,ij->i", a1_a2, a1_a2)) / np.sqrt(
             np.einsum("ij,ij->i", a2_a3, a2_a3))))
