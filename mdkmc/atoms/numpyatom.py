@@ -75,41 +75,6 @@ def distance_pbc_nonortho(a1_pos, a2_pos, pbc):
     return r
 
 
-def distance_pbc_nonortho_sort(a1_pos, a2_pos, pbc):
-    pass
-
-
-def distance_pbc_nonortho_new(a1_pos, a2_pos, pbc):
-    h = pbc.reshape((3, 3)).T
-    h_inv = np.linalg.inv(h)
-
-    lengths = [(i, np.sqrt(np.dot(v, v))) for i, v in enumerate(pbc.reshape((3, 3)))]
-    lengths.sort(key=lambda x: -x[1])
-
-    a1_s = np.dot(h_inv, a1_pos)
-    a2_s = np.dot(h_inv, a2_pos)
-
-    sdiff = a2_s - a1_s
-    for i in range(3):
-        sdiff[i] = sdiff[i] - round(sdiff[i])
-
-    rdiff = np.dot(h, sdiff)
-    return rdiff
-
-
-def distance_pbc_nonortho_bruteforce(a1_pos, a2_pos, pbc):
-    diffvec = distance_pbc_nonortho(a1_pos, a2_pos, pbc)
-    pbc = pbc.reshape((3, 3))
-    dists = []
-    for i in range(-1, 2):
-        for j in range(-1, 2):
-            for k in range(-1, 2):
-                d = diffvec + i * pbc[0] + j * pbc[1] + k * pbc[2]
-                dists.append((np.sqrt(np.dot(d, d)), d))
-                print(dists[-1][0])
-    return min(dists, key=lambda x: x[0])[1]
-
-
 # Calculate squared distance
 def sqdist(a1_pos, a2_pos, pbc=None):
     dist = a1_pos - a2_pos
