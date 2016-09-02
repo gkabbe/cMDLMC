@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import re
+from functools import reduce
 
 import ipdb
 import numpy as np
@@ -20,11 +21,13 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
                 yield line
                 if (i + 1) // frame_len == no_of_frames:
                     break
+
     if selection:
         def filter_selection(f, s):
             for i, line in enumerate(f):
                 if i % (frame_len - 2) in s:
                     yield line
+
         filter_ = filter_selection(filter_lines(f, frame_len), selection)
         output_shape = (-1, len(selection))
     else:
@@ -34,8 +37,9 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
     data = np.genfromtxt(filter_, dtype=dtype_xyz)
     return data.reshape(output_shape)
 
-def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, pbc=None, 
-                            hdf5_fname=None, chunk=1000, 
+
+def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, pbc=None,
+                            hdf5_fname=None, chunk=1000,
                             remove_com_movement=False, verbose=False):
     with open(xyz_fname, "rb") as f:
         frame_len = int(f.readline()) + 2
@@ -49,7 +53,7 @@ def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, p
         for atom_name in atom_names:
             atom_selection = np.where(first_frame["name"] == atom_name)[0]
             selections[atom_name] = atom_selection
-            
+
         all_indices = reduce(set.union, [set(s) for s in selections.values()])
 
     a = tables.Atom.from_dtype(np.dtype("float"))
@@ -79,3 +83,8 @@ def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, p
                     counter, counter / (time.time() - start_time)), end="\r")
 
 
+def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False):
+    f = tables.open_file(hdf5_fname, "r")
+    slice_ = slice(0, None)
+    trajectories = [f.get_node("/trajectories", atom_name)[slice_] for atom_name in atom_names]
+    return trajectories
