@@ -85,7 +85,7 @@ def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, p
 
 def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False):
     f = tables.open_file(hdf5_fname, "r")
-    slice_ = slice(0, None)
+    slice_ = slice(0, clip)
     trajectories = [f.get_node("/trajectories", atom_name)[slice_] for atom_name in atom_names]
     return trajectories
 
