@@ -88,7 +88,6 @@ def extend_simulationbox(Opos, onumber, h, box_multiplier, nonortho=False):
 
 def calculate_displacement(proton_lattice, proton_pos_snapshot,
                            Opos_new, displacement, pbc, wrap=True):
-    # ipdb.set_trace()
     proton_pos_new = np.zeros(proton_pos_snapshot.shape)
     for O_index, proton_index in enumerate(proton_lattice):
         if proton_index > 0:
@@ -98,7 +97,7 @@ def calculate_displacement(proton_lattice, proton_pos_snapshot,
                                           proton_pos_snapshot, pbc)
     else:
         displacement += kMC_helper.dist_numpy_all(proton_pos_new, proton_pos_snapshot, pbc)
-        proton_pos_snapshot[:] = proton_pos_new   # [:] is important (inplace operation)
+        proton_pos_snapshot[:] = proton_pos_new  # [:] is important (inplace operation)
 
 
 def calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot,
@@ -144,9 +143,9 @@ def calculate_higher_MSD(displacement):
     msd4 = 0
     for d in displacement:
         MSD += d * d
-        msd2 += (MSD[0] + MSD[1] + MSD[2])**0.5
-        msd3 += (MSD[0] + MSD[1] + MSD[2])**1.5
-        msd4 += (MSD[0] + MSD[1] + MSD[2])**2
+        msd2 += (MSD[0] + MSD[1] + MSD[2]) ** 0.5
+        msd3 += (MSD[0] + MSD[1] + MSD[2]) ** 1.5
+        msd4 += (MSD[0] + MSD[1] + MSD[2]) ** 2
     MSD /= displacement.shape[0]
     msd2 /= displacement.shape[0]
     msd3 /= displacement.shape[0]
