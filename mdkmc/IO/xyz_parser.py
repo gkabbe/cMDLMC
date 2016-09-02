@@ -77,7 +77,8 @@ def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, p
                     for frame in frames:
                         npa.remove_com_movement_frame(frame)
                 for atom_name, indices in selections.items():
-                    hdf5.get_node("/trajectories", atom_name).append(frames[:, frames[0]["name"] == atom_name]["pos"])
+                    hdf5.get_node("/trajectories", atom_name).append(
+                        frames[:, frames[0]["name"] == atom_name]["pos"])
                 counter += chunk
                 print("# Parsed frames: {:06d}. {:.2f} fps".format(
                     counter, counter / (time.time() - start_time)), end="\r")
