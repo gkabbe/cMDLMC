@@ -100,14 +100,28 @@ def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
             print("# Determining trajectory length...")
         f.seek(0)
 
-        data = parse_xyz(f, frame_length)
+        chunk_size = 1000
+        counter = 0
+        trajectory = []
+        start_time = time.time()
+        data = parse_xyz(f, frame_length, no_of_frames=chunk_size)
+        while data.shape[0] > 0:
+            counter += chunk_size
+            fps = counter / (time.time() - start_time)
+            print("# {:6d} ({:.2f} fps)".format(counter, fps), end="\r")
+            trajectory.append(data)
+            data = parse_xyz(f, frame_length, no_of_frames=chunk_size)
+        print("")
+        trajectory = np.vstack(trajectory)
 
         if remove_com_movement:
-            npa.remove_center_of_mass_movement_fast(data)
+            if verbose:
+                print("# Removing center of mass movement...")
+            npa.remove_center_of_mass_movement(trajectory)
 
         if not npz_fname:
             npz_fname = os.path.splitext(xyz_fname)[0] + ".npy"
-        np.savez(npz_fname, trajectory=data)
+        np.savez(npz_fname, trajectory=trajectory)
 
 
 def load_trajectory_from_npz(npz_fname, *atom_names, clip=None, verbose=False):
