@@ -75,18 +75,6 @@ def distance_pbc_nonortho(a1_pos, a2_pos, pbc):
     return r
 
 
-# Calculate squared distance
-def sqdist(a1_pos, a2_pos, pbc=None):
-    dist = a1_pos - a2_pos
-    for i in range(3):
-        while dist[i] < -pbc[i] / 2:
-            dist[i] += pbc[i]
-        while dist[i] > pbc[i] / 2:
-            dist[i] -= pbc[i]
-
-    return dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2]
-
-
 def squared_distance(a1_pos, a2_pos, pbc, axis_wise=False):
     """Calculate squared distance using numpy vector operations"""
     dist = a1_pos - a2_pos
@@ -195,44 +183,19 @@ def get_acidic_proton_indices(atoms, pbc=None, nonortho=False, verbose=False):
     return acid_indices
 
 
-def remove_com_movement_frame(npa_frame, verbose=False):
-    com = np.zeros(3)
-    M = 0
-    for atom in npa_frame:
-        com += atom_masses[atom["name"]] * atom["pos"]
-        M += atom_masses[atom["name"]]
-    com /= M
-    npa_frame["pos"] -= com
-
-
-def remove_center_of_mass_movement_fast(npa_traj):
+def remove_center_of_mass_movement(npa_traj):
     mass_array = np.array([atom_masses[name] for name in npa_traj[0]["name"]])[None, :, None]
     center_of_mass = (mass_array * npa_traj["pos"]).sum(axis=1)[:, None, :] / mass_array.sum()
     npa_traj["pos"] -= center_of_mass
 
 
-def calculate_com_position(npa_frame):
-    com = np.zeros(3)
-    M = 0
-    for atom in npa_frame:
-        com += atom_masses[atom["name"]] * atom["pos"]
-        M += atom_masses[atom["name"]]
-    com /= M
-    print(com)
+def print_center_of_mass(npa_traj):
+    mass_array = np.array([atom_masses[name] for name in npa_traj[0]["name"]])[None, :, None]
+    center_of_mass = (mass_array * npa_traj["pos"]).sum(axis=1)[:, None, :] / mass_array.sum()
+    for i, com in enumerate(center_of_mass):
+        print("Frame {:6d}".format(i), com)
 
 
-def show_com_over_trajectory(*args):
-    trajectory = np.load(sys.argv[1])
-    for frame in trajectory:
-        calculate_com_position(frame)
-
-
-def remove_com_movement_traj(npa_traj, verbose=False):
-    if verbose:
-        print("#Removing Center of Mass Movement")
-    for i, frame in enumerate(npa_traj):
-        if verbose and i % 1000 == 0:
-            print("#Frame {} / {}".format(i, npa_traj.shape[0]), "\r", end=' ')
-        remove_com_movement_frame(frame, verbose=verbose)
-    if verbose:
-        print("")
+def print_center_of_mass_commandline(*args):
+    trajectory = np.load(sys.argv[1])["trajectory"]
+    print_center_of_mass(trajectory)

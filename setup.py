@@ -98,7 +98,7 @@ setup(name='mdkmc',
                               'msd=mdkmc.analysis.msd:main',
                               'ohbond-corr=mdkmc.analysis.ohbond_autocorr:main',
                               'convergence=mdkmc.analysis.convergence:main',
-                              'center_of_mass=mdkmc.atoms.numpyatom:show_com_over_trajectory',
+                              'center_of_mass=mdkmc.atoms.numpyatom:print_center_of_mass_commandline',
                               'rdf=mdkmc.analysis.rdf:main',
                               'free-energy=mdkmc.analysis.free_energy:main'
                              ],
