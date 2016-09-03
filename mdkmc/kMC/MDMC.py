@@ -190,6 +190,23 @@ def load_atoms(filename, auxiliary_file, clip, *atom_names, verbose=False):
             raise InputError("Please specify either filename or auxiliary_file")
 
 
+class ObservableManager:
+    def __init__(self, msd_mode, oxygen_trajectory, proton_lattice):
+        pass
+
+    def calculate_msd_standard(self):
+        pass
+
+    def calculate_msd_higher_orders(self):
+        pass
+
+    def calculate_auto_correlation(self):
+        pass
+
+    def return_observables(self, *observables):
+        pass
+
+
 class MDMC:
     def __init__(self, configfile):
         try:
