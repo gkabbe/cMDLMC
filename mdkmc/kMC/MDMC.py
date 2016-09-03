@@ -171,7 +171,7 @@ def load_atoms(filename, auxiliary_file, clip, *atom_names, verbose=False):
             aux_fname = os.path.splitext(filename)[0] + ".npz"
             if verbose:
                 print("# Only xyz file specified.")
-                print("# Looking for auxiliary file", fname, "...")
+                print("# Looking for auxiliary file", aux_fname, "...")
             if os.path.exists(aux_fname):
                 print("# Found it!")
                 return xyz_parser.load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
