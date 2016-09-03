@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import time
-import re
-from functools import reduce
 
-import ipdb
 import numpy as np
 import tables
 
@@ -53,8 +49,6 @@ def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, p
         for atom_name in atom_names:
             atom_selection = np.where(first_frame["name"] == atom_name)[0]
             selections[atom_name] = atom_selection
-
-        all_indices = reduce(set.union, [set(s) for s in selections.values()])
 
     a = tables.Atom.from_dtype(np.dtype("float"))
     filters = tables.Filters(complevel=5, complib="blosc")
