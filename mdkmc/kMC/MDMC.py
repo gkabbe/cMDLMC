@@ -234,12 +234,14 @@ class MDMC:
 
         if self.nonortho:
             for i in range(oxygen_atoms.shape[0]):
-                P_index = npa.nextNeighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, atom_box.h, atom_box.h_inv)[0]
-                phosphorus_neighbors[i] = P_index
+                phosphorus_index = \
+                npa.nextNeighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, atom_box.h, atom_box.h_inv)[0]
+                phosphorus_neighbors[i] = phosphorus_index
         else:
             for i in range(oxygen_atoms.shape[0]):
-                P_index = npa.nextNeighbor(oxygen_atoms[i], phosphorus_atoms, atom_box.periodic_boundaries_extended)[0]
-                phosphorus_neighbors[i] = P_index
+                phosphorus_index = \
+                npa.nextNeighbor(oxygen_atoms[i], phosphorus_atoms, atom_box.periodic_boundaries_extended)[0]
+                phosphorus_neighbors[i] = phosphorus_index
         return phosphorus_neighbors
 
     def print_settings(self):
@@ -264,7 +266,7 @@ class MDMC:
             else:
                 print("# {:20} {:>20}".format(k, str(v)))
 
-    def init_proton_lattice(self, box_multiplier):
+    def initialize_proton_lattice(self, box_multiplier):
         proton_lattice = np.zeros(
             self.oxygennumber * box_multiplier[0] * box_multiplier[1] * box_multiplier[2], np.uint8)
         proton_lattice[:self.proton_number] = range(1, self.proton_number + 1)
@@ -411,7 +413,7 @@ class MDMC:
             displacement, MSD, msd2, msd3, msd4, \
             proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
 
-        proton_lattice = self.init_proton_lattice(self.box_multiplier)
+        proton_lattice = self.initialize_proton_lattice(self.box_multiplier)
 
         if self.verbose:
             print("# Sweeps:", self.sweeps, file=self.output)
