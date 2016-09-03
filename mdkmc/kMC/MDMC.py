@@ -111,11 +111,7 @@ def calculate_displacement_nonortho(proton_lattice, proton_lattice_snapshot,
 
 
 def calculate_autocorrelation(proton_lattice_old, proton_lattice_new):
-    autocorrelation = 0
-    for i in range(proton_lattice_new.size):
-        if proton_lattice_old[i] == proton_lattice_new[i] != 0:
-            autocorrelation += 1
-    return autocorrelation
+    return np.logical_and(proton_lattice_old == proton_lattice_new, proton_lattice_new != 0).sum()
 
 
 def calculate_mean_squared_displacement(mean_squared_displacement, displacement):
