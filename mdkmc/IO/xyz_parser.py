@@ -4,7 +4,6 @@ import os
 import time
 
 import numpy as np
-import tables
 
 from mdkmc.atoms import numpyatom as npa
 from mdkmc.atoms.numpyatom import xyzatom as dtype_xyz
@@ -37,6 +36,7 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
 def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, pbc=None,
                             hdf5_fname=None, chunk=1000,
                             remove_com_movement=False, verbose=False):
+    import tables
     with open(xyz_fname, "rb") as f:
         frame_len = int(f.readline()) + 2
         f.seek(0)
@@ -79,6 +79,7 @@ def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, p
 
 
 def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False):
+    import tables
     f = tables.open_file(hdf5_fname, "r")
     slice_ = slice(0, clip)
     trajectories = [f.get_node("/trajectories", atom_name)[slice_] for atom_name in atom_names]
