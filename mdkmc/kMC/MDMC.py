@@ -244,6 +244,11 @@ class MDMC:
         else:
             self.jumprate_params_fs["a"] *= self.md_timestep_fs
 
+        if len(self.pbc) == 3:
+            self.nonortho = False
+        else:
+            self.nonortho = True
+
     def determine_phosphorus_oxygen_pairs(self, frame_number, atom_box):
         phosphorus_neighbors = np.zeros(self.oxygennumber_extended, int)
         oxygen_atoms = atom_box.get_extended_frame(atom_box.oxygen_trajectory[frame_number])
@@ -401,17 +406,7 @@ class MDMC:
 
     def kmc_run(self):
         # Check periodic boundaries and determine whether cell is orthorhombic or non-orthorhombic
-        if len(self.pbc) == 3:
-            self.nonortho = False
-            if self.po_angle:
-                atombox = kMC_helper.AtomBox_Cubic(self.O_trajectory, self.pbc,
-                                                   np.array(self.box_multiplier, dtype=np.int32),
-                                                   self.P_trajectory)
-            else:
-                atombox = kMC_helper.AtomBox_Cubic(self.O_trajectory, self.pbc,
-                                                   np.array(self.box_multiplier, dtype=np.int32))
-        else:
-            self.nonortho = True
+        if self.nonortho:
             if self.po_angle:
                 atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
                                                       np.array(self.box_multiplier, dtype=np.int32),
@@ -419,6 +414,14 @@ class MDMC:
             else:
                 atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
                                                       np.array(self.box_multiplier, dtype=np.int32))
+        else:
+            if self.po_angle:
+                atombox = kMC_helper.AtomBox_Cubic(self.O_trajectory, self.pbc,
+                                                   np.array(self.box_multiplier, dtype=np.int32),
+                                                   self.P_trajectory)
+            else:
+                atombox = kMC_helper.AtomBox_Cubic(self.O_trajectory, self.pbc,
+                                                   np.array(self.box_multiplier, dtype=np.int32))
 
         if self.po_angle:
             self.P_neighbors = self.determine_phosphorus_oxygen_pairs(frame_number=0, atom_box=atombox)
