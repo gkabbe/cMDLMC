@@ -176,6 +176,10 @@ cdef class AtomBox:
 
     cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
         return 0
+        
+    cpdef double distance_indices(self, int frame, int index_1, int index_2):
+        extended_frame = self.get_extended_frame(frame, self.oxygen_trajectory)
+        return self.distance(extended_frame[index_1], extended_frame[index_2])
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return 0
