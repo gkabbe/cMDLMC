@@ -121,38 +121,6 @@ cdef class FermiFunction(JumprateFunction):
     cpdef double evaluate(self, double x):
         return self.a / (1 + exp((x - self.b) / self.c))
 
-# Jump rate function which determines jump rate from activation energy via Arrhenius equation
-cdef class AEFunction(JumprateFunction):
-    cdef:
-        double A, a, x0, xint, T
-
-    def __cinit__(self, double A, double a, double x0, double xint, double T):
-        self.A = A
-        self.a = a
-        self.x0 = x0
-        self.xint = xint
-        self.T = T
-
-    cpdef double evaluate(self, double x):
-        cdef double E
-        if x <= self.x0:
-            E = 0
-        elif self.x0 < x < self.xint:
-            E = self.a * (x - self.x0) * (x - self.x0)
-        else:
-            E = 2 * self.a * (self.xint - self.x0) * (x - self.xint) + self.a * \
-                (self.xint - self.x0) * (self.xint - self.x0)
-        return self.A * exp(-E / (R * self.T))
-
-    cpdef double get_energy(self, double x):
-        if x <= self.x0:
-            return 0
-        elif self.x0 < x < self.xint:
-            return self.a * (x - self.x0) * (x - self.x0)
-        else:
-            return 2 * self.a * (self.xint - self.x0) * (x - self.xint) + \
-                self.a * (self.xint - self.x0) * (self.xint - self.x0)
-
 
 cdef class AEFunctionPaper(JumprateFunction):
     cdef:
