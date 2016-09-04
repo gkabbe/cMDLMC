@@ -71,7 +71,7 @@ def extend_simulation_box(oxygen_coordinates, oxygen_number, h, box_multiplier, 
             v2 = h[:, 1]
             v3 = h[:, 2]
             Oview = oxygen_coordinates.view()
-            Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], oxygen_number, 3)
+            Oview.shape = box_multiplier[0], box_multiplier[1], box_multiplier[2], oxygen_number, 3
             for x in range(box_multiplier[0]):
                 for y in range(box_multiplier[1]):
                     for z in range(box_multiplier[2]):
@@ -81,9 +81,8 @@ def extend_simulation_box(oxygen_coordinates, oxygen_number, h, box_multiplier, 
         else:
             ipdb.set_trace()
             Oview = oxygen_coordinates.view()
-            Oview.shape = (box_multiplier[0], box_multiplier[1], box_multiplier[2], oxygen_number, 3)
-            kMC_helper.extend_simulationbox(Oview, h,
-                                            box_multiplier)
+            Oview.shape = box_multiplier[0], box_multiplier[1], box_multiplier[2], oxygen_number, 3
+            kMC_helper.extend_simulationbox(Oview, h, box_multiplier)
 
 
 def calculate_displacement(proton_lattice, proton_lattice_snapshot,
@@ -107,7 +106,8 @@ def calculate_displacement_nonortho(proton_lattice, proton_lattice_snapshot,
     for O_index, proton_index in enumerate(proton_lattice):
         if proton_index > 0:
             proton_pos_new[proton_index - 1] = Opos_new[O_index]
-    kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_lattice_snapshot, h, h_inv)
+    kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_lattice_snapshot, h,
+                                       h_inv)
 
 
 def calculate_autocorrelation(proton_lattice_old, proton_lattice_new):
@@ -121,7 +121,8 @@ def calculate_mean_squared_displacement(mean_squared_displacement, displacement)
     mean_squared_displacement /= displacement.shape[0]
 
 
-def calculate_mean_squared_displacement_with_variance(mean_squared_displacement, displacement, msd_variance):
+def calculate_mean_squared_displacement_with_variance(mean_squared_displacement, displacement,
+                                                      msd_variance):
     mean_squared_displacement *= 0
     msd_variance *= 0
     for d in displacement:
@@ -221,12 +222,15 @@ class MDMC:
         self.__dict__.update(file_kwargs)
 
         if self.po_angle:
-            self.O_trajectory, self.P_trajectory = load_atoms(self.filename, self.auxiliary_file, self.clip_trajectory,
-                                                              "O", "P",
-                                                              verbose=self.verbose)
+            self.oxygen_trajectory, self.phosphorus_trajectory = load_atoms(self.filename,
+                                                                            self.auxiliary_file,
+                                                                            self.clip_trajectory,
+                                                                            "O", "P",
+                                                                            verbose=self.verbose)
         else:
-            self.O_trajectory = load_atoms(self.filename, self.auxiliary_file, self.clip_trajectory, "O",
-                                           verbose=self.verbose)
+            self.oxygen_trajectory = load_atoms(self.filename, self.auxiliary_file,
+                                                self.clip_trajectory, "O",
+                                                verbose=self.verbose)
 
         if self.seed is not None:
             np.random.seed(self.seed)
@@ -234,9 +238,10 @@ class MDMC:
             self.seed = np.random.randint(2 ** 32)
             np.random.seed(self.seed)
 
-        self.oxygennumber = self.O_trajectory.shape[1]
-        self.oxygennumber_extended = self.O_trajectory.shape[
-                                         1] * self.box_multiplier[0] * self.box_multiplier[1] * self.box_multiplier[2]
+        self.oxygennumber = self.oxygen_trajectory.shape[1]
+        self.oxygennumber_extended = self.oxygen_trajectory.shape[1] * self.box_multiplier[0] * \
+                                     self.box_multiplier[1] * \
+                                     self.box_multiplier[2]
 
         # Multiply Arrhenius prefactor (unit 1/fs) with MD time step (unit fs), to get the correct rates
         if "A" in list(self.jumprate_params_fs.keys()):
@@ -257,12 +262,14 @@ class MDMC:
         if self.nonortho:
             for i in range(oxygen_atoms.shape[0]):
                 phosphorus_index = \
-                npa.nextNeighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, atom_box.h, atom_box.h_inv)[0]
+                    npa.nextNeighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, atom_box.h,
+                                              atom_box.h_inv)[0]
                 phosphorus_neighbors[i] = phosphorus_index
         else:
             for i in range(oxygen_atoms.shape[0]):
                 phosphorus_index = \
-                npa.nextNeighbor(oxygen_atoms[i], phosphorus_atoms, atom_box.periodic_boundaries_extended)[0]
+                    npa.nextNeighbor(oxygen_atoms[i], phosphorus_atoms,
+                                     atom_box.periodic_boundaries_extended)[0]
                 phosphorus_neighbors[i] = phosphorus_index
         return phosphorus_neighbors
 
@@ -315,7 +322,8 @@ class MDMC:
             msd2, msd3, msd4 = None, None, None
         return displacement, MSD, msd_var, msd2, msd3, msd4, proton_pos_snapshot, proton_pos_new
 
-    def reset_observables(self, proton_position_snapshot, proton_lattice, displacement, oxygen_positions, helper):
+    def reset_observables(self, proton_position_snapshot, proton_lattice, displacement,
+                          oxygen_positions, helper):
         for i, site in enumerate(proton_lattice):
             if site > 0:
                 proton_position_snapshot[site - 1] = oxygen_positions[i]
@@ -367,8 +375,10 @@ class MDMC:
                                                    autocorrelation, helper.get_jumps(), speed,
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
-        self.averaged_results[(sweep % self.reset_freq) // self.print_freq, 2:] += MSD[0], MSD[1], MSD[
-            2], autocorrelation, helper.get_jumps()
+        self.averaged_results[(sweep % self.reset_freq) // self.print_freq, 2:] += MSD[0], MSD[1], \
+                                                                                   MSD[2], \
+                                                                                   autocorrelation, \
+                                                                                   helper.get_jumps()
 
     def print_observables_var(self, sweep, autocorrelation, helper, timestep_fs,
                               start_time, MSD, msd_var, msd2=None, msd3=None, msd4=None):
@@ -392,8 +402,10 @@ class MDMC:
                                                    autocorrelation, helper.get_jumps(), speed,
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
-        self.averaged_results[(sweep % self.reset_freq) / self.print_freq, 2:] += MSD[0], MSD[1], MSD[
-            2], autocorrelation, helper.get_jumps()
+        self.averaged_results[(sweep % self.reset_freq) / self.print_freq, 2:] += MSD[0], MSD[1], \
+                                                                                  MSD[2], \
+                                                                                  autocorrelation, \
+                                                                                  helper.get_jumps()
 
     def print_OsHs(self, Os, proton_lattice, sweep, timestep_fs):
         proton_indices = np.where(proton_lattice > 0)[0]
@@ -408,23 +420,24 @@ class MDMC:
         # Check periodic boundaries and determine whether cell is orthorhombic or non-orthorhombic
         if self.nonortho:
             if self.po_angle:
-                atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
+                atombox = kMC_helper.AtomBox_Monoclin(self.oxygen_trajectory, self.pbc,
                                                       np.array(self.box_multiplier, dtype=np.int32),
-                                                      self.P_trajectory)
+                                                      self.phosphorus_trajectory)
             else:
-                atombox = kMC_helper.AtomBox_Monoclin(self.O_trajectory, self.pbc,
+                atombox = kMC_helper.AtomBox_Monoclin(self.oxygen_trajectory, self.pbc,
                                                       np.array(self.box_multiplier, dtype=np.int32))
         else:
             if self.po_angle:
-                atombox = kMC_helper.AtomBox_Cubic(self.O_trajectory, self.pbc,
+                atombox = kMC_helper.AtomBox_Cubic(self.oxygen_trajectory, self.pbc,
                                                    np.array(self.box_multiplier, dtype=np.int32),
-                                                   self.P_trajectory)
+                                                   self.phosphorus_trajectory)
             else:
-                atombox = kMC_helper.AtomBox_Cubic(self.O_trajectory, self.pbc,
+                atombox = kMC_helper.AtomBox_Cubic(self.oxygen_trajectory, self.pbc,
                                                    np.array(self.box_multiplier, dtype=np.int32))
 
         if self.po_angle:
-            self.P_neighbors = self.determine_phosphorus_oxygen_pairs(frame_number=0, atom_box=atombox)
+            self.phosphorus_neighbors = self.determine_phosphorus_oxygen_pairs(frame_number=0,
+                                                                               atom_box=atombox)
 
         if self.var_prot_single:
             displacement, MSD, msd_var, msd2, msd3, msd4, \
@@ -435,6 +448,8 @@ class MDMC:
 
         proton_lattice = self.initialize_proton_lattice(self.box_multiplier)
 
+        observable_manager = ObservableManager("msd", atombox, proton_lattice)
+
         if self.verbose:
             print("# Sweeps:", self.sweeps, file=self.output)
         self.print_settings()
@@ -443,7 +458,7 @@ class MDMC:
 
         helper = kMC_helper.Helper(atombox=atombox, pbc=self.pbc,
                                    box_multiplier=np.array(self.box_multiplier, dtype=np.int32),
-                                   P_neighbors=np.array(self.P_neighbors, dtype=np.int32),
+                                   P_neighbors=np.array(self.phosphorus_neighbors, dtype=np.int32),
                                    nonortho=self.nonortho,
                                    jumprate_parameter_dict=self.jumprate_params_fs,
                                    cutoff_radius=self.cutoff_radius,
@@ -465,8 +480,8 @@ class MDMC:
                 if not self.shuffle:
                     frame = sweep
                 else:
-                    frame = np.random.randint(self.O_trajectory.shape[0])
-            helper.sweep_from_vector(sweep % self.O_trajectory.shape[0], proton_lattice)
+                    frame = np.random.randint(self.oxygen_trajectory.shape[0])
+            helper.sweep_from_vector(sweep % self.oxygen_trajectory.shape[0], proton_lattice)
 
         if not self.xyz_output:
             self.print_observable_names()
@@ -476,9 +491,9 @@ class MDMC:
         for sweep in range(0, self.sweeps):
             if sweep % (self.skip_frames + 1) == 0:
                 if not self.shuffle:
-                    frame = sweep % self.O_trajectory.shape[0]
+                    frame = sweep % self.oxygen_trajectory.shape[0]
                 else:
-                    frame = np.random.randint(self.O_trajectory.shape[0])
+                    frame = np.random.randint(self.oxygen_trajectory.shape[0])
 
             if sweep % self.reset_freq == 0:
                 protonlattice_snapshot, proton_pos_snapshot, displacement = \
@@ -500,7 +515,9 @@ class MDMC:
                     MSD, msd2, msd3, msd4 = calculate_higher_mean_squared_displacement(displacement)
                 else:
                     if self.var_prot_single:
-                        MSD, msd_var = calculate_mean_squared_displacement_with_variance(MSD, displacement, msd_var)
+                        MSD, msd_var = calculate_mean_squared_displacement_with_variance(MSD,
+                                                                                         displacement,
+                                                                                         msd_var)
                     else:
                         calculate_mean_squared_displacement(MSD, displacement)
                 autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
