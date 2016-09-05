@@ -110,7 +110,7 @@ def calculate_displacement_nonortho(proton_lattice, proton_lattice_snapshot,
                                        h_inv)
 
 
-def calculate_autocorrelation(proton_lattice_old, proton_lattice_new):
+def calculate_auto_correlation(proton_lattice_old, proton_lattice_new):
     return np.logical_and(proton_lattice_old == proton_lattice_new, proton_lattice_new != 0).sum()
 
 
@@ -140,9 +140,9 @@ def calculate_higher_mean_squared_displacement(displacement):
     msd_4 = 0
     for d in displacement:
         msd_1 += d * d
-        msd_2 += (msd_1[0] + msd_1[1] + msd_1[2]) ** 0.5
-        msd_3 += (msd_1[0] + msd_1[1] + msd_1[2]) ** 1.5
-        msd_4 += (msd_1[0] + msd_1[1] + msd_1[2]) ** 2
+        msd_2 += (msd_1[0] + msd_1[1] + msd_1[2])**0.5
+        msd_3 += (msd_1[0] + msd_1[1] + msd_1[2])**1.5
+        msd_4 += (msd_1[0] + msd_1[1] + msd_1[2])**2
     msd_1 /= displacement.shape[0]
     msd_2 /= displacement.shape[0]
     msd_3 /= displacement.shape[0]
@@ -235,7 +235,7 @@ class MDMC:
         if self.seed is not None:
             np.random.seed(self.seed)
         else:
-            self.seed = np.random.randint(2 ** 32)
+            self.seed = np.random.randint(2**32)
             np.random.seed(self.seed)
 
         self.oxygennumber = self.oxygen_trajectory.shape[1]
@@ -243,7 +243,8 @@ class MDMC:
                                      self.box_multiplier[1] * \
                                      self.box_multiplier[2]
 
-        # Multiply Arrhenius prefactor (unit 1/fs) with MD time step (unit fs), to get the correct rates
+        # Multiply Arrhenius prefactor (unit 1/fs) with MD time step (unit fs), to get the
+        # correct rates
         if "A" in list(self.jumprate_params_fs.keys()):
             self.jumprate_params_fs["A"] *= self.md_timestep_fs
         else:
@@ -499,7 +500,7 @@ class MDMC:
                     frame = np.random.randint(self.oxygen_trajectory.shape[0])
 
             if sweep % self.reset_freq == 0:
-                protonlattice_snapshot, proton_pos_snapshot, displacement = \
+                proton_lattice_snapshot, proton_pos_snapshot, displacement = \
                     self.reset_observables(proton_pos_snapshot, proton_lattice, displacement,
                                            atombox.get_extended_frame(
                                                atombox.oxygen_trajectory[frame]), helper)
@@ -523,14 +524,15 @@ class MDMC:
                                                                                          msd_var)
                     else:
                         calculate_mean_squared_displacement(MSD, displacement)
-                autocorrelation = calculate_autocorrelation(protonlattice_snapshot, proton_lattice)
+                auto_correlation = calculate_auto_correlation(proton_lattice_snapshot,
+                                                              proton_lattice)
                 if not self.xyz_output:
                     if self.var_prot_single:
-                        self.print_observables_var(sweep, autocorrelation, helper,
+                        self.print_observables_var(sweep, auto_correlation, helper,
                                                    self.md_timestep_fs, start_time, MSD, msd_var,
                                                    msd2, msd3, msd4)
                     else:
-                        self.print_observables(sweep, autocorrelation, helper, self.md_timestep_fs,
+                        self.print_observables(sweep, auto_correlation, helper, self.md_timestep_fs,
                                                start_time, MSD, msd2, msd3, msd4)
                 else:
                     self.print_OsHs(atombox.oxygen_trajectory[
