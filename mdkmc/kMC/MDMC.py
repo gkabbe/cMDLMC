@@ -416,8 +416,11 @@ class MDMC:
         for index in proton_indices:
             print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]))
 
-    def kmc_run(self):
-        # Check periodic boundaries and determine whether cell is orthorhombic or non-orthorhombic
+    def cmd_lmc_run(self):
+        """Main method. """
+
+        # Check periodic boundaries and determine whether cell is orthorhombic/cubic
+        #  or non-orthorhombic/monoclin
         if self.nonortho:
             if self.po_angle:
                 atombox = kMC_helper.AtomBox_Monoclin(self.oxygen_trajectory, self.pbc,
@@ -558,7 +561,7 @@ class MDMC:
 
 def start_lmc(args):
     md_mc = MDMC(configfile=args.config_file)
-    md_mc.kmc_run()
+    md_mc.cmd_lmc_run()
 
 
 def main(*args):
