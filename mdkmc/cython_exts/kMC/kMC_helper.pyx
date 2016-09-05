@@ -199,7 +199,6 @@ cdef class Helper:
     cdef:
         gsl_rng * r
         int jumps
-        bool nonortho
         # Create containers for the oxygen index from which the proton jump start, for the index of
         # the destination oxygen, and for the jump probability of the oxygen connection.
         # The nested vectors hold
@@ -208,15 +207,8 @@ cdef class Helper:
         public vector[vector[np.int32_t]] destination
         public vector[vector[np.float32_t]] jump_probability
         public vector[vector[int]] neighbors
-        object logger
-        int[:] box_multiplier
-        double[:] pbc
-        double[:, ::1] pbc_matrix
-        double[:, ::1] oxygen_frame_extended
-        double[:, ::1] phosphorus_frame_extended
-        int[:] P_neighbors
-        int oxygennumber_unextended
-        int phosphorusnumber_unextended
+        int oxygennumber
+        int phosphorusnumber
         double r_cut, angle_threshold
         double neighbor_search_radius
         public JumprateFunction jumprate_fct
@@ -225,33 +217,17 @@ cdef class Helper:
         public double[:, ::1] jumpmatrix
         bool calculate_jumpmatrix
 
-    def __cinit__(self, AtomBox atombox, double[:] pbc, int[:] box_multiplier,
-                  int[:] P_neighbors, bool nonortho, jumprate_parameter_dict,
-                  double cutoff_radius, double angle_threshold,
-                  double neighbor_search_radius, jumprate_type,
+    def __cinit__(self, AtomBox atombox, jumprate_parameter_dict, double cutoff_radius, 
+                  double angle_threshold, double neighbor_search_radius, jumprate_type, *,
                   seed=None, bool calculate_jumpmatrix=False, verbose=False):
         cdef:
             int i
             double[:] pbc_extended
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.jumps = 0
-        self.oxygen_frame_extended = np.zeros(
-            (box_multiplier[0] *
-             box_multiplier[1] *
-             box_multiplier[2] *
-             atombox.oxygen_trajectory.shape[1],
-             atombox.oxygen_trajectory.shape[2]))
-        self.phosphorus_frame_extended = np.zeros(
-            (box_multiplier[0] *
-             box_multiplier[1] *
-             box_multiplier[2] *
-             atombox.phosphorus_trajectory.shape[1],
-             atombox.phosphorus_trajectory.shape[2]))
-        self.oxygennumber_unextended = atombox.oxygen_trajectory.shape[1]
-        self.phosphorusnumber_unextended = atombox.phosphorus_trajectory.shape[1]
-        self.box_multiplier = box_multiplier
+        self.oxygennumber = atombox.oxygen_trajectory.shape[1]
+        self.phosphorusnumber = atombox.phosphorus_trajectory.shape[1]
         self.P_neighbors = P_neighbors
-        self.nonortho = nonortho
         self.r_cut = cutoff_radius
         self.angle_threshold = angle_threshold
         self.neighbor_search_radius = neighbor_search_radius
@@ -260,21 +236,6 @@ cdef class Helper:
         self.jumpmatrix = np.zeros(
             (self.oxygen_frame_extended.shape[0],
              self.oxygen_frame_extended.shape[0]))
-
-        if pbc.size == 3:
-            pbc_extended = np.zeros(3)
-            for i in range(3):
-                pbc_extended[i] = pbc[i] * box_multiplier[i]
-        elif pbc.size == 9:
-            pbc_extended = np.zeros(9)
-            for i in range(3):
-                pbc_extended[i] = pbc[i] * box_multiplier[0]
-            for i in range(3, 6):
-                pbc_extended[i] = pbc[i] * box_multiplier[1]
-            for i in range(6, 9):
-                pbc_extended[i] = pbc[i] * box_multiplier[2]
-
-        self.pbc = pbc
 
         self.atombox = atombox
 
@@ -410,34 +371,6 @@ cdef class Helper:
         self.destination.push_back(destination_tmp)
         self.jump_probability.push_back(jump_probability_tmp)
         self.saved_frame_counter += 1
-
-    def serialize_transitions(self):
-        """Write jump transitions to numpy vector.
-        Returns Numpy array with 3 fields: int32, int32, float32.
-        First field is the index of start oxygen, second field is the index of destination oxygen.
-        Third field is the jump probability."""
-        cdef:
-            int i, dim0 = 0, dim1 = 0
-
-        dt = np.dtype({"names": ["start", "dest", "prob"],
-                       "formats": [np.int32, np.int32, np.float32]
-                       })
-        # Make sure, all 3 vectors have the same 0th dimension
-        if self.start.size() == self.destination.size() == self.jump_probability.size():
-            dim0 = self.start.size()
-            # Find largest vector
-            for i in range(self.start.size()):
-                dim1 = max(dim1, self.start[i].size())
-            transition_array = np.zeros((dim0, dim1), dtype=dt)
-
-            for i in range(self.start.size()):
-                for j in range(self.start[i].size()):
-                    transition_array[i, j] = self.start[i][
-                        j], self.destination[i][j], self.jump_probability[i][j]
-            return transition_array
-
-        else:
-            raise Exception("start destination and probability vectors have not same dimension")
 
     def get_transition_number(self):
         return self.start_tmp.size()
