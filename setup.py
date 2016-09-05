@@ -6,13 +6,13 @@ import cython_gsl
 from setuptools import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
-from Cython.Build import cythonize
 
 
 def get_commit_hash():
     command = "git log -n 1 --format=%H%n%s%n%ad"
     try:
-        commit_hash, commit_message, commit_date = subprocess.check_output(command.split()).strip().split(b"\n")
+        commit_hash, commit_message, commit_date = subprocess.check_output(
+            command.split()).strip().split(b"\n")
     except subprocess.CalledProcessError:
         print("Command '{}' could not be executed successfully.".format(command), file=sys.stderr)
     return commit_hash.decode(), commit_message.decode(), commit_date.decode()
@@ -42,6 +42,7 @@ def find_extensions():
                 extensions.append(os.path.join(root, f))
     return extensions
 
+
 subpackages = find_packages()
 cython_exts = find_extensions()
 ext_modules = []
@@ -66,25 +67,17 @@ setup(name='mdkmc',
       classifiers=[
           'Development Status :: 3 - Alpha',
           'License :: OSI Approved :: GNU General Public License (GPL)',
-          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3.5',
           'Topic :: Molecular Dynamics :: Kinetic Monte Carlo',
       ],
-      keywords='MD KMC Chemistry',
+      keywords='MD LMC KMC Chemistry',
       url='http://github.com/',
       author='Gabriel Kabbe',
       author_email='gabriel.kabbe@chemie.uni-halle.de',
       license='GPLv3',
       packages=subpackages,
-      install_requires=[
-          'numpy',
-          'ipdb',
-          'cythongsl==0.2.1',
-          'gitpython',
-          'cython',
-          'pint==0.7.2',
-          'scipy',
-          'matplotlib'
-      ],
+      install_requires=['numpy', 'ipdb', 'cythongsl==0.2.1', 'gitpython', 'cython', 'pint==0.7.2',
+                        'scipy', 'matplotlib'],
       dependency_links=['https://github.com/twiecki/CythonGSL/tarball/master#egg=cython_gsl-0.2.1'],
       test_suite='nose.collector',
       tests_require=['nose'],
@@ -101,17 +94,15 @@ setup(name='mdkmc',
                               'center_of_mass=mdkmc.atoms.numpyatom:print_center_of_mass_commandline',
                               'rdf=mdkmc.analysis.rdf:main',
                               'free-energy=mdkmc.analysis.free_energy:main'
-                             ],
+                              ],
       },
-      # scripts=["bin/MDMC.py"],
       include_package_data=True,
       zip_safe=False,
-      # ext_modules=ext_modules,
       ext_modules=ext_modules,
       cmdclass={'build_ext': build_ext}
       )
 
-# Write hash of current commit to file
+# Write hash, message and date of current commit to file
 with open("mdkmc/version_hash.py", "w") as f:
     commit_hash, commit_message, commit_date = get_commit_hash()
     print("commit_hash = \"{}\"".format(commit_hash), file=f)
