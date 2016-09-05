@@ -25,10 +25,6 @@ cdef extern from "math.h":
 xyzatom = np.dtype([("name", np.str_, 1), ("pos", np.float64, (3,))])
 
 
-pdbatom = np.dtype([("rec", np.str_, 4), ("serialnr", np.int32), ("name", np.str_, 4), ("locind", np.str_, 1), ("resname", np.str_, 3), ("chainid", np.str_, 1), ("rsn", np.int32),\
- ("rescode", np.str_, 1), ("pos", np.float64, (3,)), ("occ", np.float64), ("tempfac", np.float64), ("segment", np.str_, 4), ("element", np.str_, 2), ("charge", np.str_, 2)]) 
-
-
 cdef void diff(double [:] a1_pos, double [:] a2_pos, double [:] pbc, double [:] diffvec):
     cdef:
         int i
