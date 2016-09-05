@@ -6,7 +6,7 @@ import time
 import numpy as np
 import ipdb
 import argparse
-from mdkmc.IO import xyz_parser
+from mdkmc.IO.xyz_parser import load_atoms
 from mdkmc.IO.config_parser import print_confighelp, load_configfile
 from mdkmc.cython_exts.kMC import kMC_helper
 from mdkmc.cython_exts.atoms import numpyatom as npa
@@ -103,47 +103,6 @@ def calculate_higher_mean_squared_displacement(displacement):
     msd_3 /= displacement.shape[0]
     msd_4 /= displacement.shape[0]
     return msd_1, msd_2, msd_3, msd_4
-
-
-def load_atoms(filename, auxiliary_file, clip, *atom_names, verbose=False):
-    if filename:
-        if auxiliary_file:
-            if verbose:
-                print("# Both xyz file and auxiliary npz file specified.")
-                print("# Will try to load from auxiliary file", auxiliary_file)
-            if not os.path.exists(auxiliary_file):
-                if verbose:
-                    print("# Specified auxiliary file does not exist.")
-                    print("# Creating it now...")
-                xyz_parser.save_trajectory_to_npz(filename, npz_fname=auxiliary_file,
-                                                  remove_com_movement=True)
-            return xyz_parser.load_trajectory_from_npz(auxiliary_file, *atom_names, clip=clip,
-                                                       verbose=verbose)
-        else:
-            aux_fname = os.path.splitext(filename)[0] + ".npz"
-            if verbose:
-                print("# Only xyz file specified.")
-                print("# Looking for auxiliary file", aux_fname, "...")
-            if os.path.exists(aux_fname):
-                print("# Found it!")
-                return xyz_parser.load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
-                                                           verbose=verbose)
-            else:
-                if verbose:
-                    print("# No auxiliary file found.")
-                    print("# Will create it now...")
-                    xyz_parser.save_trajectory_to_npz(filename, npz_fname=aux_fname,
-                                                      remove_com_movement=True)
-                    return xyz_parser.load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
-                                                               verbose=verbose)
-    else:
-        print("# Found auxiliary file.")
-        print("# Loading from there...")
-        if auxiliary_file:
-            return xyz_parser.load_trajectory_from_npz(auxiliary_file, *atom_names, clip=clip,
-                                                       verbose=verbose)
-        else:
-            raise InputError("Please specify either filename or auxiliary_file")
 
 
 class ObservableManager:
