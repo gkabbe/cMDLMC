@@ -15,7 +15,7 @@ def get_commit_hash():
         commit_hash, commit_message, commit_date = subprocess.check_output(command.split()).strip().split(b"\n")
     except subprocess.CalledProcessError:
         print("Command '{}' could not be executed successfully.".format(command), file=sys.stderr)
-    return commit_hash, commit_message, commit_date
+    return commit_hash.decode(), commit_message.decode(), commit_date.decode()
 
 
 def readme():
@@ -52,7 +52,7 @@ for ext_path in cython_exts:
     ext_modules.append(Extension(
         ext_name,
         [ext_path],
-        libraries=["m"]+cython_gsl.get_libraries(),
+        libraries=["m"] + cython_gsl.get_libraries(),
         extra_compile_args=["-O3", "-Wall"],
         language="c++",
         library_dirs=[cython_gsl.get_library_dir()],
@@ -117,4 +117,3 @@ with open("mdkmc/version_hash.py", "w") as f:
     print("commit_hash = \"{}\"".format(commit_hash), file=f)
     print("commit_message = \"{}\"".format(commit_message), file=f)
     print("commit_date = \"{}\"".format(commit_date), file=f)
-
