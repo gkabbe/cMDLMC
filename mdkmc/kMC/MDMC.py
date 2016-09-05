@@ -6,55 +6,10 @@ import time
 import numpy as np
 import ipdb
 import argparse
-from textwrap import wrap
 from mdkmc.IO import xyz_parser
-from mdkmc.IO import config_parser
+from mdkmc.IO.config_parser import print_confighelp, load_configfile
 from mdkmc.cython_exts.kMC import kMC_helper
 from mdkmc.cython_exts.atoms import numpyatom as npa
-
-
-def load_configfile(config_filename, verbose=False):
-    parser_dict = config_parser.CONFIG_DICT
-    config_dict = dict()
-    with open(config_filename, "r") as f:
-        for line in f:
-            if line[0] != "#":
-                if len(line.split()) > 1:
-                    keyword = line.split()[0]
-                    if keyword in list(parser_dict.keys()):
-                        config_dict[keyword.lower()] = parser_dict[keyword.lower()][
-                            "parse_fct"](line)
-                    else:
-                        raise RuntimeError("Unknown keyword {}. Please remove it.".format(keyword))
-
-    # Check for missing options, and look if they have a default argument
-    for key, value in parser_dict.items():
-        if key not in config_dict:
-            if value["default"] == "no_default":
-                raise RuntimeError("Missing value for {}".format(key))
-            else:
-                if verbose:
-                    print("# Found no value for {} in config file".format(key))
-                    print("# Will use default value: {}".format(value["default"]))
-                config_dict[key] = value["default"]
-
-    return config_dict
-
-
-def print_confighelp(args):
-    text_width = 80
-    parser_dict = config_parser.CONFIG_DICT
-    for k, v in parser_dict.items():
-        keylen = len(k)
-        delim_len = (text_width - 2 - keylen) // 2
-        print("{delim} {keyword} {delim}".format(keyword=k.upper(), delim=delim_len * "-"))
-        print("")
-        print("\n".join(wrap(v["help"], width=text_width)))
-        print("")
-        print("Default:", v["default"])
-        print(text_width * "-")
-        print("")
-        print("")
 
 
 def get_git_version():
