@@ -85,20 +85,55 @@ def calculate_higher_mean_squared_displacement(displacement):
 
 
 class ObservableManager:
-    def __init__(self, msd_mode, oxygen_trajectory, proton_lattice):
-        pass
+    def __init__(self, atom_box, proton_lattice, proton_number, *, msd_mode=None):
+        self.proton_number = proton_number
+        self.atom_box = atom_box
+        self.displacement = np.zeros((self.proton_number, 3))
+        self.proton_pos_snapshot = np.zeros((self.proton_number, 3))
+        self.proton_lattice = proton_lattice
+        self.proton_lattice_snapshot = np.array(proton_lattice)
+
+        if msd_mode == "higher_msd":
+            self.mean_square_displacement = np.zeros((4, 3))
+            self.msd_variance = np.zeros((4, 3))
+            self.calculate_msd = self.calculate_msd_higher_orders
+        else:
+            self.mean_square_displacement = np.zeros(3)
+            self.msd_variance = np.zeros(3)
+            self.calculate_msd = self.calculate_msd_standard
+
+    def calculate_displacement(self):
+        proton_pos_new = np.zeros(self.proton_lattice_snapshot.shape)
+        for oxygen_index, proton_index in enumerate(self.proton_lattice):
+            if proton_index > 0:
+                proton_pos_new[proton_index - 1] = self.atom_box.oxygen_coordinates_new[
+                    oxygen_index]
+        self.displacement += kMC_helper.dist_numpy_all(proton_pos_new, self.proton_lattice_snapshot,
+                                                       pbc)
+        self.proton_lattice_snapshot[:] = self.proton_lattice
 
     def calculate_msd_standard(self):
-        pass
+        self.mean_square_displacement[:] = (self.displacement**2).sum(axis=0) / \
+                                           self.displacement.shape[0]
+        return self.mean_square_displacement
 
     def calculate_msd_higher_orders(self):
-        pass
+        self.mean_square_displacement[:] = 0
+        self.mean_square_displacement[0] = (self.displacement**2).sum(axis=0)
+        self.mean_square_displacement[1] = self.mean_square_displacement[0].sum()**0.5
+        self.mean_square_displacement[2] = self.mean_square_displacement[1].sum()**3
+        self.mean_square_displacement[3] = self.mean_square_displacement[1].sum()**4
+        self.mean_square_displacement /= self.displacement.shape[0]
+
+        return self.mean_square_displacement
 
     def calculate_auto_correlation(self):
-        pass
+        return np.logical_and(self.proton_lattice == self.proton_lattice_snapshot,
+                              self.proton_lattice != 0).sum()
 
     def return_observables(self, *observables):
-        pass
+        self.displacement[:] = 0
+        # self.proton_pos_snapshot =
 
 
 class MDMC:
