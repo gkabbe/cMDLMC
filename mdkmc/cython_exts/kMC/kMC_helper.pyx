@@ -122,7 +122,7 @@ cdef class FermiFunction(JumprateFunction):
         return self.a / (1 + exp((x - self.b) / self.c))
 
 
-cdef class AEFunctionPaper(JumprateFunction):
+cdef class AEFunction(JumprateFunction):
     cdef:
         double A, a, b, d0, T
 
@@ -361,24 +361,16 @@ cdef class Helper:
             b = jumprate_parameter_dict["b"]
             c = jumprate_parameter_dict["c"]
             self.jumprate_fct = FermiFunction(a, b, c)
-
         elif jumprate_type == "AE_rates":
-            A = jumprate_parameter_dict["A"]
-            a = jumprate_parameter_dict["a"]
-            x0 = jumprate_parameter_dict["x0"]
-            xint = jumprate_parameter_dict["xint"]
-            T = jumprate_parameter_dict["T"]
-            self.jumprate_fct = AEFunction(A, a, x0, xint, T)
-        elif jumprate_type == "AE_paper":
             A = jumprate_parameter_dict["A"]
             a = jumprate_parameter_dict["a"]
             b = jumprate_parameter_dict["b"]
             d0 = jumprate_parameter_dict["d0"]
             T = jumprate_parameter_dict["T"]
-            self.jumprate_fct = AEFunctionPaper(A, a, b, d0, T)
+            self.jumprate_fct = AEFunction(A, a, b, d0, T)
         else:
             raise Exception("Jumprate type unknown. Please choose between "
-                            "MD_rates, AE_rates and AE_paper")
+                            "MD_rates and AE_rates")
 
     def __dealloc__(self):
         gsl_rng_free(self.r)
