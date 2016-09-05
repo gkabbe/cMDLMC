@@ -380,7 +380,9 @@ class MDMC:
 
         proton_lattice = self.initialize_proton_lattice(self.box_multiplier)
 
-        observable_manager = ObservableManager("msd", atombox, proton_lattice)
+        msd_mode = "higher_msd" if self.higher_msd else "standard_msd"
+        observable_manager = ObservableManager(atombox, proton_lattice, self.proton_number,
+                                               msd_mode=msd_mode)
 
         if self.verbose:
             print("# Sweeps:", self.sweeps, file=self.output)
