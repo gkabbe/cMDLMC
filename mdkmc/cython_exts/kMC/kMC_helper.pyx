@@ -71,25 +71,23 @@ cdef class AEFunction(JumprateFunction):
 cdef class AtomBox:
     """The AtomBox class takes care of all the distance and angle calculation within the kMC_helper."""
     cdef:
-        public double[:, :, ::1] oxygen_trajectory
-        public double[:, :, ::1] phosphorus_trajectory
+        public double[:, :, ::1] trajectory
         double[:] periodic_boundaries
         public double[:] periodic_boundaries_extended
         int[:] box_multiplier
         double[:, ::1] pbc_matrix
         double[:, :, :, :, ::1] frame_reshaped
         int size  # Number of atoms in the extended box
+        int atom_number_unextended
 
-    def __cinit__(self, double[:, :, ::1] oxygen_trajectory,
-                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier,
-                  double[:, :, ::1] phosphorus_trajectory=None):
-        self.oxygen_trajectory = oxygen_trajectory
-        if phosphorus_trajectory is not None:
-            self.phosphorus_trajectory = phosphorus_trajectory
+    def __cinit__(self, double[:, :, ::1] trajectory,
+                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier):
+        self.trajectory = trajectory
         self.periodic_boundaries = periodic_boundaries
         self.box_multiplier = box_multiplier
+        self.atom_number_unextended = self.trajectory.shape[1]
         self.size = box_multiplier[0] * box_multiplier[1] * \
-            box_multiplier[2] * oxygen_trajectory.shape[1]
+            box_multiplier[2] * trajectory.shape[1]
 
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return 0
@@ -103,6 +101,16 @@ cdef class AtomBox:
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return 0
+        
+    cdef double position_of_index(self, int index, double * position_array):
+        cdef int atom_index, box_index, i, j, k
+        
+        atom_index = index % self.atom_number_unextended
+        box_index = index / self.atom_number_unextended
+
+        i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
+        j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
+        k = box_index % self.box_multiplier[2]
 
     cdef get_extended_frame_inplace(self, int atomnumber_unextended, double[:, ::1] frame_to_be_extended):
         cdef:
