@@ -19,27 +19,6 @@ def get_git_version():
     print("# Commit Message: {}".format(commit_message))
 
 
-def extend_simulation_box(oxygen_coordinates, oxygen_number, h, box_multiplier, nonortho=False):
-    if True in [multiplier > 1 for multiplier in box_multiplier]:
-        if nonortho:
-            v1 = h[:, 0]
-            v2 = h[:, 1]
-            v3 = h[:, 2]
-            Oview = oxygen_coordinates.view()
-            Oview.shape = box_multiplier[0], box_multiplier[1], box_multiplier[2], oxygen_number, 3
-            for x in range(box_multiplier[0]):
-                for y in range(box_multiplier[1]):
-                    for z in range(box_multiplier[2]):
-                        if x + y + z != 0:
-                            for i in range(oxygen_number):
-                                Oview[x, y, z, i, :] = Oview[0, 0, 0, i] + x * v1 + y * v2 + z * v3
-        else:
-            ipdb.set_trace()
-            Oview = oxygen_coordinates.view()
-            Oview.shape = box_multiplier[0], box_multiplier[1], box_multiplier[2], oxygen_number, 3
-            kMC_helper.extend_simulationbox(Oview, h, box_multiplier)
-
-
 def calculate_displacement(proton_lattice, proton_lattice_snapshot,
                            oxygen_coordinates_new, displacement, pbc, wrap=True):
     proton_pos_new = np.zeros(proton_lattice_snapshot.shape)
