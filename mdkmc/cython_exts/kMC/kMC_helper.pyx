@@ -245,15 +245,17 @@ cdef class AtomBox_Monoclin(AtomBox):
         return phosphorus_neighbors
 
 
+ cdef class LMCRoutine:
+    """Main component of the cMD/LMC algorithm.
+    This class determines the jump rates within a molecule according to the atomic distances and
+    carries out the Monte Carlo steps."""
 
-cdef class Helper:
     cdef:
         gsl_rng * r
         int jumps
         # Create containers for the oxygen index from which the proton jump start, for the index of
         # the destination oxygen, and for the jump probability of the oxygen connection.
-        # The nested vectors hold
-        # the indices and probabilities for the whole trajectory
+        # The nested vectors hold the indices and probabilities for the whole trajectory
         public vector[vector[np.int32_t]] start
         public vector[vector[np.int32_t]] destination
         public vector[vector[np.float32_t]] jump_probability
@@ -268,7 +270,7 @@ cdef class Helper:
         public double[:, ::1] jumpmatrix
         bool calculate_jumpmatrix
 
-    def __cinit__(self, AtomBox atombox, jumprate_parameter_dict, double cutoff_radius, 
+    def __cinit__(self, AtomBox atombox, jumprate_parameter_dict, double cutoff_radius,
                   double angle_threshold, double neighbor_search_radius, jumprate_type, *,
                   seed=None, bool calculate_jumpmatrix=False, verbose=False):
         cdef:
@@ -278,7 +280,6 @@ cdef class Helper:
         self.jumps = 0
         self.oxygennumber = atombox.oxygen_trajectory.shape[1]
         self.phosphorusnumber = atombox.phosphorus_trajectory.shape[1]
-        self.P_neighbors = P_neighbors
         self.r_cut = cutoff_radius
         self.angle_threshold = angle_threshold
         self.neighbor_search_radius = neighbor_search_radius
@@ -287,15 +288,12 @@ cdef class Helper:
         self.jumpmatrix = np.zeros(
             (self.oxygen_frame_extended.shape[0],
              self.oxygen_frame_extended.shape[0]))
-
         self.atombox = atombox
-
         if type(seed) != int:
             seed = time.time()
         gsl_rng_set(self.r, seed)
         if verbose:
             print "#Using seed", seed
-
         if jumprate_type == "MD_rates":
             a = jumprate_parameter_dict["a"]
             b = jumprate_parameter_dict["b"]
@@ -311,6 +309,9 @@ cdef class Helper:
         else:
             raise Exception("Jumprate type unknown. Please choose between "
                             "MD_rates and AE_rates")
+
+
+
 
     def __dealloc__(self):
         gsl_rng_free(self.r)
@@ -507,3 +508,4 @@ cdef class Helper:
 
     def get_jumps(self):
         return self.jumps
+

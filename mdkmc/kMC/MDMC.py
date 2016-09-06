@@ -390,15 +390,17 @@ class MDMC:
 
         start_time = time.time()
 
-        helper = kMC_helper.Helper(atombox=atombox, pbc=self.pbc,
-                                   box_multiplier=np.array(self.box_multiplier, dtype=np.int32),
-                                   P_neighbors=np.array(self.phosphorus_neighbors, dtype=np.int32),
-                                   nonortho=self.nonortho,
-                                   jumprate_parameter_dict=self.jumprate_params_fs,
-                                   cutoff_radius=self.cutoff_radius,
-                                   angle_threshold=self.angle_threshold,
-                                   neighbor_search_radius=self.neighbor_search_radius,
-                                   jumprate_type=self.jumprate_type)
+        helper = kMC_helper.LMCRoutine(atombox=atombox,
+                                       pbc=self.pbc,
+                                       box_multiplier=np.array(self.box_multiplier, dtype=np.int32),
+                                       P_neighbors=np.array(self.phosphorus_neighbors,
+                                                            dtype=np.int32),
+                                       nonortho=self.nonortho,
+                                       jumprate_parameter_dict=self.jumprate_params_fs,
+                                       cutoff_radius=self.cutoff_radius,
+                                       angle_threshold=self.angle_threshold,
+                                       neighbor_search_radius=self.neighbor_search_radius,
+                                       jumprate_type=self.jumprate_type)
 
         helper.determine_neighbors(0)
         helper.store_transitions_in_vector(verbose=self.verbose)
