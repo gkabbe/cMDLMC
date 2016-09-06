@@ -207,9 +207,9 @@ cdef class AtomBox_Monoclin(AtomBox):
         public double[:, ::1] h
         public double[:, ::1] h_inv
 
-    def __cinit__(self, double[:, :, ::1] oxygen_trajectory,
-                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier,
-                  double[:, :, ::1] phosphorus_trajectory=None):
+    def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
+                  double[:, :, ::1] phosphorus_trajectory,
+                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier):
 
         self.periodic_boundaries_extended = np.array(periodic_boundaries)
         for i in range(0, 3):
@@ -231,6 +231,20 @@ cdef class AtomBox_Monoclin(AtomBox):
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return cnpa.angle_ptr_nonortho(atompos_2, atompos_1, atompos_2, atompos_3, & self.h[0, 0], & self.h_inv[0, 0])
+        
+    def determine_phosphorus_oxygen_pairs(self, frame_number):
+        phosphorus_neighbors = np.zeros(self.oxygennumber_extended, int)
+        oxygen_atoms = self.oxygen_trajectory[frame_number]
+        phosphorus_atoms = self.phosphorus_trajectory[frame_number]
+
+        for i in range(oxygen_atoms.shape[0]):
+            phosphorus_index = \
+                cnpa.next_neighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, self.h, 
+                                            self.h_inv)[0]
+            phosphorus_neighbors[i] = phosphorus_index
+        return phosphorus_neighbors
+
+
 
 cdef class Helper:
     cdef:
