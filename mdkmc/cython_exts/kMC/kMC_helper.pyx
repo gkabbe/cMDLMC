@@ -69,49 +69,70 @@ cdef class AEFunction(JumprateFunction):
 
 
 cdef class AtomBox:
-    """The AtomBox class takes care of all the distance and angle calculation within the kMC_helper."""
+    """The AtomBox class takes care of all distance and angle calculations."""
     cdef:
-        public double[:, :, ::1] trajectory
+        public double[:, :, ::1] oxygen_trajectory
+        public double[:, :, ::1] phosphorus_trajectory
         double[:] periodic_boundaries
         public double[:] periodic_boundaries_extended
-        int[:] box_multiplier
         double[:, ::1] pbc_matrix
-        double[:, :, :, :, ::1] frame_reshaped
-        int size  # Number of atoms in the extended box
-        int atom_number_unextended
+        int[:] box_multiplier
 
-    def __cinit__(self, double[:, :, ::1] trajectory,
+    def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
+                  double[:, :, ::1] phosphorus_trajectory,
                   np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier):
-        self.trajectory = trajectory
+        self.oxygen_trajectory = oxygen_trajectory
+        self.phosphorus_trajectory = phosphorus_trajectory
         self.periodic_boundaries = periodic_boundaries
         self.box_multiplier = box_multiplier
-        self.atom_number_unextended = self.trajectory.shape[1]
-        self.size = box_multiplier[0] * box_multiplier[1] * \
-            box_multiplier[2] * trajectory.shape[1]
+
 
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return 0
 
     cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
         return 0
-        
-    cpdef double distance_indices(self, int frame, int index_1, int index_2):
-        extended_frame = self.get_extended_frame(frame, self.oxygen_trajectory)
-        return self.distance(extended_frame[index_1], extended_frame[index_2])
+
+    cpdef double[:] distance_vector(self, double[:] atompos_1, double[:] atompos_2):
+        cdef double x[3]
+        return x
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return 0
         
-    cdef double position_of_index(self, int index, double * position_array):
-        cdef int atom_index, box_index, i, j, k
         
-        atom_index = index % self.atom_number_unextended
-        box_index = index / self.atom_number_unextended
+    cpdef double[:] distance_vector(self, int index_1, double[:, ::1] frame_1, 
+                                    int index_2, double[:, ::1] frame_2):
+        cdef: 
+            int atom_index, box_index, i, j, k, ix
+            double[3] pos_1, pos_2, distance
+        
+        atom_index = index_1 % frame_1.shape[0]
+        box_index = index_1 / frame_1.shape[0]
+        
+        i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
+        j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
+        k = box_index % self.box_multiplier[2]
+        
+        for ix in range(3):
+            pos_1[ix] =  frame_1[atom_index, ix] + i * self.pbc_matrix[0, ix] \
+                                                 + j * self.pbc_matrix[1, ix] \
+                                                 + k * self.pbc_matrix[2, ix]
+
+        atom_index = index_2 % frame_2.shape[0]
+        box_index = index_2 / frame_2.shape[0]
 
         i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
         j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
         k = box_index % self.box_multiplier[2]
-
+        
+        for ix in range(3):
+            pos_2[ix] =  frame_2[atom_index, ix] + i * self.pbc_matrix[0, ix] \
+                                                 + j * self.pbc_matrix[1, ix] \
+                                                 + k * self.pbc_matrix[2, ix]
+                                              
+        return self.distance(pos_1, pos_2)
+    
     cdef get_extended_frame_inplace(self, int atomnumber_unextended, double[:, ::1] frame_to_be_extended):
         cdef:
             int x, y, z, i, j
@@ -136,6 +157,9 @@ cdef class AtomBox:
         extended_frame[:unextended_frame.shape[0]] = unextended_frame
         self.get_extended_frame_inplace(unextended_frame.shape[0], extended_frame)
         return extended_frame
+        
+
+        
 
 cdef class AtomBox_Cubic(AtomBox):
     """Subclass of AtomBox, which takes care of orthogonal periodic MD boxes"""
