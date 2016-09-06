@@ -19,7 +19,7 @@ from mdkmc.atoms import numpyatom as npa
 def determine_PO_pairs(O_frame, P_frame, pbc):
     P_neighbors = np.zeros(O_frame.shape[0], int)
     for i in range(O_frame.shape[0]):
-        P_index = cnpa.nextNeighbor(O_frame[i], P_frame, pbc)[0]
+        P_index = cnpa.next_neighbor(O_frame[i], P_frame, pbc)[0]
         P_neighbors[i] = P_index
     return P_neighbors
     

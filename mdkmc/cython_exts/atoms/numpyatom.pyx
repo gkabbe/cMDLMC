@@ -199,7 +199,7 @@ cpdef double sqdist(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
     return dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2]
 
 
-def nextNeighbor(double [:] a1_pos, double [:, ::1] atoms_pos, double [:] pbc, exclude_identical_position=False):
+def next_neighbor(double [:] a1_pos, double [:, ::1] atoms_pos, double [:] pbc, exclude_identical_position=False):
     "search for nearest neighbor and return its index and distance"
     cdef:
         double mindist = 1e6
@@ -215,7 +215,7 @@ def nextNeighbor(double [:] a1_pos, double [:, ::1] atoms_pos, double [:] pbc, e
     return minind, mindist
 
 
-def nextNeighbor_nonortho(double [:] a1_pos, double [:, ::1] atoms_pos, double [:,::1] h, double [:,::1] h_inv):
+def next_neighbor_nonortho(double [:] a1_pos, double [:, ::1] atoms_pos, double [:,::1] h, double [:,::1] h_inv):
     "search for nearest neighbor and return its index and distance. For nonorthogonal boxes"
     cdef:
         double mindist = 1e6

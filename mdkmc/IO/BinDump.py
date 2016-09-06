@@ -23,7 +23,7 @@ def npget_acidHs(atoms, pbc, only_indices=False):
     acidH_indices = []
     atoms_pos = np.array(atoms["pos"], order="C")
     for i, atom in enumerate(atoms_pos):
-        if atoms[i]["name"] == "H" and atoms[cython_npa.nextNeighbor(
+        if atoms[i]["name"] == "H" and atoms[cython_npa.next_neighbor(
                 atom, atoms_pos, pbc, exclude_identical_position=True)[0]]["name"] == "O":
             acidH_indices.append(i)
     if only_indices:
@@ -168,7 +168,7 @@ def npsave_covevo(fname, Os, Hs, pbc, nonortho=False, verbose=False):
 
         for i in range(covevo.shape[0]):
             for j in range(covevo.shape[1]):
-                covevo[i, j] = cython_npa.nextNeighbor_nonortho(Hs[i, j], Os[i], hmat, hmat_inv)[0]
+                covevo[i, j] = cython_npa.next_neighbor_nonortho(Hs[i, j], Os[i], hmat, hmat_inv)[0]
             if verbose and i % 100 == 0:
                 print("# Frame {: 6d} ({:5.0f} fps)".format(
                     i, float(i) / (time.time() - start_time)), end=' ')
@@ -177,7 +177,7 @@ def npsave_covevo(fname, Os, Hs, pbc, nonortho=False, verbose=False):
     else:
         for i in range(covevo.shape[0]):
             for j in range(covevo.shape[1]):
-                covevo[i, j] = cython_npa.nextNeighbor(Hs[i, j], Os[i], pbc=pbc)[0]
+                covevo[i, j] = cython_npa.next_neighbor(Hs[i, j], Os[i], pbc=pbc)[0]
             if verbose and i % 100 == 0:
                 print("# Frame {: 6d} ({:5.0f} fps)".format(
                     i, float(i) / (time.time() - start_time)), end='\r')

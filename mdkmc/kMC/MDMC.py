@@ -191,13 +191,13 @@ class MDMC:
         if self.nonortho:
             for i in range(oxygen_atoms.shape[0]):
                 phosphorus_index = \
-                    npa.nextNeighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, atom_box.h,
+                    npa.next_neighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, atom_box.h,
                                               atom_box.h_inv)[0]
                 phosphorus_neighbors[i] = phosphorus_index
         else:
             for i in range(oxygen_atoms.shape[0]):
                 phosphorus_index = \
-                    npa.nextNeighbor(oxygen_atoms[i], phosphorus_atoms,
+                    npa.next_neighbor(oxygen_atoms[i], phosphorus_atoms,
                                      atom_box.periodic_boundaries_extended)[0]
                 phosphorus_neighbors[i] = phosphorus_index
         return phosphorus_neighbors

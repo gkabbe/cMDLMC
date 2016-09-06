@@ -14,7 +14,7 @@ from mdkmc.cython_exts.helper import analysis_helper as ah
 def get_P_neighbors(O_frame, P_frame, pbc):
     P_neighbors = np.zeros(O_frame.shape[0], int)
     for i in range(O_frame.shape[0]):
-        P_index = npa.nextNeighbor(O_frame[i], P_frame, pbc=pbc)[0]
+        P_index = npa.next_neighbor(O_frame[i], P_frame, pbc=pbc)[0]
         P_neighbors[i] = P_index
     return P_neighbors
 

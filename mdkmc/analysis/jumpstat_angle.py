@@ -178,7 +178,7 @@ from IO import BinDump
 def determine_oxy_neighbor_pairs(O_frame, neighbor_frame, pbc):
 	neighbors = np.zeros(O_frame.shape[0], int)
 	for i in range(O_frame.shape[0]):
-		nb_index = npa.nextNeighbor(O_frame[i], neighbor_frame, pbc)[0]
+		nb_index = npa.next_neighbor(O_frame[i], neighbor_frame, pbc)[0]
 		neighbors[i] = nb_index
 	return neighbors
 
