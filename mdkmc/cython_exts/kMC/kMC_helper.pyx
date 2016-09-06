@@ -93,7 +93,7 @@ cdef class AtomBox:
     cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
         return 0
 
-    cpdef double[:] distance_vector(self, double[:] atompos_1, double[:] atompos_2):
+    cpdef double[:] posdiff(self, double[:] atompos_1, double[:] atompos_2):
         cdef double x[3]
         return x
 
@@ -101,7 +101,7 @@ cdef class AtomBox:
         return 0
         
         
-    cpdef double[:] distance_vector(self, int index_1, double[:, ::1] frame_1, 
+    cpdef double[:] distance_extended(self, int index_1, double[:, ::1] frame_1,
                                     int index_2, double[:, ::1] frame_2):
         cdef: 
             int atom_index, box_index, i, j, k, ix
@@ -131,35 +131,8 @@ cdef class AtomBox:
                                                  + j * self.pbc_matrix[1, ix] \
                                                  + k * self.pbc_matrix[2, ix]
                                               
-        return self.distance(pos_1, pos_2)
-    
-    cdef get_extended_frame_inplace(self, int atomnumber_unextended, double[:, ::1] frame_to_be_extended):
-        cdef:
-            int x, y, z, i, j
+        return self.posdiff(pos_1, pos_2)
 
-        self.frame_reshaped = <double[:self.box_multiplier[0], :self.box_multiplier[1],
-                                      :self.box_multiplier[2], :atomnumber_unextended, :3] > &frame_to_be_extended[0, 0]
-
-        for x in range(self.box_multiplier[0]):
-            for y in range(self.box_multiplier[1]):
-                for z in range(self.box_multiplier[2]):
-                    for i in range(atomnumber_unextended):
-                        for j in range(3):
-                            if x + y + z != 0:
-                                self.frame_reshaped[x, y, z, i, j] = self.frame_reshaped[0, 0, 0, i, j] \
-                                    + x * self.pbc_matrix[0, j] \
-                                    + y * self.pbc_matrix[1, j] \
-                                    + z * self.pbc_matrix[2, j]
-
-    def get_extended_frame(self, double[:, ::1] unextended_frame):
-        cdef np.ndarray [np.double_t, ndim = 2] extended_frame  = \
-            np.zeros((self.box_multiplier[0] * self.box_multiplier[1] * self.box_multiplier[2] * unextended_frame.shape[0], 3))
-        extended_frame[:unextended_frame.shape[0]] = unextended_frame
-        self.get_extended_frame_inplace(unextended_frame.shape[0], extended_frame)
-        return extended_frame
-        
-
-        
 
 cdef class AtomBox_Cubic(AtomBox):
     """Subclass of AtomBox, which takes care of orthogonal periodic MD boxes"""
@@ -182,8 +155,12 @@ cdef class AtomBox_Cubic(AtomBox):
         return cnpa.length_ptr(atompos_1, atompos_2, & self.periodic_boundaries_extended[0])
 
     cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
-#         return cnpa.length_ptr( & atompos_1[0], & atompos_2[0], & self.periodic_boundaries_extended[0])
         return cnpa.length(atompos_1, atompos_2, self.periodic_boundaries_extended)
+
+    cpdef double[:] posdiff(self, double[:] atompos_1, double[:] atompos_2):
+        cdef double x[3]
+        cnpa.diff_ptr(&atompos_1[0], &atompos_2[0], &self.periodic_boundaries_extended[0], &x[0])
+        return x
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3, & self.periodic_boundaries_extended[0])
@@ -228,6 +205,11 @@ cdef class AtomBox_Monoclin(AtomBox):
 
     cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
         return cnpa.length_nonortho_bruteforce_ptr(& atompos_1[0], & atompos_2[0], & self.h[0, 0], & self.h_inv[0, 0])
+
+    cpdef double[:] posdiff(self, double[:] atompos_1, double[:] atompos_2):
+        cdef double x[3]
+        cnpa.diff_nonortho(atompos_1, atompos_2, x[0], self.h, self.h_inv)
+        return x
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return cnpa.angle_ptr_nonortho(atompos_2, atompos_1, atompos_2, atompos_3, & self.h[0, 0], & self.h_inv[0, 0])
