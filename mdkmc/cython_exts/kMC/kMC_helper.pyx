@@ -164,9 +164,9 @@ cdef class AtomBox:
 cdef class AtomBox_Cubic(AtomBox):
     """Subclass of AtomBox, which takes care of orthogonal periodic MD boxes"""
 
-    def __cinit__(self, double[:, :, ::1] oxygen_trajectory,
-                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier,
-                  double[:, :, ::1] phosphorus_trajectory=None):
+    def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
+                  double[:, :, ::1] phosphorus_trajectory,
+                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier):
         cdef int i
 
         self.pbc_matrix = np.zeros((3, 3))
@@ -182,10 +182,23 @@ cdef class AtomBox_Cubic(AtomBox):
         return cnpa.length_ptr(atompos_1, atompos_2, & self.periodic_boundaries_extended[0])
 
     cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
-        return cnpa.length_ptr( & atompos_1[0], & atompos_2[0], & self.periodic_boundaries_extended[0])
+#         return cnpa.length_ptr( & atompos_1[0], & atompos_2[0], & self.periodic_boundaries_extended[0])
+        return cnpa.length(atompos_1, atompos_2, self.periodic_boundaries_extended)
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3, & self.periodic_boundaries_extended[0])
+
+    def determine_phosphorus_oxygen_pairs(self, frame_number):
+        phosphorus_neighbors = np.zeros(self.oxygennumber_extended, int)
+        oxygen_atoms = self.oxygen_trajectory[frame_number]
+        phosphorus_atoms = self.phosphorus_trajectory[frame_number]
+
+        for i in range(oxygen_atoms.shape[0]):
+            phosphorus_index = \
+                cnpa.next_neighbor(oxygen_atoms[i], phosphorus_atoms,
+                                   self.periodic_boundaries_extended)[0]
+            phosphorus_neighbors[i] = phosphorus_index
+        return phosphorus_neighbors
 
 
 cdef class AtomBox_Monoclin(AtomBox):
