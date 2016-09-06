@@ -82,28 +82,28 @@ cpdef double length_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, do
         int i,j,k,dim
         double mindist = 1e6, dist
 
-    diff_ptr_nonortho(&a1_pos[0], &a2_pos[0], &diffvec[0], &h[0,0], &h_inv[0,0])
+    diff_ptr_nonortho(&a1_pos[0], &a2_pos[0], &diffvec[0], &h[0, 0], &h_inv[0, 0])
     for i in xrange(-1, 2):
         for j in xrange(-1, 2):
             for k in xrange(-1, 2):
                 d.clear()
                 for dim in range(3):
-                    d.push_back(diffvec[dim] + i*h[dim,0] + j*h[dim,1] + k*h[dim,2])
+                    d.push_back(diffvec[dim] + i * h[dim, 0] + j * h[dim, 1] + k * h[dim, 2])
                 dists.push_back(d)
     for i in range(dists.size()):
-        dist = dists[i][0]*dists[i][0] + dists[i][1]*dists[i][1] + dists[i][2]*dists[i][2]
+        dist = dists[i][0] * dists[i][0] + dists[i][1] * dists[i][1] + dists[i][2] * dists[i][2]
         if dist < mindist:
             mindist = dist
     return sqrt(mindist)
 
 
-cdef double length_nonortho_bruteforce_ptr(double * a1_pos, double * a2_pos, double * h,
-                                           double * h_inv) nogil:
+cdef double length_nonortho_bruteforce_ptr(double *a1_pos, double *a2_pos, double *h,
+                                           double *h_inv) nogil:
     cdef:
         double diffvec[3]
         vector[double] d
         vector[vector[double]] dists
-        int i,j,k,dim
+        int i, j, k, dim
         double mindist = 1e6, dist
 
     diff_ptr_nonortho(a1_pos, a2_pos, diffvec, h, h_inv)
@@ -112,10 +112,11 @@ cdef double length_nonortho_bruteforce_ptr(double * a1_pos, double * a2_pos, dou
             for k in xrange(-1, 2):
                 d.clear()
                 for dim in range(3):
-                    d.push_back(diffvec[dim] + i*h[3*dim] + j*h[3*dim+1] + k*h[3*dim+2])
+                    d.push_back(
+                        diffvec[dim] + i * h[3 * dim] + j * h[3 * dim + 1] + k * h[3 * dim + 2])
                 dists.push_back(d)
     for i in range(dists.size()):
-        dist = dists[i][0]*dists[i][0] + dists[i][1]*dists[i][1] + dists[i][2]*dists[i][2]
+        dist = dists[i][0] * dists[i][0] + dists[i][1] * dists[i][1] + dists[i][2] * dists[i][2]
         if dist < mindist:
             mindist = dist
     return sqrt(mindist)
@@ -126,19 +127,19 @@ cdef diff_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:] d
     cdef:
         vector[double] d
         vector[vector[double]] dists
-        int i,j,k,dim,index
+        int i, j, k, dim, index
         double mindist = 1e6, dist
 
-    diff_ptr_nonortho(&a1_pos[0], &a2_pos[0], &diffvec[0], &h[0,0], &h_inv[0,0])
+    diff_ptr_nonortho(&a1_pos[0], &a2_pos[0], &diffvec[0], &h[0, 0], &h_inv[0, 0])
     for i in xrange(-1, 2):
         for j in xrange(-1, 2):
             for k in xrange(-1, 2):
                 d.clear()
                 for dim in range(3):
-                    d.push_back(diffvec[dim] + i*h[dim,0] + j*h[dim,1] + k*h[dim,2])
+                    d.push_back(diffvec[dim] + i * h[dim, 0] + j * h[dim, 1] + k * h[dim, 2])
                 dists.push_back(d)
     for i in range(dists.size()):
-        dist = dists[i][0]*dists[i][0] + dists[i][1]*dists[i][1] + dists[i][2]*dists[i][2]
+        dist = dists[i][0] * dists[i][0] + dists[i][1] * dists[i][1] + dists[i][2] * dists[i][2]
         if dist < mindist:
             mindist = dist
             index = i
@@ -162,7 +163,7 @@ cpdef double length(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
 
     diff_ptr(&a1_pos[0], &a2_pos[0], &pbc[0], &dist[0])
 
-    return sqrt(dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2])
+    return sqrt(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2])
 
 
 cdef double length_ptr(double *a1_pos, double *a2_pos, double *pbc) nogil:
@@ -172,7 +173,7 @@ cdef double length_ptr(double *a1_pos, double *a2_pos, double *pbc) nogil:
 
     diff_ptr(a1_pos, a2_pos, pbc, &dist[0])
 
-    return sqrt(dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2])
+    return sqrt(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2])
         
 
 cpdef double sqdist(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
@@ -181,7 +182,7 @@ cpdef double sqdist(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
         int i
     diff_ptr(&a1_pos[0], &a2_pos[0], &pbc[0], &dist[0])
 
-    return dist[0]*dist[0]+dist[1]*dist[1]+dist[2]*dist[2]
+    return dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2]
 
 
 def next_neighbor(double [:] a1_pos, double [:, ::1] atoms_pos, double [:] pbc, *,
