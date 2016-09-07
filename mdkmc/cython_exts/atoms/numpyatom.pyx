@@ -42,7 +42,7 @@ cdef void diff_ptr(double *a1_pos, double *a2_pos, double *pbc, double *diffvec)
 
 
 cdef void diff_nonortho(double [:] a1_pos, double [:] a2_pos, double [:] diffvec,
-                        double [:,::1] h, double [:,::1] h_inv) nogil:
+                        double [:,::1] h, double [:,::1] h_inv):
     cdef:
         int i
 

@@ -14,6 +14,8 @@ cdef diff_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:] d
 
 cdef void diff_ptr(double *a1_pos, double *a2_pos, double *pbc, double *diffvec) nogil
 
+cdef void diff_nonortho(double [:] a1_pos, double [:] a2_pos, double [:] diffvec, double [:,::1] h, double [:,::1] h_inv)
+
 cdef void diff_ptr_nonortho(double  *a1_pos, double *a2_pos, double *diffvec, double * h, double * h_inv) nogil
 
 cpdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:] pbc)
