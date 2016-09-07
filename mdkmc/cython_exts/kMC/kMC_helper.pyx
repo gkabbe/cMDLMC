@@ -1,7 +1,6 @@
 # cython: profile=False
 # cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
 import time
-import types
 import numpy as np
 
 cimport numpy as np
@@ -77,14 +76,20 @@ cdef class AtomBox:
         public double[:] periodic_boundaries_extended
         double[:, ::1] pbc_matrix
         int[:] box_multiplier
+        int oxygen_number_extended
+        int phosphorus_number_extended
 
     def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
                   double[:, :, ::1] phosphorus_trajectory,
-                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier):
+                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
         self.oxygen_trajectory = oxygen_trajectory
         self.phosphorus_trajectory = phosphorus_trajectory
         self.periodic_boundaries = periodic_boundaries
-        self.box_multiplier = box_multiplier
+        self.box_multiplier = np.asarray(box_multiplier, dtype=np.int32)
+        self.oxygen_number_extended = self.oxygen_trajectory.shape[1] * box_multiplier[0] * \
+                                      box_multiplier[1] * box_multiplier[2]
+        self.phosphorus_number_extended = self.phosphorus_trajectory.shape[1] * box_multiplier[0]\
+                                          * box_multiplier[1] * box_multiplier[2]
 
 
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
@@ -99,10 +104,9 @@ cdef class AtomBox:
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return 0
-        
-        
+
     cpdef double[:] distance_extended(self, int index_1, double[:, ::1] frame_1,
-                                    int index_2, double[:, ::1] frame_2):
+                                      int index_2, double[:, ::1] frame_2):
         cdef: 
             int atom_index, box_index, i, j, k, ix
             double[3] pos_1, pos_2, distance
@@ -139,7 +143,7 @@ cdef class AtomBox_Cubic(AtomBox):
 
     def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
                   double[:, :, ::1] phosphorus_trajectory,
-                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier):
+                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
         cdef int i
 
         self.pbc_matrix = np.zeros((3, 3))
@@ -166,7 +170,7 @@ cdef class AtomBox_Cubic(AtomBox):
         return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3, & self.periodic_boundaries_extended[0])
 
     def determine_phosphorus_oxygen_pairs(self, frame_number):
-        phosphorus_neighbors = np.zeros(self.oxygennumber_extended, int)
+        phosphorus_neighbors = np.zeros(self.oxygen_number_extended, int)
         oxygen_atoms = self.oxygen_trajectory[frame_number]
         phosphorus_atoms = self.phosphorus_trajectory[frame_number]
 
@@ -186,7 +190,7 @@ cdef class AtomBox_Monoclin(AtomBox):
 
     def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
                   double[:, :, ::1] phosphorus_trajectory,
-                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, int[:] box_multiplier):
+                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
 
         self.periodic_boundaries_extended = np.array(periodic_boundaries)
         for i in range(0, 3):
@@ -208,7 +212,7 @@ cdef class AtomBox_Monoclin(AtomBox):
 
     cpdef double[:] posdiff(self, double[:] atompos_1, double[:] atompos_2):
         cdef double x[3]
-        cnpa.diff_nonortho(atompos_1, atompos_2, x[0], self.h, self.h_inv)
+        cnpa.diff_nonortho(atompos_1, atompos_2, x, self.h, self.h_inv)
         return x
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
