@@ -83,9 +83,9 @@ cpdef double length_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, do
         double mindist = 1e6, dist
 
     diff_ptr_nonortho(&a1_pos[0], &a2_pos[0], &diffvec[0], &h[0, 0], &h_inv[0, 0])
-    for i in xrange(-1, 2):
-        for j in xrange(-1, 2):
-            for k in xrange(-1, 2):
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            for k in range(-1, 2):
                 d.clear()
                 for dim in range(3):
                     d.push_back(diffvec[dim] + i * h[dim, 0] + j * h[dim, 1] + k * h[dim, 2])
@@ -107,9 +107,9 @@ cdef double length_nonortho_bruteforce_ptr(double *a1_pos, double *a2_pos, doubl
         double mindist = 1e6, dist
 
     diff_ptr_nonortho(a1_pos, a2_pos, diffvec, h, h_inv)
-    for i in xrange(-1, 2):
-        for j in xrange(-1, 2):
-            for k in xrange(-1, 2):
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            for k in range(-1, 2):
                 d.clear()
                 for dim in range(3):
                     d.push_back(
@@ -131,9 +131,9 @@ cdef diff_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:] d
         double mindist = 1e6, dist
 
     diff_ptr_nonortho(&a1_pos[0], &a2_pos[0], &diffvec[0], &h[0, 0], &h_inv[0, 0])
-    for i in xrange(-1, 2):
-        for j in xrange(-1, 2):
-            for k in xrange(-1, 2):
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            for k in range(-1, 2):
                 d.clear()
                 for dim in range(3):
                     d.push_back(diffvec[dim] + i * h[dim, 0] + j * h[dim, 1] + k * h[dim, 2])
@@ -194,7 +194,7 @@ def next_neighbor(double [:] a1_pos, double [:, ::1] atoms_pos, double [:] pbc, 
         int i
         double dist = -1
 
-    for i in xrange(atoms_pos.shape[0]):
+    for i in range(atoms_pos.shape[0]):
         dist = sqdist(a1_pos, atoms_pos[i], pbc)
         if dist < mindist and (dist > 0 or exclude_identical_position == False):
             mindist = dist
@@ -211,7 +211,7 @@ def next_neighbor_nonortho(double [:] a1_pos, double [:, ::1] atoms_pos, double 
         int i
         double diff[3]
 
-    for i in xrange(atoms_pos.shape[0]):
+    for i in range(atoms_pos.shape[0]):
         dist = length_nonortho_bruteforce(a1_pos, atoms_pos[i], h, h_inv)
         if dist < mindist:
             mindist = dist
