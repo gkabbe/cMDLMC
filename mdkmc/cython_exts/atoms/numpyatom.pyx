@@ -202,6 +202,23 @@ def next_neighbor(double [:] a1_pos, double [:, ::1] atoms_pos, double [:] pbc, 
     return minind, mindist
 
 
+cdef int next_neighbor_index(double [:] a1_pos, double [:, ::1] atoms_pos, double [:] pbc, *,
+                  exclude_identical_position=False):
+    "search for nearest neighbor and return its index and distance"
+    cdef:
+        double mindist = 1e6
+        int minind = -1
+        int i
+        double dist = -1
+
+    for i in range(atoms_pos.shape[0]):
+        dist = sqdist(a1_pos, atoms_pos[i], pbc)
+        if dist < mindist and (dist > 0 or exclude_identical_position == False):
+            mindist = dist
+            minind = i
+    return minind, mindist
+
+
 def next_neighbor_nonortho(double [:] a1_pos, double [:, ::1] atoms_pos, double [:,::1] h, 
                            double [:,::1] h_inv):
     "search for nearest neighbor and return its index and distance. For nonorthogonal boxes"

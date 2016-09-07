@@ -149,16 +149,11 @@ class MDMC:
         # Save settings as object variable
         self.__dict__.update(file_kwargs)
 
-        if self.po_angle:
-            self.oxygen_trajectory, self.phosphorus_trajectory = load_atoms(self.filename,
-                                                                            self.auxiliary_file,
-                                                                            self.clip_trajectory,
-                                                                            "O", "P",
-                                                                            verbose=self.verbose)
-        else:
-            self.oxygen_trajectory = load_atoms(self.filename, self.auxiliary_file,
-                                                self.clip_trajectory, "O",
-                                                verbose=self.verbose)
+        self.oxygen_trajectory, self.phosphorus_trajectory = load_atoms(self.filename,
+                                                                        self.auxiliary_file,
+                                                                        "O", "P",
+                                                                        clip=self.clip_trajectory,
+                                                                        verbose=self.verbose)
 
         if self.seed is not None:
             np.random.seed(self.seed)
@@ -351,25 +346,16 @@ class MDMC:
         # Check periodic boundaries and determine whether cell is orthorhombic/cubic
         #  or non-orthorhombic/monoclin
         if self.nonortho:
-            if self.po_angle:
-                atombox = kMC_helper.AtomBox_Monoclin(self.oxygen_trajectory, self.pbc,
-                                                      np.array(self.box_multiplier, dtype=np.int32),
-                                                      self.phosphorus_trajectory)
-            else:
-                atombox = kMC_helper.AtomBox_Monoclin(self.oxygen_trajectory, self.pbc,
-                                                      np.array(self.box_multiplier, dtype=np.int32))
+            atombox = kMC_helper.AtomBox_Monoclin(self.oxygen_trajectory,
+                                                  self.phosphorus_trajectory, self.pbc,
+                                                  self.box_multiplier)
         else:
-            if self.po_angle:
-                atombox = kMC_helper.AtomBox_Cubic(self.oxygen_trajectory, self.pbc,
-                                                   np.array(self.box_multiplier, dtype=np.int32),
-                                                   self.phosphorus_trajectory)
-            else:
-                atombox = kMC_helper.AtomBox_Cubic(self.oxygen_trajectory, self.pbc,
-                                                   np.array(self.box_multiplier, dtype=np.int32))
+            atombox = kMC_helper.AtomBox_Cubic(self.oxygen_trajectory, self.phosphorus_trajectory,
+                                               self.pbc,
+                                               self.box_multiplier)
 
-        if self.po_angle:
-            self.phosphorus_neighbors = self.determine_phosphorus_oxygen_pairs(frame_number=0,
-                                                                               atom_box=atombox)
+        self.phosphorus_neighbors = self.determine_phosphorus_oxygen_pairs(frame_number=0,
+                                                                           atom_box=atombox)
 
         if self.var_prot_single:
             displacement, MSD, msd_var, msd2, msd3, msd4, \
@@ -391,16 +377,11 @@ class MDMC:
         start_time = time.time()
 
         helper = kMC_helper.LMCRoutine(atombox=atombox,
-                                       pbc=self.pbc,
-                                       box_multiplier=np.array(self.box_multiplier, dtype=np.int32),
-                                       P_neighbors=np.array(self.phosphorus_neighbors,
-                                                            dtype=np.int32),
-                                       nonortho=self.nonortho,
                                        jumprate_parameter_dict=self.jumprate_params_fs,
                                        cutoff_radius=self.cutoff_radius,
                                        angle_threshold=self.angle_threshold,
                                        neighbor_search_radius=self.neighbor_search_radius,
-                                       jumprate_type=self.jumprate_type)
+                                       jumprate_type=self.jumprate_type, verbose=self.verbose)
 
         helper.determine_neighbors(0)
         helper.store_transitions_in_vector(verbose=self.verbose)

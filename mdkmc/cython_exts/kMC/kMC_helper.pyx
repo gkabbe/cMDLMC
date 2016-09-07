@@ -80,12 +80,11 @@ cdef class AtomBox:
         int oxygen_number_extended
         int phosphorus_number_extended
 
-    def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
-                  double[:, :, ::1] phosphorus_trajectory,
-                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
+    def __cinit__(self, double[:, :, ::1] oxygen_trajectory, double[:, :, ::1] phosphorus_trajectory,
+                  periodic_boundaries, box_multiplier):
         self.oxygen_trajectory = oxygen_trajectory
         self.phosphorus_trajectory = phosphorus_trajectory
-        self.periodic_boundaries = periodic_boundaries
+        self.periodic_boundaries = np.asfarray(periodic_boundaries)
         self.box_multiplier = np.asarray(box_multiplier, dtype=np.int32)
         self.oxygen_number_extended = self.oxygen_trajectory.shape[1] * box_multiplier[0] * \
                                       box_multiplier[1] * box_multiplier[2]
@@ -150,6 +149,20 @@ cdef class AtomBox:
                                               
         return self.distance_vector(pos_1, pos_2)
 
+    cpdef int next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
+        return 0
+
+
+    def determine_phosphorus_oxygen_pairs(self, frame_number):
+        phosphorus_neighbors = np.zeros(self.oxygen_number_extended, int)
+        oxygen_atoms = self.oxygen_trajectory[frame_number]
+        phosphorus_atoms = self.phosphorus_trajectory[frame_number]
+
+        for oxygen_index in range(oxygen_atoms.shape[0]):
+            phosphorus_index = self.next_neighbor(oxygen_index, oxygen_atoms, phosphorus_atoms)
+            phosphorus_neighbors[oxygen_index] = phosphorus_index
+        return phosphorus_neighbors
+
 
 cdef class AtomBox_Cubic(AtomBox):
     """Subclass of AtomBox for orthogonal periodic MD boxes"""
@@ -182,17 +195,8 @@ cdef class AtomBox_Cubic(AtomBox):
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3, & self.periodic_boundaries_extended[0])
 
-    def determine_phosphorus_oxygen_pairs(self, frame_number):
-        phosphorus_neighbors = np.zeros(self.oxygen_number_extended, int)
-        oxygen_atoms = self.oxygen_trajectory[frame_number]
-        phosphorus_atoms = self.phosphorus_trajectory[frame_number]
+    cpdef int next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
 
-        for i in range(oxygen_atoms.shape[0]):
-            phosphorus_index = \
-                cnpa.next_neighbor(oxygen_atoms[i], phosphorus_atoms,
-                                   self.periodic_boundaries_extended)[0]
-            phosphorus_neighbors[i] = phosphorus_index
-        return phosphorus_neighbors
 
 
 cdef class AtomBox_Monoclin(AtomBox):
@@ -329,7 +333,7 @@ cdef class LMCRoutine:
 
     cdef calculate_transitions(self, int frame_number, double r_cut, double angle_thresh):
         cdef:
-            int i, j, index2
+            int start_index, neighbor_index, destination_index
             double dist, PO_angle
             vector[np.int32_t] start_indices_tmp
             vector[np.int32_t] destination_indices_tmp
@@ -338,18 +342,20 @@ cdef class LMCRoutine:
         start_indices_tmp.clear()
         destination_indices_tmp.clear()
         jump_probability_tmp.clear()
-        for i in range(self.atombox.oxygen_number_extended):
-            for j in range(self.neighbors[i].size()):
-                index2 = self.neighbors[i][j]
-                dist = self.atombox.distance_extended_box(i,
+        for start_index in range(self.atombox.oxygen_number_extended):
+            for neighbor_index in range(self.neighbors[start_index].size()):
+                destination_index = self.neighbors[start_index][neighbor_index]
+                dist = self.atombox.distance_extended_box(start_index,
                                                       self.atombox.oxygen_trajectory[frame_number],
-                                                      index2,
+                                                      destination_index,
                                                       self.atombox.oxygen_trajectory[frame_number])
                 if dist < r_cut:
-                    poo_angle = self.atombox.angle_ptr( & self.phosphorus_frame_extended[self.P_neighbors[i], 0],
-                                                       & self.oxygen_frame_extended[i, 0], & self.oxygen_frame_extended[index2, 0])
-                    start_indices_tmp.push_back(i)
-                    destination_indices_tmp.push_back(self.neighbors[i][j])
+                    poo_angle = self.atombox.angle_extended_box(
+                        self.P_neighbors[start_index], self.atombox.phosphorus_trajectory[frame_number],
+                        start_index, self.atombox.oxygen_trajectory[frame_number],
+                        destination_index, self.atombox.oxygen_trajectory[frame_number])
+                    start_indices_tmp.push_back(start_index)
+                    destination_indices_tmp.push_back(destination_index)
                     if poo_angle >= angle_thresh:
                         jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist))
                     else:
