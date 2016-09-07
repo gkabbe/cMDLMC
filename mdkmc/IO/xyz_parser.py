@@ -125,15 +125,18 @@ def load_trajectory_from_npz(npz_fname, *atom_names, clip=None, verbose=False):
         if verbose:
             print("# Clipping trajectory to the first {} frames".format(clip))
         trajectory = trajectory[:clip]
-    single_atom_trajs = []
-    for atom in atom_names:
-        atom_traj = trajectory[:, trajectory[0]["name"] == atom]
-        atom_traj = np.array(atom_traj["pos"], order="C")
-        single_atom_trajs.append(atom_traj)
-    return single_atom_trajs
+    if len(atom_names) > 0:
+        single_atom_trajs = []
+        for atom in atom_names:
+            atom_traj = trajectory[:, trajectory[0]["name"] == atom]
+            atom_traj = np.array(atom_traj["pos"], order="C")
+            single_atom_trajs.append(atom_traj)
+        return single_atom_trajs
+    else:
+        return trajectory
 
 
-def load_atoms(filename, auxiliary_file, clip, *atom_names, verbose=False):
+def load_atoms(filename, auxiliary_file, *atom_names, verbose=False, clip=None):
     if filename:
         if auxiliary_file:
             if verbose:
@@ -144,9 +147,9 @@ def load_atoms(filename, auxiliary_file, clip, *atom_names, verbose=False):
                     print("# Specified auxiliary file does not exist.")
                     print("# Creating it now...")
                 save_trajectory_to_npz(filename, npz_fname=auxiliary_file,
-                                                  remove_com_movement=True)
+                                       remove_com_movement=True, verbose=verbose)
             return load_trajectory_from_npz(auxiliary_file, *atom_names, clip=clip,
-                                                       verbose=verbose)
+                                            verbose=verbose)
         else:
             aux_fname = os.path.splitext(filename)[0] + ".npz"
             if verbose:
@@ -155,15 +158,15 @@ def load_atoms(filename, auxiliary_file, clip, *atom_names, verbose=False):
             if os.path.exists(aux_fname):
                 print("# Found it!")
                 return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
-                                                           verbose=verbose)
+                                                verbose=verbose)
             else:
                 if verbose:
                     print("# No auxiliary file found.")
                     print("# Will create it now...")
                     save_trajectory_to_npz(filename, npz_fname=aux_fname,
-                                                      remove_com_movement=True)
+                                           remove_com_movement=True, verbose=verbose)
                     return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
-                                                               verbose=verbose)
+                                                    verbose=verbose)
     else:
         print("# Found auxiliary file.")
         print("# Loading from there...")
