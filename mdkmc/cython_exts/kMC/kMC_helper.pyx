@@ -231,7 +231,7 @@ cdef class AtomBox_Monoclin(AtomBox):
         return phosphorus_neighbors
 
 
- cdef class LMCRoutine:
+cdef class LMCRoutine:
     """Main component of the cMD/LMC algorithm.
     This class determines the jump rates within a molecule according to the atomic distances and
     carries out the Monte Carlo steps."""
@@ -242,13 +242,13 @@ cdef class AtomBox_Monoclin(AtomBox):
         # Create containers for the oxygen index from which the proton jump start, for the index of
         # the destination oxygen, and for the jump probability of the oxygen connection.
         # The nested vectors hold the indices and probabilities for the whole trajectory
-        public vector[vector[np.int32_t]] start
-        public vector[vector[np.int32_t]] destination
+        public vector[vector[np.int32_t]] start_indices
+        public vector[vector[np.int32_t]] destination_indices
         public vector[vector[np.float32_t]] jump_probability
         public vector[vector[int]] neighbors
-        int oxygennumber
-        int phosphorusnumber
-        double r_cut, angle_threshold
+        int oxygen_number
+        int phosphorus_number
+        double cutoff_radius, angle_threshold
         double neighbor_search_radius
         public JumprateFunction jumprate_fct
         public AtomBox atombox
@@ -264,22 +264,20 @@ cdef class AtomBox_Monoclin(AtomBox):
             double[:] pbc_extended
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.jumps = 0
-        self.oxygennumber = atombox.oxygen_trajectory.shape[1]
-        self.phosphorusnumber = atombox.phosphorus_trajectory.shape[1]
-        self.r_cut = cutoff_radius
+        self.oxygen_number = atombox.oxygen_number_extended
+        self.phosphorus_number = atombox.phosphorus_number_extended
+        self.cutoff_radius = cutoff_radius
         self.angle_threshold = angle_threshold
         self.neighbor_search_radius = neighbor_search_radius
         self.saved_frame_counter = 0
         self.calculate_jumpmatrix = calculate_jumpmatrix
-        self.jumpmatrix = np.zeros(
-            (self.oxygen_frame_extended.shape[0],
-             self.oxygen_frame_extended.shape[0]))
+        self.jumpmatrix = np.zeros((self.oxygen_number, self.oxygen_number))
         self.atombox = atombox
         if type(seed) != int:
             seed = time.time()
         gsl_rng_set(self.r, seed)
         if verbose:
-            print "#Using seed", seed
+            print "# Using seed", seed
         if jumprate_type == "MD_rates":
             a = jumprate_parameter_dict["a"]
             b = jumprate_parameter_dict["b"]
@@ -293,79 +291,59 @@ cdef class AtomBox_Monoclin(AtomBox):
             T = jumprate_parameter_dict["T"]
             self.jumprate_fct = AEFunction(A, a, b, d0, T)
         else:
-            raise Exception("Jumprate type unknown. Please choose between "
+            raise Exception("Jump rate type unknown. Please choose between "
                             "MD_rates and AE_rates")
-
-
-
 
     def __dealloc__(self):
         gsl_rng_free(self.r)
 
-    def determine_neighbors(self, int framenumber, verbose=False):
+    def determine_neighbors(self, int frame_number, verbose=False):
         cdef:
             int i, j
             double dist
             vector[int] neighbor_list
-        self.oxygen_frame_extended[
-            :self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
-        self.phosphorus_frame_extended[
-            :self.phosphorusnumber_unextended] = self.atombox.phosphorus_trajectory[framenumber]
-
-        self.atombox.get_extended_frame_inplace(
-            self.oxygennumber_unextended, self.oxygen_frame_extended)
-        self.atombox.get_extended_frame_inplace(
-            self.phosphorusnumber_unextended,
-            self.phosphorus_frame_extended)
 
         self.neighbors.clear()
-        for i in xrange(self.oxygen_frame_extended.shape[0]):
+        for i in xrange(self.atombox.oxygen_number_extended):
             neighbor_list.clear()
-            for j in xrange(self.oxygen_frame_extended.shape[0]):
+            for j in xrange(self.atombox.oxygen_number_extended):
                 if i != j:
-                    dist = self.atombox.distance_ptr(& self.oxygen_frame_extended[i, 0], & self.oxygen_frame_extended[j, 0])
+                    dist = self.atombox.distance_extended(i, self.atombox.oxygen_trajectory[
+                        frame_number], j, self.atombox.oxygen_trajectory[frame_number])
                     if dist < self.neighbor_search_radius:
                         neighbor_list.push_back(j)
             self.neighbors.push_back(neighbor_list)
 
-    cdef calculate_transitions_POOangle(self, int framenumber, double r_cut, double angle_thresh):
+    cdef calculate_transitions_poo_angle(self, int frame_number, double r_cut, double angle_thresh):
         cdef:
             int i, j, index2
             double dist, PO_angle
-            vector[np.int32_t] start_tmp
-            vector[np.int32_t] destination_tmp
+            vector[np.int32_t] start_indices_tmp
+            vector[np.int32_t] destination_indices_tmp
             vector[np.float32_t] jump_probability_tmp
 
-        self.oxygen_frame_extended[
-            :self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
-        self.phosphorus_frame_extended[
-            :self.phosphorusnumber_unextended] = self.atombox.phosphorus_trajectory[framenumber]
-
-        self.atombox.get_extended_frame_inplace(
-            self.oxygennumber_unextended, self.oxygen_frame_extended)
-        self.atombox.get_extended_frame_inplace(
-            self.phosphorusnumber_unextended,
-            self.phosphorus_frame_extended)
-
-        start_tmp.clear()
-        destination_tmp.clear()
+        start_indices_tmp.clear()
+        destination_indices_tmp.clear()
         jump_probability_tmp.clear()
-        for i in range(self.oxygen_frame_extended.shape[0]):
+        for i in range(self.atombox.oxygen_number_extended):
             for j in range(self.neighbors[i].size()):
                 index2 = self.neighbors[i][j]
-                dist = self.atombox.distance_ptr(& self.oxygen_frame_extended[i, 0], & self.oxygen_frame_extended[index2, 0])
+                dist = self.atombox.distance_extended(i,
+                                                      self.atombox.oxygen_trajectory[frame_number],
+                                                      index2,
+                                                      self.atombox.oxygen_trajectory[frame_number])
                 if dist < r_cut:
                     POO_angle = self.atombox.angle_ptr( & self.phosphorus_frame_extended[self.P_neighbors[i], 0],
                                                        & self.oxygen_frame_extended[i, 0], & self.oxygen_frame_extended[index2, 0])
-                    start_tmp.push_back(i)
-                    destination_tmp.push_back(self.neighbors[i][j])
+                    start_indices_tmp.push_back(i)
+                    destination_indices_tmp.push_back(self.neighbors[i][j])
                     if POO_angle >= angle_thresh:
                         jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist))
                     else:
                         jump_probability_tmp.push_back(0)
 
-        self.start.push_back(start_tmp)
-        self.destination.push_back(destination_tmp)
+        self.start_indices.push_back(start_indices_tmp)
+        self.destination_indices.push_back(destination_indices_tmp)
         self.jump_probability.push_back(jump_probability_tmp)
         self.saved_frame_counter += 1
 
@@ -405,8 +383,8 @@ cdef class AtomBox_Monoclin(AtomBox):
                         else:
                             jump_probability_tmp.push_back(0)
 
-        self.start.push_back(start_tmp)
-        self.destination.push_back(destination_tmp)
+        self.start_indices.push_back(start_tmp)
+        self.destination_indices.push_back(destination_tmp)
         self.jump_probability.push_back(jump_probability_tmp)
         self.saved_frame_counter += 1
 
@@ -418,12 +396,12 @@ cdef class AtomBox_Monoclin(AtomBox):
 
     def print_transitions(self, int frame):
         cdef int i
-        for i in range(self.start[frame].size()):
-            print self.start[frame][i], self.destination[frame][i], self.jump_probability[frame][i]
-        print "In total", self.start[frame].size(), "connections"
+        for i in range(self.start_indices[frame].size()):
+            print self.start_indices[frame][i], self.destination_indices[frame][i], self.jump_probability[frame][i]
+        print "In total", self.start_indices[frame].size(), "connections"
 
     def return_transitions(self, int frame):
-        return self.start[frame], self.destination[frame], self.jump_probability[frame]
+        return self.start_indices[frame], self.destination_indices[frame], self.jump_probability[frame]
 
     def sweep_list(self, np.uint8_t[:] proton_lattice):
         cdef:
@@ -443,7 +421,7 @@ cdef class AtomBox_Monoclin(AtomBox):
     def store_transitions_in_vector(self, bool verbose=False):
         cdef int i
         for i in range(self.atombox.oxygen_trajectory.shape[0]):
-            self.calculate_transitions_POOangle(i, self.r_cut, self.angle_threshold)
+            self.calculate_transitions_poo_angle(i, self.cutoff_radius, self.angle_threshold)
             if verbose and i % 1000 == 0:
                 print "# Saving transitions {} / {}".format(i, self.atombox.oxygen_trajectory.shape[0]), "\r",
         print ""
@@ -456,12 +434,12 @@ cdef class AtomBox_Monoclin(AtomBox):
             int trajectory_length
             int steps
 
-        steps = self.start[frame].size()
+        steps = self.start_indices[frame].size()
 
         for step in xrange(steps):
             i = gsl_rng_uniform_int(self.r, steps)
-            index_origin = self.start[frame][i]
-            index_destination = self.destination[frame][i]
+            index_origin = self.start_indices[frame][i]
+            index_destination = self.destination_indices[frame][i]
             if proton_lattice[index_origin] > 0 and proton_lattice[index_destination] == 0:
                 if gsl_rng_uniform(self.r) < self.jump_probability[frame][i]:
                     proton_lattice[index_destination] = proton_lattice[index_origin]
@@ -475,13 +453,13 @@ cdef class AtomBox_Monoclin(AtomBox):
             int steps
         trajectory_length = self.atombox.oxygen_trajectory.shape[0]
         while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame + 1:
-            self.calculate_transitions_POOangle(
-                self.saved_frame_counter, self.r_cut, self.angle_threshold)
-        steps = self.start[frame].size()
+            self.calculate_transitions_poo_angle(
+                self.saved_frame_counter, self.cutoff_radius, self.angle_threshold)
+        steps = self.start_indices[frame].size()
         for step in xrange(steps):
             i = gsl_rng_uniform_int(self.r, steps)
-            index_origin = self.start[frame][i]
-            index_destination = self.destination[frame][i]
+            index_origin = self.start_indices[frame][i]
+            index_destination = self.destination_indices[frame][i]
             if proton_lattice[index_origin] > 0 and proton_lattice[index_destination] == 0:
                 if gsl_rng_uniform(self.r) < self.jump_probability[frame][i]:
                     proton_lattice[index_destination] = proton_lattice[index_origin]
