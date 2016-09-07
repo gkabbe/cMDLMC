@@ -129,15 +129,17 @@ CONFIG_DICT = OrderedDict([
         {
             "parse_fct": parse_string,
             "default": "no_default",
-            "help": "Choose between jump rates determined from static DFT activation energy calculations (AE_rates) "
-                    "and jump rates determined from AIMD simulations (MD_rates)."
+            "help": "Choose between jump rates determined from static DFT activation energy "
+                    "calculations (AE_rates) and jump rates determined from AIMD simulations ("
+                    "MD_rates)."
         }),
     ("sweeps",
         {
             "parse_fct": parse_int,
             "default": "no_default",
-            "help": "Number of sweeps for the production run. A sweep is the number of single proton jump attempts, "
-                    "after which (on average) each oxygen bond has been selected once."
+            "help": "Number of sweeps for the production run. A sweep is the number of single "
+                    "proton jump attempts, after which (on average) each oxygen bond has been "
+                    "selected once."
         }),
     ("equilibration_sweeps",
         {
@@ -149,8 +151,8 @@ CONFIG_DICT = OrderedDict([
         {
             "parse_fct": parse_int,
             "default": "no_default",
-            "help": "How many frames to skip when updating the topology from the MD trajectory. A skip of zero frames "
-                    "means that all frames are read from the trajectory."
+            "help": "How many frames to skip when updating the topology from the MD trajectory. A "
+                    "skip of zero frames means that all frames are read from the trajectory."
         }),
     ("print_freq",
         {
@@ -162,16 +164,16 @@ CONFIG_DICT = OrderedDict([
         {
             "parse_fct": parse_int,
             "default": "no_default",
-            "help": "After how many sweeps should quantities such as MSD and covalent bonding autocorrelation function "
-                    "be reset? reset_freq should be a multiple of print_freq, in order to ease the averaging of the "
-                    "final output."
+            "help": "After how many sweeps should quantities such as MSD and covalent bonding "
+                    "autocorrelation function be reset? reset_freq should be a multiple of "
+                    "print_freq, in order to ease the averaging of the final output."
         }),
     ("neighbor_search_radius",
         {
             "parse_fct": parse_float,
             "default": 15.0,
-            "help": "All atoms whose distance is not larger than the neighbor_search_radius are considered as "
-                    "neighbors."
+            "help": "All atoms whose distance is not larger than the neighbor_search_radius are "
+                    "considered as neighbors."
         }),
     ("proton_number",
         {
@@ -183,14 +185,15 @@ CONFIG_DICT = OrderedDict([
         {
             "parse_fct": parse_int,
             "default": None,
-            "help": "Clip the number of frames used from the trajectory. If not specified, the full trajectory will be "
-                    "used."
+            "help": "Clip the number of frames used from the trajectory. If not specified, "
+                    "the full trajectory will be used."
         }),
     ("seed",
         {
             "parse_fct": parse_int,
             "default": None,
-            "help": "The seed for the random number generators. If none is specified, a random one will be chosen."
+            "help": "The seed for the random number generators. If none is specified, a random "
+                    "one will be chosen."
         }),
     ("md_timestep_fs",
         {
@@ -202,29 +205,26 @@ CONFIG_DICT = OrderedDict([
         {
             "parse_fct": parse_float,
             "default": PI / 2,
-            "help": "When using angle dependent jump rates, this option determines up to which value of theta the "
-                    "jump rates will be set to zero. Theta is the angle between the vector connecting an oxygen and its "
-                    "nearest heavy atom neighbor (whose type can be defined via \"o_neighbor\") and the vector "
-                    "connecting the two oxygens between which the jump rate is determined. Default is ninety degrees."
+            "help": "When using angle dependent jump rates, this option determines up to which "
+                    "value of theta the jump rates will be set to zero. Theta is the angle "
+                    "between the vector connecting an oxygen and its nearest heavy atom neighbor "
+                    "(whose type can be defined via \"o_neighbor\") and the vector connecting the "
+                    "two oxygens between which the jump rate is determined. Default is ninety "
+                    "degrees."
         }),
     ("cutoff_radius",
         {
             "parse_fct": parse_float,
             "default": 4.0,
-            "help": "Cutoff radius for the determination of jump rates. If two oxygens have a larger distance, the "
-                    "jump rate will be set to zero."
-        }),
-    ("po_angle",
-        {
-            "parse_fct": parse_bool,
-            "default": True,
-            "help": "Whether to use angle_dependent jump rates or not."
+            "help": "Cutoff radius for the determination of jump rates. If two oxygens have a "
+                    "larger distance, the jump rate will be set to zero."
         }),
     ("shuffle",
         {
             "parse_fct": parse_bool,
             "default": False,
-            "help": "Whether to use shuffle mode, where frames from the trajectory are chosen randomly."
+            "help": "Whether to use shuffle mode, where frames from the trajectory are chosen "
+                    "randomly."
         }),
     ("verbose",
         {
@@ -248,8 +248,8 @@ CONFIG_DICT = OrderedDict([
         {
             "parse_fct": parse_string,
             "default": None,
-            "help": "If a filename is given, the number of proton jumps between each oxygen pair will be counted and "
-                    "saved."
+            "help": "If a filename is given, the number of proton jumps between each oxygen pair "
+                    "will be counted and saved."
         }),
     ("box_multiplier",
         {
@@ -267,12 +267,14 @@ CONFIG_DICT = OrderedDict([
         {
             "parse_fct": get_jumprate_parameters,
             "default": "no_default",
-            "help": "Specify the parameters used for the calculation of the distance dependent jump rate. If the"
-                    "jump rate type is \"MD_rates\", a dict containing values for a, b, and c is expected (parameters"
-                    "for a fermi like step function f(d) = a/(1+exp((x-b)/c) ). If the jump rate type is \"AE_rates\","
-                    "the expected parameters are A, a, x0, xint and T. a, x0 and xint are fit parameters for the "
-                    "function describing the activation energy over the oxygen distance, whereas A and T are parameters"
-                    "of the Arrhenius equation, which converts the activation energy to a jump rate."
+            "help": "Specify the parameters used for the calculation of the distance dependent "
+                    "jump rate. If thejump rate type is \"MD_rates\", a dict containing values "
+                    "for a, b, and c is expected (parametersfor a fermi like step function f(d) = "
+                    "a/(1+exp((x-b)/c) ). If the jump rate type is \"AE_rates\",the expected "
+                    "parameters are A, a, x0, xint and T. a, x0 and xint are fit parameters for "
+                    "the function describing the activation energy over the oxygen distance, "
+                    "whereas A and T are parametersof the Arrhenius equation, which converts the "
+                    "activation energy to a jump rate."
         }),
     ("higher_msd",
         {
