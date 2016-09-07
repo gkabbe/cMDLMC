@@ -103,13 +103,13 @@ cdef class AtomBox:
     cpdef double angle_extended_box(self, int index_1, double[:, ::1] frame_1, int index_2,
                                     double[:, ::1] frame_2, int index_3, double[:, ::1] frame_3):
         """Calculates the angle ∠ index_1 index_2 index_3"""
-        cdef double[3] diff_2_1, diff_2_3
+        cdef double[:] diff_2_1, diff_2_3
 
         diff_2_1 = self.distance_vector_extended_box(index_2, frame_2, index_1, frame_1)
         diff_2_3 = self.distance_vector_extended_box(index_2, frame_2, index_3, frame_3)
 
-        return acos(mh.dot_product(diff_2_1, diff_2_3, 3) / sqrt(
-            mh.dot_product(diff_2_1, diff_2_1, 3)) / sqrt(mh.dot_product(diff_2_3, diff_2_3, 3)))
+        return acos(mh.dot_product(diff_2_1, diff_2_3) / sqrt(
+            mh.dot_product(diff_2_1, diff_2_1)) / sqrt(mh.dot_product(diff_2_3, diff_2_3)))
 
     cpdef double[:] distance_vector(self, double[:] atompos_1, double[:] atompos_2):
         cdef double x[3]

@@ -1,4 +1,5 @@
-#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False, initializedcheck=False
+#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False,
+# initializedcheck=False
 import cython
 cimport numpy as cnp
 
@@ -11,12 +12,21 @@ cdef extern from "math.h":
 #~ cdef extern from "<cmath>":
 #~ 	double round(double x) nogil
 
-cdef double dot_product(double* a1, double* a2, int length) nogil:
+cdef double dot_product_ptr(double* a1, double* a2, int length) nogil:
 	cdef:
 		int i
 		double result = 0
 
 	for i in range(length):
+		result += a1[i] * a2[i]
+	return result
+
+cdef double dot_product(double [:] a1, double [:] a2) nogil:
+	cdef:
+		int i
+		double result = 0
+
+	for i in range(a1.shape[0]):
 		result += a1[i] * a2[i]
 	return result
 

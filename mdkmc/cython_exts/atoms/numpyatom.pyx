@@ -238,8 +238,8 @@ cpdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, d
             v2[i] -= pbc[i]
         while v2[i] < -pbc[i]/2:
             v2[i] += pbc[i]
-    return acos(mh.dot_product(&v1[0], &v2[0], 3) / sqrt(mh.dot_product(&v1[0], &v1[0], 3))\
-        / sqrt(mh.dot_product(&v2[0], &v2[0], 3)))
+    return acos(mh.dot_product_ptr(&v1[0], &v2[0], 3) / sqrt(mh.dot_product_ptr(&v1[0], &v1[0], 3))\
+        / sqrt(mh.dot_product_ptr(&v2[0], &v2[0], 3)))
 
 
 cdef double angle_ptr(double * a1, double * a2, double * a3, double * a4, double * pbc) nogil:
@@ -261,8 +261,8 @@ cdef double angle_ptr(double * a1, double * a2, double * a3, double * a4, double
             v2[i] -= pbc[i]
         while v2[i] < -pbc[i]/2:
             v2[i] += pbc[i]
-    return acos(mh.dot_product(&v1[0], &v2[0], 3) / sqrt(mh.dot_product(&v1[0], &v1[0], 3))\
-        / sqrt(mh.dot_product(&v2[0], &v2[0], 3)))
+    return acos(mh.dot_product_ptr(&v1[0], &v2[0], 3) / sqrt(mh.dot_product_ptr(&v1[0], &v1[0], 3))\
+        / sqrt(mh.dot_product_ptr(&v2[0], &v2[0], 3)))
 
 
 cpdef double angle_nonortho(double [:] a1, double [:] a2, double [:] a3, double [:] a4,
@@ -275,8 +275,8 @@ cpdef double angle_nonortho(double [:] a1, double [:] a2, double [:] a3, double 
     diff_nonortho_bruteforce(a1, a2, v1, h, h_inv)
     diff_nonortho_bruteforce(a3, a4, v2, h, h_inv)
 
-    return acos(mh.dot_product(v1, v2, 3) / sqrt(mh.dot_product(v1, v1, 3)) / \
-                sqrt(mh.dot_product(v2, v2, 3)))
+    return acos(mh.dot_product_ptr(v1, v2, 3) / sqrt(mh.dot_product_ptr(v1, v1, 3)) / \
+                sqrt(mh.dot_product_ptr(v2, v2, 3)))
 
 cdef double angle_ptr_nonortho(double * a1, double * a2, double * a3, double * a4, double * h,
                                double * h_inv) nogil:
@@ -288,5 +288,5 @@ cdef double angle_ptr_nonortho(double * a1, double * a2, double * a3, double * a
     diff_ptr_nonortho(&a1[0], &a2[0], &v1[0], &h[0], &h_inv[0])
     diff_ptr_nonortho(&a3[0], &a4[0], &v2[0], &h[0], &h_inv[0])
 
-    return acos(mh.dot_product(v1, v2, 3) / sqrt(mh.dot_product(v1, v1, 3)) / \
-                sqrt(mh.dot_product(v2, v2, 3)))
+    return acos(mh.dot_product_ptr(v1, v2, 3) / sqrt(mh.dot_product_ptr(v1, v1, 3)) / \
+                sqrt(mh.dot_product_ptr(v2, v2, 3)))
