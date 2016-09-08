@@ -149,9 +149,21 @@ cdef class AtomBox:
                                               
         return self.distance_vector(pos_1, pos_2)
 
-    cpdef int next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
-        return 0
+    def next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
+        cdef:
+            double distance, minimum_distance = 1e30
+            int minimum_index = -1
+            int index_2
+            int atom_number = frame_2.shape[0] * self.box_multiplier[0] * self.box_multiplier[1] * \
+                              self.box_multiplier[2]
 
+        for index_2 in range(atom_number):
+            distance = self.distance_extended_box(index_1, frame_1, index_2, frame_2)
+            if distance < minimum_distance:
+                minimum_distance = distance
+                minimum_index = index_2
+
+        return minimum_index, minimum_distance
 
     def determine_phosphorus_oxygen_pairs(self, frame_number):
         phosphorus_neighbors = np.zeros(self.oxygen_number_extended, int)
