@@ -177,6 +177,7 @@ cdef class AtomBox:
         return phosphorus_neighbors
 
 
+cdef class AtomBoxCubic(AtomBox):
     """Subclass of AtomBox for orthogonal periodic MD boxes"""
 
     def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
@@ -209,9 +210,7 @@ cdef class AtomBox:
 
     cpdef int next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
 
-
-
-cdef class AtomBox_Monoclin(AtomBox):
+cdef class AtomBoxMonoclin(AtomBox):
     """Subclass of AtomBox for monoclinic periodic MD boxes"""
     cdef:
         public double[:, ::1] h
