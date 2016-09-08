@@ -73,6 +73,7 @@ cdef class AtomBox:
     cdef:
         public double[:, :, ::1] oxygen_trajectory
         public double[:, :, ::1] phosphorus_trajectory
+        public int[:] phosphorus_neighbors
         double[:] periodic_boundaries
         public double[:] periodic_boundaries_extended
         double[:, ::1] pbc_matrix
@@ -88,9 +89,9 @@ cdef class AtomBox:
         self.box_multiplier = np.asarray(box_multiplier, dtype=np.int32)
         self.oxygen_number_extended = self.oxygen_trajectory.shape[1] * box_multiplier[0] * \
                                       box_multiplier[1] * box_multiplier[2]
-        self.phosphorus_number_extended = self.phosphorus_trajectory.shape[1] * box_multiplier[0]\
-                                          * box_multiplier[1] * box_multiplier[2]
 
+    def __init__(self, *args, **kwargs):
+        self.phosphorus_neighbors = self.determine_phosphorus_oxygen_pairs(0)
 
     cpdef double distance_extended_box(self, int index_1, double[:, ::1] frame_1, int index_2,
                                        double[:, ::1] frame_2):
@@ -166,17 +167,16 @@ cdef class AtomBox:
         return minimum_index, minimum_distance
 
     def determine_phosphorus_oxygen_pairs(self, frame_number):
-        phosphorus_neighbors = np.zeros(self.oxygen_number_extended, int)
+        phosphorus_neighbors = np.zeros(self.oxygen_number_extended, np.int32)
         oxygen_atoms = self.oxygen_trajectory[frame_number]
         phosphorus_atoms = self.phosphorus_trajectory[frame_number]
 
-        for oxygen_index in range(oxygen_atoms.shape[0]):
-            phosphorus_index = self.next_neighbor(oxygen_index, oxygen_atoms, phosphorus_atoms)
+        for oxygen_index in range(self.oxygen_number_extended):
+            phosphorus_index, _ = self.next_neighbor(oxygen_index, oxygen_atoms, phosphorus_atoms)
             phosphorus_neighbors[oxygen_index] = phosphorus_index
         return phosphorus_neighbors
 
 
-cdef class AtomBox_Cubic(AtomBox):
     """Subclass of AtomBox for orthogonal periodic MD boxes"""
 
     def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
@@ -363,7 +363,8 @@ cdef class LMCRoutine:
                                                       self.atombox.oxygen_trajectory[frame_number])
                 if dist < r_cut:
                     poo_angle = self.atombox.angle_extended_box(
-                        self.P_neighbors[start_index], self.atombox.phosphorus_trajectory[frame_number],
+                        self.atombox.phosphorus_neighbors[start_index],
+                        self.atombox.phosphorus_trajectory[frame_number],
                         start_index, self.atombox.oxygen_trajectory[frame_number],
                         destination_index, self.atombox.oxygen_trajectory[frame_number])
                     start_indices_tmp.push_back(start_index)
