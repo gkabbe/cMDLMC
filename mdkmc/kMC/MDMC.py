@@ -133,7 +133,6 @@ class ObservableManager:
 
     def return_observables(self, *observables):
         self.displacement[:] = 0
-        # self.proton_pos_snapshot =
 
 
 class MDMC:
@@ -177,25 +176,6 @@ class MDMC:
             self.nonortho = False
         else:
             self.nonortho = True
-
-    def determine_phosphorus_oxygen_pairs(self, frame_number, atom_box):
-        phosphorus_neighbors = np.zeros(self.oxygennumber_extended, int)
-        oxygen_atoms = atom_box.get_extended_frame(atom_box.oxygen_trajectory[frame_number])
-        phosphorus_atoms = atom_box.get_extended_frame(atom_box.phosphorus_trajectory[frame_number])
-
-        if self.nonortho:
-            for i in range(oxygen_atoms.shape[0]):
-                phosphorus_index = \
-                    npa.next_neighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, atom_box.h,
-                                              atom_box.h_inv)[0]
-                phosphorus_neighbors[i] = phosphorus_index
-        else:
-            for i in range(oxygen_atoms.shape[0]):
-                phosphorus_index = \
-                    npa.next_neighbor(oxygen_atoms[i], phosphorus_atoms,
-                                     atom_box.periodic_boundaries_extended)[0]
-                phosphorus_neighbors[i] = phosphorus_index
-        return phosphorus_neighbors
 
     def print_settings(self):
         print("# I'm using the following settings:")
@@ -346,16 +326,12 @@ class MDMC:
         # Check periodic boundaries and determine whether cell is orthorhombic/cubic
         #  or non-orthorhombic/monoclin
         if self.nonortho:
-            atombox = kMC_helper.AtomBox_Monoclin(self.oxygen_trajectory,
+            atombox = kMC_helper.AtomBoxMonoclin(self.oxygen_trajectory,
                                                   self.phosphorus_trajectory, self.pbc,
                                                   self.box_multiplier)
         else:
-            atombox = kMC_helper.AtomBox_Cubic(self.oxygen_trajectory, self.phosphorus_trajectory,
-                                               self.pbc,
-                                               self.box_multiplier)
-
-        self.phosphorus_neighbors = self.determine_phosphorus_oxygen_pairs(frame_number=0,
-                                                                           atom_box=atombox)
+            atombox = kMC_helper.AtomBoxCubic(self.oxygen_trajectory, self.phosphorus_trajectory,
+                                               self.pbc, self.box_multiplier)
 
         if self.var_prot_single:
             displacement, MSD, msd_var, msd2, msd3, msd4, \
