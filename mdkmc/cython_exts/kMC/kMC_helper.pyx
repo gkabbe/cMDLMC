@@ -206,9 +206,9 @@ cdef class AtomBoxCubic(AtomBox):
         return x
 
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
-        return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3, & self.periodic_boundaries_extended[0])
+        return cnpa.angle_ptr(atompos_2, atompos_1, atompos_2, atompos_3,
+                              &self.periodic_boundaries_extended[0])
 
-    cpdef int next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
 
 cdef class AtomBoxMonoclin(AtomBox):
     """Subclass of AtomBox for monoclinic periodic MD boxes"""
@@ -233,30 +233,21 @@ cdef class AtomBoxMonoclin(AtomBox):
         self.pbc_matrix = periodic_boundaries.reshape((3, 3))
 
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
-        return cnpa.length_nonortho_bruteforce_ptr(atompos_1, atompos_2, & self.h[0, 0], & self.h_inv[0, 0])
+        return cnpa.length_nonortho_bruteforce_ptr(atompos_1, atompos_2, &self.h[0, 0],
+                                                   &self.h_inv[0, 0])
 
     cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
-        return cnpa.length_nonortho_bruteforce_ptr(& atompos_1[0], & atompos_2[0], & self.h[0, 0], & self.h_inv[0, 0])
+        return cnpa.length_nonortho_bruteforce_ptr(&atompos_1[0], &atompos_2[0], &self.h[0, 0],
+                                                   &self.h_inv[0, 0])
 
     cpdef double[:] distance_vector(self, double[:] atompos_1, double[:] atompos_2):
         cdef double x[3]
         cnpa.diff_nonortho(atompos_1, atompos_2, x, self.h, self.h_inv)
         return x
 
-    cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
-        return cnpa.angle_ptr_nonortho(atompos_2, atompos_1, atompos_2, atompos_3, & self.h[0, 0], & self.h_inv[0, 0])
-        
-    def determine_phosphorus_oxygen_pairs(self, frame_number):
-        phosphorus_neighbors = np.zeros(self.oxygennumber_extended, int)
-        oxygen_atoms = self.oxygen_trajectory[frame_number]
-        phosphorus_atoms = self.phosphorus_trajectory[frame_number]
-
-        for i in range(oxygen_atoms.shape[0]):
-            phosphorus_index = \
-                cnpa.next_neighbor_nonortho(oxygen_atoms[i], phosphorus_atoms, self.h, 
-                                            self.h_inv)[0]
-            phosphorus_neighbors[i] = phosphorus_index
-        return phosphorus_neighbors
+    cdef double angle_ptr(self, double *atompos_1, double *atompos_2, double *atompos_3) nogil:
+        return cnpa.angle_ptr_nonortho(atompos_2, atompos_1, atompos_2, atompos_3, &self.h[0, 0],
+                                       &self.h_inv[0, 0])
 
 
 cdef class LMCRoutine:
@@ -377,47 +368,6 @@ cdef class LMCRoutine:
         self.destination_indices.push_back(destination_indices_tmp)
         self.jump_probability.push_back(jump_probability_tmp)
         self.saved_frame_counter += 1
-
-    # cdef calculate_transitions_POOangle_noneighborlist(self, int framenumber, double r_cut, double angle_thresh):
-    #     cdef:
-    #         int i, j, index2
-    #         double dist, PO_angle
-    #         vector[np.int32_t] start_tmp
-    #         vector[np.int32_t] destination_tmp
-    #         vector[np.float32_t] jump_probability_tmp
-    #
-    #     self.oxygen_frame_extended[
-    #         :self.oxygennumber_unextended] = self.atombox.oxygen_trajectory[framenumber]
-    #     self.phosphorus_frame_extended[
-    #         :self.phosphorusnumber_unextended] = self.atombox.phosphorus_trajectory[framenumber]
-    #
-    #     self.atombox.get_extended_frame_inplace(
-    #         self.oxygennumber_unextended, self.oxygen_frame_extended)
-    #     self.atombox.get_extended_frame_inplace(
-    #         self.phosphorusnumber_unextended,
-    #         self.phosphorus_frame_extended)
-    #
-    #     start_tmp.clear()
-    #     destination_tmp.clear()
-    #     jump_probability_tmp.clear()
-    #     for i in range(self.oxygen_frame_extended.shape[0]):
-    #         for j in range(self.oxygen_frame_extended.shape[0]):
-    #             if i != j:
-    #                 dist = self.atombox.distance_ptr(& self.oxygen_frame_extended[i, 0], & self.oxygen_frame_extended[j, 0])
-    #                 if dist < r_cut:
-    #                     POO_angle = self.atombox.angle_ptr( & self.phosphorus_frame_extended[self.P_neighbors[i], 0],
-    #                                                        & self.oxygen_frame_extended[i, 0], & self.oxygen_frame_extended[j, 0])
-    #                     start_tmp.push_back(i)
-    #                     destination_tmp.push_back(j)
-    #                     if POO_angle >= angle_thresh:
-    #                         jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist))
-    #                     else:
-    #                         jump_probability_tmp.push_back(0)
-    #
-    #     self.start_indices.push_back(start_tmp)
-    #     self.destination_indices.push_back(destination_tmp)
-    #     self.jump_probability.push_back(jump_probability_tmp)
-    #     self.saved_frame_counter += 1
 
     def get_transition_number(self):
         return self.start_tmp.size()
