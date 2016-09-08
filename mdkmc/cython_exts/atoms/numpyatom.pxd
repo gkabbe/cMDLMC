@@ -12,6 +12,8 @@ cdef double length_nonortho_bruteforce_ptr(double * a1_pos, double * a2_pos, dou
 
 cdef diff_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:] diffvec, double [:,::1] h, double [:,::1] h_inv)
 
+cdef void diff(double [:] a1_pos, double [:] a2_pos, double [:] pbc, double [:] diffvec)
+
 cdef void diff_ptr(double *a1_pos, double *a2_pos, double *pbc, double *diffvec) nogil
 
 cdef void diff_nonortho(double [:] a1_pos, double [:] a2_pos, double [:] diffvec, double [:,::1] h, double [:,::1] h_inv)
