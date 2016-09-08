@@ -54,7 +54,7 @@ for ext_path in cython_exts:
         ext_name,
         [ext_path],
         libraries=["m"] + cython_gsl.get_libraries(),
-        extra_compile_args=["-O3", "-Wall"],
+        extra_compile_args=["-O3", "-Wall", "-ffast-math"],
         language="c++",
         library_dirs=[cython_gsl.get_library_dir()],
         include_dirs=[".", numpy.get_include(), cython_gsl.get_cython_include_dir()]
