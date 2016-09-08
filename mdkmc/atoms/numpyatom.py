@@ -3,7 +3,6 @@
 import numpy as np
 import math
 import sys
-import ipdb
 
 xyzatom = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
 
