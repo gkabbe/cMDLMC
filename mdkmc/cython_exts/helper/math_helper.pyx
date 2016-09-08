@@ -1,5 +1,5 @@
 #cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=False,
-# initializedcheck=False
+# initializedcheck=False, profile=False
 import cython
 cimport numpy as cnp
 
