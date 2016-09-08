@@ -123,7 +123,10 @@ cdef class AtomBox:
         cdef: 
             int atom_index, box_index, i, j, k, ix
             double[3] pos_1, pos_2, distance
-        
+
+        if self.box_multiplier[0] == self.box_multiplier[1] == self.box_multiplier[2] == 1:
+            return self.distance_vector(frame_1[index_1], frame_2[index_2])
+
         atom_index = index_1 % frame_1.shape[0]
         box_index = index_1 / frame_1.shape[0]
         
