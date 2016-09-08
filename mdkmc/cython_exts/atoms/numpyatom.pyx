@@ -18,7 +18,7 @@ cdef extern from "math.h":
 xyzatom = np.dtype([("name", np.str_, 1), ("pos", np.float64, (3,))])
 
 
-cdef void diff(double [:] a1_pos, double [:] a2_pos, double [:] pbc, double [:] diffvec):
+cdef void diff(double [:] a1_pos, double [:] a2_pos, double [:] pbc, double [:] diffvec) nogil:
     cdef:
         int i
     for i in range(3):
@@ -42,7 +42,7 @@ cdef void diff_ptr(double *a1_pos, double *a2_pos, double *pbc, double *diffvec)
 
 
 cdef void diff_nonortho(double [:] a1_pos, double [:] a2_pos, double [:] diffvec,
-                        double [:,::1] h, double [:,::1] h_inv):
+                        double [:,::1] h, double [:,::1] h_inv) nogil:
     cdef:
         int i
 
@@ -74,7 +74,7 @@ cdef void diff_ptr_nonortho(double  *a1_pos, double *a2_pos, double *diffvec, do
 
 
 cpdef double length_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:,::1] h,
-                                        double [:,::1] h_inv):
+                                        double [:,::1] h_inv) nogil:
     cdef:
         double diffvec[3]
         vector[double] d
@@ -122,8 +122,8 @@ cdef double length_nonortho_bruteforce_ptr(double *a1_pos, double *a2_pos, doubl
     return sqrt(mindist)
 
 
-cdef diff_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:] diffvec,
-                              double [:,::1] h, double [:,::1] h_inv):
+cdef void diff_nonortho_bruteforce(double [:] a1_pos, double [:] a2_pos, double [:] diffvec,
+                              double [:,::1] h, double [:,::1] h_inv) nogil:
     cdef:
         vector[double] d
         vector[vector[double]] dists
@@ -158,7 +158,7 @@ def bruteforce_test(double [:] a1_pos, double [:] a2_pos, double [:,::1] h, doub
 
 cpdef double length(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
     cdef:
-        np.ndarray[np.float_t, ndim=1] dist = np.zeros(3, float)
+        double dist[3]
         int i
 
     diff_ptr(&a1_pos[0], &a2_pos[0], &pbc[0], &dist[0])
@@ -176,7 +176,7 @@ cdef double length_ptr(double *a1_pos, double *a2_pos, double *pbc) nogil:
     return sqrt(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2])
         
 
-cpdef double sqdist(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
+cpdef double sqdist(double [:] a1_pos, double [:] a2_pos, double [:] pbc) nogil:
     cdef:
         double dist[3]
         int i
@@ -219,7 +219,7 @@ def next_neighbor_nonortho(double [:] a1_pos, double [:, ::1] atoms_pos, double 
     return minind, mindist
 
 
-cpdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:] pbc):
+cpdef double angle(double [:] a1, double [:] a2, double [:] a3, double [:] a4, double [:] pbc) nogil:
     cdef:
         double v1[3]
         double v2[3]
