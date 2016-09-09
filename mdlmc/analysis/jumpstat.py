@@ -12,7 +12,7 @@ import ipdb
 
 script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 from mdkmc.cython_exts.atoms import numpyatom as cnpa
-from mdkmc.cython_exts.kMC import jumpstat_helper as jsh
+from mdkmc.cython_exts.LMC import jumpstat_helper as jsh
 from mdkmc.IO import BinDump
 from mdkmc.atoms import numpyatom as npa
 

@@ -5,7 +5,7 @@ import numpy as np
 cimport numpy as np
 
 from cython_gsl cimport round
-from mdkmc.cython_exts.helper cimport math_helper as mh
+from mdlmc.cython_exts.helper cimport math_helper as mh
 from libcpp.vector cimport vector
 
 cdef extern from "math.h":

@@ -8,8 +8,8 @@ from cython_gsl cimport *
 from libcpp.vector cimport vector
 from libcpp cimport bool
 from libc.stdio cimport *
-cimport mdkmc.cython_exts.atoms.numpyatom as cnpa
-cimport mdkmc.cython_exts.helper.math_helper as mh
+cimport mdlmc.cython_exts.atoms.numpyatom as cnpa
+cimport mdlmc.cython_exts.helper.math_helper as mh
 
 cdef extern from "math.h":
     double sqrt(double x) nogil
@@ -23,7 +23,7 @@ cdef double PI = np.pi
 cdef double R = 1.9872041e-3   # universal gas constant in kcal/mol/K
 
 
-# Define Function Objects. These can later be substituted easily by kMC_helper
+# Define Function Objects. These can later be substituted easily by LMCHelper
 cdef class JumprateFunction:
     cpdef double evaluate(self, double x):
         return 0

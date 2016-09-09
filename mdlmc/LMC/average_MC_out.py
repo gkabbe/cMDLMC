@@ -233,7 +233,7 @@ def main(*args):
     parser.add_argument("--plot", "-p", action="store_true", help="Show plot")
     parser.add_argument("--time_unit", default="fs", type=ureg.parse_expression, help="Time unit of MC output")
     parser.add_argument("--length_unit", type=ureg.parse_expression, default="angstrom", help="Length unit of atom coordinates")
-    parser.add_argument("--var_prot_single", action="store_true", default=False, help="average variance, mode var_prot_single during kMC run necessary ")
+    parser.add_argument("--var_prot_single", action="store_true", default=False, help="average variance, mode var_prot_single during LMC run necessary ")
     subparsers = parser.add_subparsers()
     parser_slope = subparsers.add_parser("slope", help="Only determine slope of MSD")
     parser_slope.add_argument("file", help="KMC output")

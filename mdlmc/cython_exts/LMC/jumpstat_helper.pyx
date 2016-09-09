@@ -10,7 +10,7 @@ cimport cython
 
 from libcpp.vector cimport vector
 
-from mdkmc.cython_exts.atoms cimport numpyatom as cnpa
+from mdlmc.cython_exts.atoms cimport numpyatom as cnpa
 
 cdef extern from "math.h":
     double sqrt(double x) nogil

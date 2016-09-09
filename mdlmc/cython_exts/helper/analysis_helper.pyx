@@ -6,7 +6,7 @@ import time
 cimport numpy as np
 import numpy as np
 
-cimport mdkmc.cython_exts.atoms.numpyatom as cnpa
+cimport mdlmc.cython_exts.atoms.numpyatom as cnpa
 
 cdef double PI = np.pi
 

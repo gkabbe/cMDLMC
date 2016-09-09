@@ -26,7 +26,7 @@ def readme():
 def find_packages():
     """Find all packages (i.e. folders with an __init__.py file inside)"""
     packages = []
-    for root, _, files in os.walk("mdkmc"):
+    for root, _, files in os.walk("mdlmc"):
         for f in files:
             if f == "__init__.py":
                 packages.append(root)
@@ -36,7 +36,7 @@ def find_packages():
 def find_extensions():
     """Find all .pyx files in all directories"""
     extensions = []
-    for root, _, files in os.walk("mdkmc"):
+    for root, _, files in os.walk("mdlmc"):
         for f in files:
             if f.endswith(".pyx"):
                 extensions.append(os.path.join(root, f))
@@ -60,7 +60,7 @@ for ext_path in cython_exts:
         include_dirs=[".", numpy.get_include(), cython_gsl.get_cython_include_dir()]
     ))
 
-setup(name='mdkmc',
+setup(name='mdlmc',
       version='0.1',
       description='Implementation of the cMD/LMC algorithm in Python',
       long_description=readme(),
@@ -70,7 +70,7 @@ setup(name='mdkmc',
           'Programming Language :: Python :: 3.5',
           'Topic :: Molecular Dynamics :: Kinetic Monte Carlo',
       ],
-      keywords='MD LMC KMC Chemistry',
+      keywords='MD LMC LMC Chemistry',
       url='http://github.com/',
       author='Gabriel Kabbe',
       author_email='gabriel.kabbe@chemie.uni-halle.de',
@@ -82,18 +82,18 @@ setup(name='mdkmc',
       test_suite='nose.collector',
       tests_require=['nose'],
       entry_points={
-          'console_scripts': ['mdmc=mdkmc.kMC.MDMC:main',
-                              'jumpstat=mdkmc.analysis.jumpstat:main',
-                              'poo-occupation=mdkmc.analysis.phosphonic_group_occupation:main',
-                              'md_jumpmatrix=mdkmc.analysis.jumpmat_anglecrit:main',
-                              'print_version=mdkmc.print_version:print_version',
-                              'avg_mdmc=mdkmc.kMC.average_MC_out:main',
-                              'msd=mdkmc.analysis.msd:main',
-                              'ohbond-corr=mdkmc.analysis.ohbond_autocorr:main',
-                              'convergence=mdkmc.analysis.convergence:main',
-                              'center_of_mass=mdkmc.atoms.numpyatom:print_center_of_mass_commandline',
-                              'rdf=mdkmc.analysis.rdf:main',
-                              'free-energy=mdkmc.analysis.free_energy:main'
+          'console_scripts': ['mdmc=mdlmc.LMC.MDMC:main',
+                              'jumpstat=mdlmc.analysis.jumpstat:main',
+                              'poo-occupation=mdlmc.analysis.phosphonic_group_occupation:main',
+                              'md_jumpmatrix=mdlmc.analysis.jumpmat_anglecrit:main',
+                              'print_version=mdlmc.print_version:print_version',
+                              'avg_mdmc=mdlmc.LMC.average_MC_out:main',
+                              'msd=mdlmc.analysis.msd:main',
+                              'ohbond-corr=mdlmc.analysis.ohbond_autocorr:main',
+                              'convergence=mdlmc.analysis.convergence:main',
+                              'center_of_mass=mdlmc.atoms.numpyatom:print_center_of_mass_commandline',
+                              'rdf=mdlmc.analysis.rdf:main',
+                              'free-energy=mdlmc.analysis.free_energy:main'
                               ],
       },
       include_package_data=True,
@@ -103,7 +103,7 @@ setup(name='mdkmc',
       )
 
 # Write hash, message and date of current commit to file
-with open("mdkmc/version_hash.py", "w") as f:
+with open("mdlmc/version_hash.py", "w") as f:
     commit_hash, commit_message, commit_date = get_commit_hash()
     print("commit_hash = \"{}\"".format(commit_hash), file=f)
     print("commit_message = \"{}\"".format(commit_message), file=f)

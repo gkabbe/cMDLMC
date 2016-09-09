@@ -15,7 +15,7 @@ script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfra
 sys.path.append(os.path.join(script_path, "../cython/atoms"))
 import numpyatom as npa
 
-sys.path.append(os.path.join(script_path, "../cython/kMC"))
+sys.path.append(os.path.join(script_path, "../cython/LMC"))
 import jumpstat_helper as jsh
 
 from atoms import atomclass

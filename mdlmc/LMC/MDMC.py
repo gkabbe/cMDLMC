@@ -8,7 +8,7 @@ import ipdb
 import argparse
 from mdkmc.IO.xyz_parser import load_atoms
 from mdkmc.IO.config_parser import print_confighelp, load_configfile
-from mdkmc.cython_exts.kMC import kMC_helper
+from mdkmc.cython_exts.LMC import LMCHelper
 from mdkmc.cython_exts.atoms import numpyatom as npa
 
 
@@ -26,10 +26,10 @@ def calculate_displacement(proton_lattice, proton_lattice_snapshot,
         if proton_index > 0:
             proton_pos_new[proton_index - 1] = oxygen_coordinates_new[oxygen_index]
     if wrap:
-        kMC_helper.dist_numpy_all_inplace(displacement, proton_pos_new,
+        LMCHelper.dist_numpy_all_inplace(displacement, proton_pos_new,
                                           proton_lattice_snapshot, pbc)
     else:
-        displacement += kMC_helper.dist_numpy_all(proton_pos_new, proton_lattice_snapshot, pbc)
+        displacement += LMCHelper.dist_numpy_all(proton_pos_new, proton_lattice_snapshot, pbc)
         proton_lattice_snapshot[:] = proton_pos_new  # [:] is important (inplace operation)
 
 
@@ -40,7 +40,7 @@ def calculate_displacement_nonortho(proton_lattice, proton_lattice_snapshot,
     for O_index, proton_index in enumerate(proton_lattice):
         if proton_index > 0:
             proton_pos_new[proton_index - 1] = Opos_new[O_index]
-    kMC_helper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_lattice_snapshot, h,
+    LMCHelper.dist_numpy_all_nonortho(displacement, proton_pos_new, proton_lattice_snapshot, h,
                                        h_inv)
 
 
@@ -108,7 +108,7 @@ class ObservableManager:
             if proton_index > 0:
                 proton_pos_new[proton_index - 1] = self.atom_box.oxygen_coordinates_new[
                     oxygen_index]
-        self.displacement += kMC_helper.dist_numpy_all(proton_pos_new, self.proton_lattice_snapshot,
+        self.displacement += LMCHelper.dist_numpy_all(proton_pos_new, self.proton_lattice_snapshot,
                                                        pbc)
         self.proton_lattice_snapshot[:] = self.proton_lattice
 
@@ -326,11 +326,11 @@ class MDMC:
         # Check periodic boundaries and determine whether cell is orthorhombic/cubic
         #  or non-orthorhombic/monoclin
         if self.nonortho:
-            atombox = kMC_helper.AtomBoxMonoclin(self.oxygen_trajectory,
+            atombox = LMCHelper.AtomBoxMonoclin(self.oxygen_trajectory,
                                                   self.phosphorus_trajectory, self.pbc,
                                                   self.box_multiplier)
         else:
-            atombox = kMC_helper.AtomBoxCubic(self.oxygen_trajectory, self.phosphorus_trajectory,
+            atombox = LMCHelper.AtomBoxCubic(self.oxygen_trajectory, self.phosphorus_trajectory,
                                                self.pbc, self.box_multiplier)
 
         if self.var_prot_single:
@@ -352,7 +352,7 @@ class MDMC:
 
         start_time = time.time()
 
-        helper = kMC_helper.LMCRoutine(atombox=atombox,
+        helper = LMCHelper.LMCRoutine(atombox=atombox,
                                        jumprate_parameter_dict=self.jumprate_params_fs,
                                        cutoff_radius=self.cutoff_radius,
                                        angle_threshold=self.angle_threshold,
