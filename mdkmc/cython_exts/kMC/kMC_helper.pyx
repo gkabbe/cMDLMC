@@ -1,4 +1,4 @@
-# cython: profile=False
+# cython: profile=True
 # cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
 import time
 import numpy as np
@@ -94,27 +94,30 @@ cdef class AtomBox:
         self.phosphorus_neighbors = self.determine_phosphorus_oxygen_pairs(0)
 
     cdef double distance_extended_box(self, int index_1, double * frame_1, int frame_1_len, int index_2,
-                                       double * frame_2, int frame_2_len):
+                                       double * frame_2, int frame_2_len) nogil:
         """Calculates the distance between two atoms, taking into account the periodic boundary
         conditions of the extended periodic box."""
         cdef double dist[3]
-        self.distance_vector_extended_box(index_1, frame_1, frame_1_len, index_2, frame_2,
-                                          frame_2_len, dist)
+        self.distance_vector_extended_box_ptr(index_1, frame_1, frame_1_len, index_2, frame_2,
+                                              frame_2_len, dist)
         return sqrt(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2])
 
-    cpdef double angle_extended_box(self, int index_1, double *frame_1, int frame_1_len,
+    cdef double angle_extended_box(self, int index_1, double *frame_1, int frame_1_len,
                                     int index_2, double *frame_2, int frame_2_len, int index_3,
-                                    double *frame_3, int frame_3_len):
+                                    double *frame_3, int frame_3_len) nogil:
         """Calculates the angle ∠ index_1 index_2 index_3"""
         cdef:
             double diff_2_1[3]
             double diff_2_3[3]
 
-        self.distance_vector_extended_box(index_2, frame_2, frame_2_len, index_1, frame_1, frame_1_len, diff_2_1)
-        self.distance_vector_extended_box(index_2, frame_2, frame_2_len, index_3, frame_3, frame_3_len, diff_2_3)
+        self.distance_vector_extended_box_ptr(index_2, frame_2, frame_2_len, index_1, frame_1,
+                                             frame_1_len, diff_2_1)
+        self.distance_vector_extended_box_ptr(index_2, frame_2, frame_2_len, index_3, frame_3,
+                                              frame_3_len, diff_2_3)
 
-        return acos(mh.dot_product(diff_2_1, diff_2_3) / sqrt(
-            mh.dot_product(diff_2_1, diff_2_1)) / sqrt(mh.dot_product(diff_2_3, diff_2_3)))
+        return acos(mh.dot_product_ptr(diff_2_1, diff_2_3, 3) / sqrt(
+            mh.dot_product_ptr(diff_2_1, diff_2_1, 3)) / sqrt(
+            mh.dot_product_ptr(diff_2_3, diff_2_3, 3)))
 
     cdef void distance_vector(self, double * atompos_1, double * atompos_2, double * diffvec) nogil:
         pass
@@ -122,41 +125,45 @@ cdef class AtomBox:
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return 0
 
-    cdef void distance_vector_extended_box(self, int index_1, double *frame_1, int frame_1_len,
-                                           int index_2, double *frame_2, int frame_2_len,
-                                           double *diffvec) nogil:
+    # cpdef distance_vector_extended_box(int index_1, double [:, ::1] frame_1, int index_2,
+    #                                    double [:, ::1] frame_2):
+
+
+    cdef void distance_vector_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len,
+                                               int index_2, double * frame_2, int frame_2_len,
+                                               double * diffvec) nogil:
         cdef: 
             int atom_index, box_index, i, j, k, ix
             double[3] pos_1, pos_2, distance
 
         if self.box_multiplier[0] == self.box_multiplier[1] == self.box_multiplier[2] == 1:
-            return self.distance_vector(&frame_1[index_1, 0], &frame_2[index_2, 0])
+            self.distance_vector(&frame_1[3 * index_1], &frame_2[3 * index_2], diffvec)
+        else:
+            atom_index = index_1 % frame_1_len
+            box_index = index_1 / frame_1_len
 
-        atom_index = index_1 % frame_1_len
-        box_index = index_1 / frame_1_len
-        
-        i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
-        j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
-        k = box_index % self.box_multiplier[2]
-        
-        for ix in range(3):
-            pos_1[ix] =  frame_1[atom_index, ix] + i * self.pbc_matrix[0, ix] \
-                                                 + j * self.pbc_matrix[1, ix] \
-                                                 + k * self.pbc_matrix[2, ix]
+            i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
+            j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
+            k = box_index % self.box_multiplier[2]
 
-        atom_index = index_2 % frame_2_len
-        box_index = index_2 / frame_2_len
+            for ix in range(3):
+                pos_1[ix] =  frame_1[3 * atom_index + ix] + i * self.pbc_matrix[0, ix] \
+                                                          + j * self.pbc_matrix[1, ix] \
+                                                          + k * self.pbc_matrix[2, ix]
 
-        i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
-        j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
-        k = box_index % self.box_multiplier[2]
-        
-        for ix in range(3):
-            pos_2[ix] =  frame_2[atom_index, ix] + i * self.pbc_matrix[0, ix] \
-                                                 + j * self.pbc_matrix[1, ix] \
-                                                 + k * self.pbc_matrix[2, ix]
-                                              
-        return self.distance_vector(pos_1, pos_2)
+            atom_index = index_2 % frame_2_len
+            box_index = index_2 / frame_2_len
+
+            i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
+            j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
+            k = box_index % self.box_multiplier[2]
+
+            for ix in range(3):
+                pos_2[ix] =  frame_2[3 * atom_index + ix] + i * self.pbc_matrix[0, ix] \
+                                                          + j * self.pbc_matrix[1, ix] \
+                                                          + k * self.pbc_matrix[2, ix]
+
+            self.distance_vector(pos_1, pos_2, diffvec)
 
     def next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
         cdef:
@@ -167,7 +174,8 @@ cdef class AtomBox:
                               self.box_multiplier[2]
 
         for index_2 in range(atom_number):
-            distance = self.distance_extended_box(index_1, frame_1, index_2, frame_2)
+            distance = self.distance_extended_box(index_1, &frame_1[0, 0], frame_1.shape[0],
+                                                  index_2, &frame_2[0, 0], frame_2.shape[0])
             if distance < minimum_distance:
                 minimum_distance = distance
                 minimum_index = index_2
@@ -205,7 +213,7 @@ cdef class AtomBoxCubic(AtomBox):
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return cnpa.length_ptr(atompos_1, atompos_2, & self.periodic_boundaries_extended[0])
 
-    cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
+    cdef double distance(self, double[:] atompos_1, double[:] atompos_2):
         return cnpa.length(atompos_1, atompos_2, self.periodic_boundaries_extended)
 
     cdef void distance_vector(self, double * atompos_1, double * atompos_2, double * diffvec) nogil:
@@ -323,6 +331,7 @@ cdef class LMCRoutine:
     def determine_neighbors(self, int frame_number, verbose=False):
         cdef:
             int i, j
+            int oxygen_len = self.atombox.oxygen_trajectory.shape[1]
             double dist
             vector[int] neighbor_list
 
@@ -331,8 +340,9 @@ cdef class LMCRoutine:
             neighbor_list.clear()
             for j in xrange(self.atombox.oxygen_number_extended):
                 if i != j:
-                    dist = self.atombox.distance_extended_box(i, self.atombox.oxygen_trajectory[
-                        frame_number], j, self.atombox.oxygen_trajectory[frame_number])
+                    dist = self.atombox.distance_extended_box(i, &self.atombox.oxygen_trajectory[
+                        frame_number, 0, 0], oxygen_len,
+                        j, &self.atombox.oxygen_trajectory[frame_number, 0, 0], oxygen_len)
                     if dist < self.neighbor_search_radius:
                         neighbor_list.push_back(j)
             self.neighbors.push_back(neighbor_list)
@@ -341,6 +351,7 @@ cdef class LMCRoutine:
         cdef:
             int start_index, neighbor_index, destination_index
             int oxygen_number_unextended = self.atombox.oxygen_trajectory.shape[1]
+            int phosphorus_number_unextended = self.atombox.phosphorus_trajectory.shape[1]
             double dist, PO_angle
             vector[np.int32_t] start_indices_tmp
             vector[np.int32_t] destination_indices_tmp
@@ -363,9 +374,14 @@ cdef class LMCRoutine:
                 if dist < r_cut:
                     poo_angle = self.atombox.angle_extended_box(
                         self.atombox.phosphorus_neighbors[start_index],
-                        self.atombox.phosphorus_trajectory[frame_number],
-                        start_index, self.atombox.oxygen_trajectory[frame_number],
-                        destination_index, self.atombox.oxygen_trajectory[frame_number])
+                        &self.atombox.phosphorus_trajectory[frame_number, 0, 0],
+                        phosphorus_number_unextended,
+                        start_index,
+                        &self.atombox.oxygen_trajectory[frame_number, 0, 0],
+                        oxygen_number_unextended,
+                        destination_index,
+                        &self.atombox.oxygen_trajectory[frame_number, 0, 0],
+                        oxygen_number_unextended)
                     start_indices_tmp.push_back(start_index)
                     destination_indices_tmp.push_back(destination_index)
                     if poo_angle >= angle_thresh:
