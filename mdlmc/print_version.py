@@ -1,4 +1,4 @@
-from mdkmc import version_hash
+from mdlmc import version_hash
 
 def print_version():
     print(version_hash.commit_hash)

@@ -11,10 +11,10 @@ import inspect
 import ipdb
 
 script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-from mdkmc.cython_exts.atoms import numpyatom as cnpa
-from mdkmc.cython_exts.LMC import jumpstat_helper as jsh
-from mdkmc.IO import BinDump
-from mdkmc.atoms import numpyatom as npa
+from mdlmc.cython_exts.atoms import numpyatom as cnpa
+from mdlmc.cython_exts.LMC import jumpstat_helper as jsh
+from mdlmc.IO import BinDump
+from mdlmc.atoms import numpyatom as npa
 
 def determine_PO_pairs(O_frame, P_frame, pbc):
     P_neighbors = np.zeros(O_frame.shape[0], int)

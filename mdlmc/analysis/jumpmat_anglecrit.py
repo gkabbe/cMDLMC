@@ -7,9 +7,9 @@ import re
 import argparse
 import time
 
-from mdkmc.IO import BinDump
-from mdkmc.cython_exts.atoms import numpyatom as npa
-from mdkmc.cython_exts.helper import analysis_helper as ah
+from mdlmc.IO import BinDump
+from mdlmc.cython_exts.atoms import numpyatom as npa
+from mdlmc.cython_exts.helper import analysis_helper as ah
 
 def get_P_neighbors(O_frame, P_frame, pbc):
     P_neighbors = np.zeros(O_frame.shape[0], int)

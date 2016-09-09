@@ -6,14 +6,14 @@ import time
 import numpy as np
 import ipdb
 import argparse
-from mdkmc.IO.xyz_parser import load_atoms
-from mdkmc.IO.config_parser import print_confighelp, load_configfile
-from mdkmc.cython_exts.LMC import LMCHelper
-from mdkmc.cython_exts.atoms import numpyatom as npa
+from mdlmc.IO.xyz_parser import load_atoms
+from mdlmc.IO.config_parser import print_confighelp, load_configfile
+from mdlmc.cython_exts.LMC import LMCHelper
+from mdlmc.cython_exts.atoms import numpyatom as npa
 
 
 def get_git_version():
-    from mdkmc.version_hash import commit_hash, commit_date, commit_message
+    from mdlmc.version_hash import commit_hash, commit_date, commit_message
     print("# Hello. I am from commit {}".format(commit_hash))
     print("# Commit Date: {}".format(commit_date))
     print("# Commit Message: {}".format(commit_message))

@@ -4,8 +4,8 @@ import glob
 import re
 import sys
 
-from mdkmc.IO import BinDump
-from mdkmc.atoms import numpyatom as npa
+from mdlmc.IO import BinDump
+from mdlmc.atoms import numpyatom as npa
 
 def get_occupations(PO3_groups, covevo):
     occupations = np.zeros(PO3_groups.shape[0])

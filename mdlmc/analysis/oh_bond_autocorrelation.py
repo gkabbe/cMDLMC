@@ -7,7 +7,7 @@ from math import ceil
 
 import numpy as np
 
-from mdkmc.IO import BinDump
+from mdlmc.IO import BinDump
 
 
 def main(*args):

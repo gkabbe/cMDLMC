@@ -8,8 +8,8 @@ import matplotlib.pylab as plt
 from scipy.optimize import curve_fit
 import pint
 
-from mdkmc.atoms import numpyatom as npa
-from mdkmc.IO import BinDump
+from mdlmc.atoms import numpyatom as npa
+from mdlmc.IO import BinDump
 
 
 ureg = pint.UnitRegistry()

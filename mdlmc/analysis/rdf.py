@@ -5,8 +5,8 @@ import warnings
 import matplotlib.pylab as plt
 import time
 
-from mdkmc.IO import BinDump
-import mdkmc.atoms.numpyatom as npa
+from mdlmc.IO import BinDump
+import mdlmc.atoms.numpyatom as npa
 
 
 def distance(a1, a2, pbc):

@@ -5,8 +5,8 @@ import time
 
 import numpy as np
 
-from mdkmc.atoms import numpyatom as npa
-from mdkmc.atoms.numpyatom import xyzatom as dtype_xyz
+from mdlmc.atoms import numpyatom as npa
+from mdlmc.atoms.numpyatom import xyzatom as dtype_xyz
 
 
 def parse_xyz(f, frame_len, selection=None, no_of_frames=None):

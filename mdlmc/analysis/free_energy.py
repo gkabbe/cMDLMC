@@ -4,8 +4,8 @@ import numpy as np
 import pint
 import matplotlib.pylab as plt
 
-from mdkmc.IO import BinDump
-from mdkmc.atoms import numpyatom as npa
+from mdlmc.IO import BinDump
+from mdlmc.atoms import numpyatom as npa
 from functools import reduce
 
 
@@ -131,7 +131,7 @@ def free_energy_standard_hbond_criterion(traj, pbc):
     ipdb.set_trace()
     
     
-def free_energy_mdkmc(traj, pbc):
+def free_energy_mdlmc(traj, pbc):
     oxygen_traj = npa.select_atoms(traj, "O")
     phos_traj = npa.select_atoms(traj, "P")
     proton_traj = npa.select_atoms(traj, "H")
@@ -147,7 +147,7 @@ def free_energy_mdkmc(traj, pbc):
             ox1 = oxygen_traj[range(start, end), oh_bond_indices[i][0]]
             ox2 = oxygen_traj[range(start, end), oh_bond_indices[i][1]]
             phos = phos_traj[range(start, end), p_neighbors[oh_bond_indices[i][0]]]
-            hb = is_hbond_mdkmc(ox1, ox2, phos, pbc)
+            hb = is_hbond_mdlmc(ox1, ox2, phos, pbc)
             if hb.any():
                 dist = np.sqrt((npa.distance(ox1[hb], ox2[hb], pbc) ** 2).sum(axis=-1))
                 dists += list(dist)   
@@ -167,7 +167,7 @@ def is_hbond(ox1, ox2, proton, pbc):
                                    np.linalg.norm(npa.distance(ox2, proton, pbc), axis=-1) <= 2.2])
 
 
-def is_hbond_mdkmc(ox1, ox2, phos, pbc):
+def is_hbond_mdlmc(ox1, ox2, phos, pbc):
     poo_angle = npa.angle_vectorized(phos, ox1, ox2, pbc)
     oo_dist = np.linalg.norm(npa.distance(ox1, ox2, pbc), axis=-1)
 
@@ -184,5 +184,5 @@ def main(*args):
     
     # free_energy_from_oxygen_pairs(traj, pbc)
     free_energy_standard_hbond_criterion(traj, pbc)
-    # free_energy_mdkmc(traj, pbc)
+    # free_energy_mdlmc(traj, pbc)
     #  free_energy_when_proton_in_middle(traj, pbc)

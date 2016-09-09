@@ -9,8 +9,8 @@ import time
 import re
 import inspect
 
-from mdkmc.cython_exts.atoms import numpyatom as cython_npa
-from mdkmc.atoms import numpyatom as npa
+from mdlmc.cython_exts.atoms import numpyatom as cython_npa
+from mdlmc.atoms import numpyatom as npa
 
 
 def npget_acidHs(atoms, pbc, only_indices=False):
