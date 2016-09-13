@@ -93,7 +93,7 @@ cdef class AtomBox:
     def __init__(self, *args, **kwargs):
         self.phosphorus_neighbors = self.determine_phosphorus_oxygen_pairs(0)
 
-    def position_extended_box(self, int index, np.ndarray[np.float_t, ndim=2] frame):
+    def position_extended_box(self, int index, double [:, ::1] frame):
         cdef np.ndarray[np.float_t, ndim=1] pos = np.zeros(3)
 
         self.position_extended_box_ptr(index, &frame[0, 0], frame.shape[0], &pos[0])
