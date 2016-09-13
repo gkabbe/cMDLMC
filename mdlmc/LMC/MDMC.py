@@ -130,21 +130,18 @@ class ObservableManager:
         return self.mean_square_displacement
 
     def calculate_auto_correlation(self):
-        return np.logical_and(self.proton_lattice == self.proton_lattice_snapshot,
+        self.autocorrelation = np.logical_and(self.proton_lattice == self.proton_lattice_snapshot,
                               self.proton_lattice != 0).sum()
 
     def reset_observables(self, frame):
         for oxy_ind, prot_ind in enumerate(self.proton_lattice):
             if prot_ind > 0:
                 self.proton_pos_snapshot[prot_ind - 1] = \
-                    self.atom_box.oxygen.position_extended_box(oxy_ind, self.atom_box.oxygen_trajectory[frame])
+                    self.atom_box.position_extended_box(oxy_ind, self.atom_box.oxygen_trajectory[frame])
 
-        self.protonlattice_snapshot = np.copy(proton_lattice)
+        self.protonlattice_snapshot = np.copy(self.proton_lattice)
 
-        if not self.periodic_wrap:
-            self.displacement[:] = 0
-
-        return self.protonlattice_snapshot, self.proton_pos_snapshot, self.displacement
+        self.displacement[:] = 0
 
     def print_observable_names(self):
         if self.variance_per_proton:
@@ -364,42 +361,12 @@ class MDMC:
                     frame = np.random.randint(self.oxygen_trajectory.shape[0])
 
             if sweep % self.reset_freq == 0:
-                observable_manager.reset_observables(proton_pos_snapshot, proton_lattice,
-                                                     displacement,
-                                                     atombox.get_extended_frame(atombox.oxygen_trajectory[frame]), helper)
+                observable_manager.reset_observables(frame)
             if sweep % self.print_freq == 0:
-                if not self.nonortho:
-                    calculate_displacement(proton_lattice, proton_pos_snapshot,
-                                           atombox.get_extended_frame(
-                                               atombox.oxygen_trajectory[frame]),
-                                           displacement, self.pbc, wrap=self.periodic_wrap)
-                else:
-                    calculate_displacement_nonortho(proton_lattice, proton_pos_snapshot,
-                                                    atombox.get_extended_frame(
-                                                        atombox.oxygen_trajectory[frame]),
-                                                    displacement, atombox.h, atombox.h_inv)
-                if self.higher_msd:
-                    MSD, msd2, msd3, msd4 = calculate_higher_mean_squared_displacement(displacement)
-                else:
-                    if self.variance_per_proton:
-                        MSD, msd_var = calculate_mean_squared_displacement_with_variance(MSD,
-                                                                                         displacement,
-                                                                                         msd_var)
-                    else:
-                        calculate_mean_squared_displacement(MSD, displacement)
-                auto_correlation = calculate_auto_correlation(proton_lattice_snapshot,
-                                                              proton_lattice)
-                if not self.xyz_output:
-                    if self.variance_per_proton:
-                        self.print_observables_var(sweep, auto_correlation, helper,
-                                                   self.md_timestep_fs, start_time, MSD, msd_var,
-                                                   msd2, msd3, msd4)
-                    else:
-                        self.print_observables(sweep, auto_correlation, helper, self.md_timestep_fs,
-                                               start_time, MSD, msd2, msd3, msd4)
-                else:
-                    self.print_OsHs(atombox.oxygen_trajectory[
-                                        frame], proton_lattice, frame, self.md_timestep_fs)
+                observable_manager.calculate_displacement()
+                observable_manager.calculate_msd()
+                observable_manager.calculate_auto_correlation()
+                observable_manager.print_observables(sweep)
             # helper.sweep_list(proton_lattice)
             if self.jumpmatrix_filename is not None:
                 helper.sweep_from_vector_jumpmatrix(frame, proton_lattice)
