@@ -93,6 +93,28 @@ cdef class AtomBox:
     def __init__(self, *args, **kwargs):
         self.phosphorus_neighbors = self.determine_phosphorus_oxygen_pairs(0)
 
+    def position_extended_box(self, int index, np.ndarray[np.float_t, ndim=2] frame):
+        cdef np.ndarray[np.float_t, ndim=1] pos = np.zeros(3)
+
+        self.position_extended_box_ptr(index, &frame[0, 0], frame.shape[0], &pos[0])
+
+        return pos
+
+    cdef void position_extended_box_ptr(self, int index, double *frame, int frame_len,
+                                        double *position) nogil:
+       cdef:
+            int atom_index, box_index, i, j, k, ix
+
+       atom_index = index % frame_len
+       box_index = index / frame_len
+       i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
+       j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
+       k = box_index % self.box_multiplier[2]
+       for ix in range(3):
+           position[ix] =  frame[3 * atom_index + ix] + i * self.pbc_matrix[0, ix] \
+                                                      + j * self.pbc_matrix[1, ix] \
+                                                      + k * self.pbc_matrix[2, ix]
+
     cdef double distance_extended_box(self, int index_1, double * frame_1, int frame_1_len, int index_2,
                                        double * frame_2, int frame_2_len) nogil:
         """Calculates the distance between two atoms, taking into account the periodic boundary
@@ -125,44 +147,18 @@ cdef class AtomBox:
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return 0
 
-    # cpdef distance_vector_extended_box(int index_1, double [:, ::1] frame_1, int index_2,
-    #                                    double [:, ::1] frame_2):
-
-
     cdef void distance_vector_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len,
                                                int index_2, double * frame_2, int frame_2_len,
                                                double * diffvec) nogil:
         cdef: 
             int atom_index, box_index, i, j, k, ix
-            double[3] pos_1, pos_2, distance
+            double[3] pos_1, pos_2
 
         if self.box_multiplier[0] == self.box_multiplier[1] == self.box_multiplier[2] == 1:
             self.distance_vector(&frame_1[3 * index_1], &frame_2[3 * index_2], diffvec)
         else:
-            atom_index = index_1 % frame_1_len
-            box_index = index_1 / frame_1_len
-
-            i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
-            j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
-            k = box_index % self.box_multiplier[2]
-
-            for ix in range(3):
-                pos_1[ix] =  frame_1[3 * atom_index + ix] + i * self.pbc_matrix[0, ix] \
-                                                          + j * self.pbc_matrix[1, ix] \
-                                                          + k * self.pbc_matrix[2, ix]
-
-            atom_index = index_2 % frame_2_len
-            box_index = index_2 / frame_2_len
-
-            i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
-            j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
-            k = box_index % self.box_multiplier[2]
-
-            for ix in range(3):
-                pos_2[ix] =  frame_2[3 * atom_index + ix] + i * self.pbc_matrix[0, ix] \
-                                                          + j * self.pbc_matrix[1, ix] \
-                                                          + k * self.pbc_matrix[2, ix]
-
+            self.position_extended_box_ptr(index_1, frame_1, frame_1_len, &pos_1[0])
+            self.position_extended_box_ptr(index_2, frame_2, frame_2_len, &pos_2[0])
             self.distance_vector(pos_1, pos_2, diffvec)
 
     def next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
