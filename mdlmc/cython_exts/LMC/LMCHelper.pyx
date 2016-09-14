@@ -115,7 +115,22 @@ cdef class AtomBox:
                                                       + j * self.pbc_matrix[1, ix] \
                                                       + k * self.pbc_matrix[2, ix]
 
-    cdef double distance_extended_box(self, int index_1, double * frame_1, int frame_1_len, int index_2,
+    def distance_extended_box(self, arr1, arr2):
+        cdef:
+            int i, j
+            double diffvec[3]
+            np.ndarray[np.double_t, ndim=2] arr1_ = arr1.reshape((-1, 3))
+            np.ndarray[np.double_t, ndim=2] arr2_ = arr2.reshape((-1, 3))
+
+        result = np.zeros(arr1.shape)
+
+        for i in range(arr1.shape[0]):
+            self.distance_vector(&arr1_[i, 0], &arr2_[i, 0], &diffvec[0])
+            for j in range(3):
+                result[i, j] = diffvec[j]
+        return result
+
+    cdef double distance_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len, int index_2,
                                        double * frame_2, int frame_2_len) nogil:
         """Calculates the distance between two atoms, taking into account the periodic boundary
         conditions of the extended periodic box."""
@@ -170,7 +185,7 @@ cdef class AtomBox:
                               self.box_multiplier[2]
 
         for index_2 in range(atom_number):
-            distance = self.distance_extended_box(index_1, &frame_1[0, 0], frame_1.shape[0],
+            distance = self.distance_extended_box_ptr(index_1, &frame_1[0, 0], frame_1.shape[0],
                                                   index_2, &frame_2[0, 0], frame_2.shape[0])
             if distance < minimum_distance:
                 minimum_distance = distance
@@ -236,8 +251,8 @@ cdef class AtomBoxMonoclin(AtomBox):
                 self.periodic_boundaries_extended[3 * i + j] *= box_multiplier[i]
 
         self.h = np.zeros((3, 3))
-        for i in xrange(3):
-            for j in xrange(3):
+        for i in range(3):
+            for j in range(3):
                 self.h[j, i] = self.periodic_boundaries_extended[i * 3 + j]
         self.h_inv = np.array(np.linalg.inv(self.h), order="C")
         self.pbc_matrix = periodic_boundaries.reshape((3, 3))
@@ -278,12 +293,12 @@ cdef class LMCRoutine:
         double cutoff_radius, angle_threshold
         double neighbor_search_radius
         public JumprateFunction jumprate_fct
-        public AtomBox atombox
+        public AtomBox atom_box
         np.uint32_t saved_frame_counter
         public double[:, ::1] jumpmatrix
         bool calculate_jumpmatrix
 
-    def __cinit__(self, AtomBox atombox, jumprate_parameter_dict, double cutoff_radius,
+    def __cinit__(self, AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
                   double angle_threshold, double neighbor_search_radius, jumprate_type, *,
                   seed=None, bool calculate_jumpmatrix=False, verbose=False):
         cdef:
@@ -291,15 +306,15 @@ cdef class LMCRoutine:
             double[:] pbc_extended
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.jumps = 0
-        self.oxygen_number = atombox.oxygen_number_extended
-        self.phosphorus_number = atombox.phosphorus_number_extended
+        self.oxygen_number = atom_box.oxygen_number_extended
+        self.phosphorus_number = atom_box.phosphorus_number_extended
         self.cutoff_radius = cutoff_radius
         self.angle_threshold = angle_threshold
         self.neighbor_search_radius = neighbor_search_radius
         self.saved_frame_counter = 0
         self.calculate_jumpmatrix = calculate_jumpmatrix
         self.jumpmatrix = np.zeros((self.oxygen_number, self.oxygen_number))
-        self.atombox = atombox
+        self.atom_box = atom_box
         if type(seed) != int:
             seed = time.time()
         gsl_rng_set(self.r, seed)
@@ -327,18 +342,18 @@ cdef class LMCRoutine:
     def determine_neighbors(self, int frame_number, verbose=False):
         cdef:
             int i, j
-            int oxygen_len = self.atombox.oxygen_trajectory.shape[1]
+            int oxygen_len = self.atom_box.oxygen_trajectory.shape[1]
             double dist
             vector[int] neighbor_list
 
         self.neighbors.clear()
-        for i in xrange(self.atombox.oxygen_number_extended):
+        for i in range(self.atom_box.oxygen_number_extended):
             neighbor_list.clear()
-            for j in xrange(self.atombox.oxygen_number_extended):
+            for j in range(self.atom_box.oxygen_number_extended):
                 if i != j:
-                    dist = self.atombox.distance_extended_box(i, &self.atombox.oxygen_trajectory[
+                    dist = self.atom_box.distance_extended_box_ptr(i, &self.atom_box.oxygen_trajectory[
                         frame_number, 0, 0], oxygen_len,
-                        j, &self.atombox.oxygen_trajectory[frame_number, 0, 0], oxygen_len)
+                        j, &self.atom_box.oxygen_trajectory[frame_number, 0, 0], oxygen_len)
                     if dist < self.neighbor_search_radius:
                         neighbor_list.push_back(j)
             self.neighbors.push_back(neighbor_list)
@@ -346,8 +361,8 @@ cdef class LMCRoutine:
     cdef calculate_transitions(self, int frame_number, double r_cut, double angle_thresh):
         cdef:
             int start_index, neighbor_index, destination_index
-            int oxygen_number_unextended = self.atombox.oxygen_trajectory.shape[1]
-            int phosphorus_number_unextended = self.atombox.phosphorus_trajectory.shape[1]
+            int oxygen_number_unextended = self.atom_box.oxygen_trajectory.shape[1]
+            int phosphorus_number_unextended = self.atom_box.phosphorus_trajectory.shape[1]
             double dist, PO_angle
             vector[np.int32_t] start_indices_tmp
             vector[np.int32_t] destination_indices_tmp
@@ -356,27 +371,27 @@ cdef class LMCRoutine:
         start_indices_tmp.clear()
         destination_indices_tmp.clear()
         jump_probability_tmp.clear()
-        for start_index in range(self.atombox.oxygen_number_extended):
+        for start_index in range(self.atom_box.oxygen_number_extended):
             for neighbor_index in range(self.neighbors[start_index].size()):
                 destination_index = self.neighbors[start_index][neighbor_index]
-                dist = self.atombox.distance_extended_box(start_index,
-                                                          &self.atombox.oxygen_trajectory[
+                dist = self.atom_box.distance_extended_box_ptr(start_index,
+                                                          &self.atom_box.oxygen_trajectory[
                                                               frame_number, 0, 0],
                                                           oxygen_number_unextended,
                                                           destination_index,
-                                                          &self.atombox.oxygen_trajectory[
+                                                          &self.atom_box.oxygen_trajectory[
                                                               frame_number, 0, 0],
                                                           oxygen_number_unextended)
                 if dist < r_cut:
-                    poo_angle = self.atombox.angle_extended_box(
-                        self.atombox.phosphorus_neighbors[start_index],
-                        &self.atombox.phosphorus_trajectory[frame_number, 0, 0],
+                    poo_angle = self.atom_box.angle_extended_box(
+                        self.atom_box.phosphorus_neighbors[start_index],
+                        &self.atom_box.phosphorus_trajectory[frame_number, 0, 0],
                         phosphorus_number_unextended,
                         start_index,
-                        &self.atombox.oxygen_trajectory[frame_number, 0, 0],
+                        &self.atom_box.oxygen_trajectory[frame_number, 0, 0],
                         oxygen_number_unextended,
                         destination_index,
-                        &self.atombox.oxygen_trajectory[frame_number, 0, 0],
+                        &self.atom_box.oxygen_trajectory[frame_number, 0, 0],
                         oxygen_number_unextended)
                     start_indices_tmp.push_back(start_index)
                     destination_indices_tmp.push_back(destination_index)
@@ -410,7 +425,7 @@ cdef class LMCRoutine:
         cdef:
             int i, j, index_origin, index_destin
             int steps = self.start_tmp.size()
-        for j in xrange(steps):
+        for j in range(steps):
             i = gsl_rng_uniform_int(self.r, steps)
             index_origin = self.start_tmp[i]
             index_destin = self.destination_tmp[i]
@@ -423,10 +438,10 @@ cdef class LMCRoutine:
 
     def store_transitions_in_vector(self, bool verbose=False):
         cdef int i
-        for i in range(self.atombox.oxygen_trajectory.shape[0]):
+        for i in range(self.atom_box.oxygen_trajectory.shape[0]):
             self.calculate_transitions(i, self.cutoff_radius, self.angle_threshold)
             if verbose and i % 1000 == 0:
-                print "# Saving transitions {} / {}".format(i, self.atombox.oxygen_trajectory.shape[0]), "\r",
+                print "# Saving transitions {} / {}".format(i, self.atom_box.oxygen_trajectory.shape[0]), "\r",
         print ""
         if verbose:
             print "# Done"
@@ -439,7 +454,7 @@ cdef class LMCRoutine:
 
         steps = self.start_indices[frame].size()
 
-        for step in xrange(steps):
+        for step in range(steps):
             i = gsl_rng_uniform_int(self.r, steps)
             index_origin = self.start_indices[frame][i]
             index_destination = self.destination_indices[frame][i]
@@ -454,12 +469,12 @@ cdef class LMCRoutine:
             int step, i, index_origin, index_destination
             int trajectory_length
             int steps
-        trajectory_length = self.atombox.oxygen_trajectory.shape[0]
+        trajectory_length = self.atom_box.oxygen_trajectory.shape[0]
         while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame + 1:
             self.calculate_transitions(
                 self.saved_frame_counter, self.cutoff_radius, self.angle_threshold)
         steps = self.start_indices[frame].size()
-        for step in xrange(steps):
+        for step in range(steps):
             i = gsl_rng_uniform_int(self.r, steps)
             index_origin = self.start_indices[frame][i]
             index_destination = self.destination_indices[frame][i]

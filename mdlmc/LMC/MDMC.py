@@ -85,34 +85,37 @@ def calculate_higher_mean_squared_displacement(displacement):
 
 
 class ObservableManager:
-    def __init__(self, atom_box, proton_lattice, proton_number, *, msd_mode=None,
-                 variance_per_proton=False, output=sys.stdout):
+    def __init__(self, atom_box, proton_lattice, proton_number, md_timestep, sweeps, *,
+                 msd_mode=None, variance_per_proton=False, output=sys.stdout):
         self.proton_number = proton_number
         self.atom_box = atom_box
         self.displacement = np.zeros((self.proton_number, 3))
         self.proton_pos_snapshot = np.zeros((self.proton_number, 3))
-        self.proton_lattice = proton_lattice
-        self.proton_lattice_snapshot = np.array(proton_lattice)
+        self.oxygen_lattice = proton_lattice
+        self.oxygen_lattice_snapshot = np.array(proton_lattice)
         self.variance_per_proton = variance_per_proton
+        self.md_timestep = md_timestep
         self.output = output
+        self.sweeps = sweeps
 
         if msd_mode == "higher_msd":
             self.mean_square_displacement = np.zeros((4, 3))
             self.msd_variance = np.zeros((4, 3))
             self.calculate_msd = self.calculate_msd_higher_orders
         else:
-            self.mean_square_displacement = np.zeros(3)
+            self.mean_square_displacement = np.zeros((1, 3))
             self.msd_variance = np.zeros(3)
             self.calculate_msd = self.calculate_msd_standard
 
     def calculate_displacement(self, frame):
-        proton_pos_new = np.zeros(self.proton_lattice_snapshot.shape)
-        for oxygen_index, proton_index in enumerate(self.proton_lattice):
+        proton_pos_new = np.zeros(self.proton_pos_snapshot.shape)
+        for oxygen_index, proton_index in enumerate(self.oxygen_lattice):
             if proton_index > 0:
-                proton_pos_new[proton_index - 1] = self.atom_box.position_extended_box(oxygen_index, self.atom_box.oxygen_trajectory[frame])
-        self.displacement += npa.distance(proton_pos_new, self.proton_pos_snapshot,
-                                          self.pbc)
-        self.proton_lattice_snapshot[:] = self.proton_lattice
+                proton_pos_new[proton_index - 1] = \
+                    self.atom_box.position_extended_box(oxygen_index,
+                                                        self.atom_box.oxygen_trajectory[frame])
+        self.displacement += self.atom_box.distance_extended_box(proton_pos_new,
+                                                                 self.proton_pos_snapshot)
 
     def calculate_msd_standard(self):
         self.mean_square_displacement[:] = (self.displacement**2).sum(axis=0) / \
@@ -130,16 +133,17 @@ class ObservableManager:
         return self.mean_square_displacement
 
     def calculate_auto_correlation(self):
-        self.autocorrelation = np.logical_and(self.proton_lattice == self.proton_lattice_snapshot,
-                              self.proton_lattice != 0).sum()
+        self.autocorrelation = np.logical_and(self.oxygen_lattice == self.oxygen_lattice_snapshot,
+                                              self.oxygen_lattice != 0).sum()
 
     def reset_observables(self, frame):
-        for oxy_ind, prot_ind in enumerate(self.proton_lattice):
+        for oxy_ind, prot_ind in enumerate(self.oxygen_lattice):
             if prot_ind > 0:
                 self.proton_pos_snapshot[prot_ind - 1] = \
-                    self.atom_box.position_extended_box(oxy_ind, self.atom_box.oxygen_trajectory[frame])
+                    self.atom_box.position_extended_box(oxy_ind,
+                                                        self.atom_box.oxygen_trajectory[frame])
 
-        self.protonlattice_snapshot = np.copy(self.proton_lattice)
+        self.oxygen_lattice_snapshot = np.copy(self.oxygen_lattice)
 
         self.displacement[:] = 0
 
@@ -157,7 +161,7 @@ class ObservableManager:
                 file=self.output)
 
     def print_observables(self, sweep):
-        speed = float(sweep) / (time.time() - start_time)
+        speed = float(sweep) / (time.time() - self.start_time)
         if sweep != 0:
             remaining_time_hours = int((self.sweeps - sweep) / speed / 3600)
             remaining_time_min = int((((self.sweeps - sweep) / speed) % 3600) / 60)
@@ -173,15 +177,18 @@ class ObservableManager:
         print(" {:>10} {:>10}    "
               "{:18.8f} {:18.8f} {:18.8f}   "
               "{msd_higher:}  "
-              "{:8d} {:10d} {:10.2f} {:10}".format(sweep, sweep * timestep_fs,
-                                                   MSD[0], MSD[1], MSD[2],
-                                                   autocorrelation, helper.get_jumps(), speed,
+              "{:8d} {:10d} {:10.2f} {:10}".format(sweep, sweep * self.md_timestep,
+                                                   *self.mean_square_displacement[0],
+                                                   self.autocorrelation, -7, speed,
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
-        self.averaged_results[(sweep % self.reset_freq) // self.print_freq, 2:] += MSD[0], MSD[1], \
-                                                                                   MSD[2], \
-                                                                                   autocorrelation, \
-                                                                                   helper.get_jumps()
+        # self.averaged_results[(sweep % self.reset_freq) // self.print_freq, 2:] += MSD[0], MSD[1], \
+        #                                                                            MSD[2], \
+        #                                                                            autocorrelation, \
+        #                                                                            helper.get_jumps()
+
+    def start_timer(self):
+        self.start_time = time.time()
 
     def print_observables_var(self, sweep, autocorrelation, helper, timestep_fs,
                               start_time, MSD, msd_var, msd2=None, msd3=None, msd4=None):
@@ -284,7 +291,7 @@ class MDMC:
             else:
                 print("# {:20} {:>20}".format(k, str(v)))
 
-    def initialize_proton_lattice(self, box_multiplier):
+    def initialize_oxygen_lattice(self, box_multiplier):
         proton_lattice = np.zeros(
             self.oxygennumber * box_multiplier[0] * box_multiplier[1] * box_multiplier[2], np.uint8)
         proton_lattice[:self.proton_number] = range(1, self.proton_number + 1)
@@ -298,24 +305,18 @@ class MDMC:
         # Check periodic boundaries and determine whether cell is orthorhombic/cubic
         #  or non-orthorhombic/monoclin
         if self.nonortho:
-            atombox = LMCHelper.AtomBoxMonoclin(self.oxygen_trajectory,
-                                                self.phosphorus_trajectory, self.pbc,
-                                                self.box_multiplier)
+            atom_box = LMCHelper.AtomBoxMonoclin(self.oxygen_trajectory,
+                                                 self.phosphorus_trajectory, self.pbc,
+                                                 self.box_multiplier)
         else:
-            atombox = LMCHelper.AtomBoxCubic(self.oxygen_trajectory, self.phosphorus_trajectory,
-                                             self.pbc, self.box_multiplier)
+            atom_box = LMCHelper.AtomBoxCubic(self.oxygen_trajectory, self.phosphorus_trajectory,
+                                              self.pbc, self.box_multiplier)
 
-        # if self.variance_per_proton:
-        #     displacement, MSD, msd_var, msd2, msd3, msd4, \
-        #     proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant_var()
-        # else:
-        #     displacement, MSD, msd2, msd3, msd4, \
-        #     proton_pos_snapshot, proton_pos_new = self.init_observables_protons_constant()
-
-        proton_lattice = self.initialize_proton_lattice(self.box_multiplier)
+        oxygen_lattice = self.initialize_oxygen_lattice(self.box_multiplier)
 
         msd_mode = "higher_msd" if self.higher_msd else "standard_msd"
-        observable_manager = ObservableManager(atombox, proton_lattice, self.proton_number,
+        observable_manager = ObservableManager(atom_box, oxygen_lattice, self.proton_number,
+                                               self.md_timestep_fs, self.sweeps,
                                                msd_mode=msd_mode,
                                                variance_per_proton=self.variance_per_proton)
 
@@ -325,7 +326,7 @@ class MDMC:
 
         start_time = time.time()
 
-        helper = LMCHelper.LMCRoutine(atombox=atombox,
+        helper = LMCHelper.LMCRoutine(atom_box=atom_box,
                                       jumprate_parameter_dict=self.jumprate_params_fs,
                                       cutoff_radius=self.cutoff_radius,
                                       angle_threshold=self.angle_threshold,
@@ -346,13 +347,13 @@ class MDMC:
                     frame = sweep
                 else:
                     frame = np.random.randint(self.oxygen_trajectory.shape[0])
-            helper.sweep_from_vector(sweep % self.oxygen_trajectory.shape[0], proton_lattice)
+            helper.sweep_from_vector(sweep % self.oxygen_trajectory.shape[0], oxygen_lattice)
 
         if not self.xyz_output:
             observable_manager.print_observable_names()
 
         # Run
-        start_time = time.time()
+        observable_manager.start_timer()
         for sweep in range(0, self.sweeps):
             if sweep % (self.skip_frames + 1) == 0:
                 if not self.shuffle:
@@ -363,15 +364,15 @@ class MDMC:
             if sweep % self.reset_freq == 0:
                 observable_manager.reset_observables(frame)
             if sweep % self.print_freq == 0:
-                observable_manager.calculate_displacement()
+                observable_manager.calculate_displacement(frame)
                 observable_manager.calculate_msd()
                 observable_manager.calculate_auto_correlation()
                 observable_manager.print_observables(sweep)
-            # helper.sweep_list(proton_lattice)
+            # helper.sweep_list(oxygen_lattice)
             if self.jumpmatrix_filename is not None:
-                helper.sweep_from_vector_jumpmatrix(frame, proton_lattice)
+                helper.sweep_from_vector_jumpmatrix(frame, oxygen_lattice)
             else:
-                helper.sweep_from_vector(frame, proton_lattice)
+                helper.sweep_from_vector(frame, oxygen_lattice)
 
         if self.jumpmatrix_filename is not None:
             np.savetxt(self.jumpmatrix_filename, helper.jumpmatrix)
