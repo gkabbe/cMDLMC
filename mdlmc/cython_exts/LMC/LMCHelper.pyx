@@ -280,7 +280,7 @@ cdef class LMCRoutine:
 
     cdef:
         gsl_rng * r
-        int jumps
+        public int jumps
         # Create containers for the oxygen index from which the proton jump start, for the index of
         # the destination oxygen, and for the jump probability of the oxygen connection.
         # The nested vectors hold the indices and probabilities for the whole trajectory
@@ -487,6 +487,3 @@ cdef class LMCRoutine:
 
     def reset_jumpcounter(self):
         self.jumps = 0
-
-    def get_jumps(self):
-        return self.jumps
