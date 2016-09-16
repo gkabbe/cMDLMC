@@ -120,7 +120,15 @@ def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
 
 
 def load_trajectory_from_npz(npz_fname, *atom_names, clip=None, verbose=False):
-    trajectory = np.load(npz_fname)["trajectory"]
+    file_content = np.load(npz_fname)
+    if type(file_content) == np.ndarray:
+        trajectory = file_content
+    else:
+        if "trajectory" in file_content.keys():
+            trajectory = file_content["trajectory"]
+        else:
+            trajectory = file_content.items()[0]
+
     if clip:
         if verbose:
             print("# Clipping trajectory to the first {} frames".format(clip))
@@ -140,7 +148,7 @@ def load_atoms(filename, auxiliary_file, *atom_names, verbose=False, clip=None):
     if filename:
         if auxiliary_file:
             if verbose:
-                print("# Both xyz file and auxiliary npz file specified.")
+                print("# Both xyz file and auxiliary npz/npy file specified.")
                 print("# Will try to load from auxiliary file", auxiliary_file)
             if not os.path.exists(auxiliary_file):
                 if verbose:
