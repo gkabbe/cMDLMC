@@ -116,6 +116,7 @@ class ObservableManager:
                                                         self.atom_box.oxygen_trajectory[frame])
         self.displacement += self.atom_box.distance_extended_box(proton_pos_new,
                                                                  self.proton_pos_snapshot)
+        self.proton_pos_snapshot[:] = proton_pos_new
 
     def calculate_msd_standard(self):
         self.mean_square_displacement[:] = (self.displacement**2).sum(axis=0) / \
@@ -182,10 +183,6 @@ class ObservableManager:
                                                    self.autocorrelation, -7, speed,
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
-        # self.averaged_results[(sweep % self.reset_freq) // self.print_freq, 2:] += MSD[0], MSD[1], \
-        #                                                                            MSD[2], \
-        #                                                                            autocorrelation, \
-        #                                                                            helper.get_jumps()
 
     def start_timer(self):
         self.start_time = time.time()
