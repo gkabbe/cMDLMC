@@ -20,9 +20,11 @@ def get_git_version():
 
 
 class ObservableManager:
-    def __init__(self, lmc_helper, atom_box, oxygen_lattice, proton_number, md_timestep, sweeps, *,
-                 msd_mode=None, variance_per_proton=False, output=sys.stdout):
+    def __init__(self, lmc_helper, oxygen_trajectory, atom_box, oxygen_lattice, proton_number,
+                 md_timestep, sweeps, *, msd_mode=None, variance_per_proton=False,
+                 output=sys.stdout):
         self.lmc_helper = lmc_helper
+        self.oxygen_trajectory = oxygen_trajectory
         self.atom_box = atom_box
         self.proton_number = proton_number
         self.displacement = np.zeros((self.proton_number, 3))
@@ -59,7 +61,7 @@ class ObservableManager:
             if proton_index > 0:
                 proton_pos_new[proton_index - 1] = \
                     self.atom_box.position_extended_box(oxygen_index,
-                                                        self.atom_box.oxygen_trajectory[frame])
+                                                        self.oxygen_trajectory[frame])
         self.displacement += self.atom_box.distance_extended_box(proton_pos_new,
                                                                  self.proton_pos_snapshot)
         self.proton_pos_snapshot[:] = proton_pos_new
@@ -88,7 +90,7 @@ class ObservableManager:
             if prot_ind > 0:
                 self.proton_pos_snapshot[prot_ind - 1] = \
                     self.atom_box.position_extended_box(oxy_ind,
-                                                        self.atom_box.oxygen_trajectory[frame])
+                                                        self.oxygen_trajectory[frame])
 
         self.oxygen_lattice_snapshot = np.copy(self.oxygen_lattice)
 
@@ -248,12 +250,9 @@ class MDMC:
         # Check periodic boundaries and determine whether cell is orthorhombic/cubic
         #  or non-orthorhombic/monoclin
         if self.nonortho:
-            atom_box = LMCHelper.AtomBoxMonoclin(self.oxygen_trajectory,
-                                                 self.phosphorus_trajectory, self.pbc,
-                                                 self.box_multiplier)
+            atom_box = LMCHelper.AtomBoxMonoclin(self.pbc, self.box_multiplier)
         else:
-            atom_box = LMCHelper.AtomBoxCubic(self.oxygen_trajectory, self.phosphorus_trajectory,
-                                              self.pbc, self.box_multiplier)
+            atom_box = LMCHelper.AtomBoxCubic(self.pbc, self.box_multiplier)
 
         oxygen_lattice = self.initialize_oxygen_lattice(self.box_multiplier)
 
@@ -265,15 +264,16 @@ class MDMC:
 
         start_time = time.time()
 
-        helper = LMCHelper.LMCRoutine(atom_box=atom_box,
+        helper = LMCHelper.LMCRoutine(self.oxygen_trajectory, self.phosphorus_trajectory,
+                                      atom_box=atom_box,
                                       jumprate_parameter_dict=self.jumprate_params_fs,
                                       cutoff_radius=self.cutoff_radius,
                                       angle_threshold=self.angle_threshold,
                                       neighbor_search_radius=self.neighbor_search_radius,
                                       jumprate_type=self.jumprate_type, verbose=self.verbose)
-        helper.determine_neighbors(0)
         helper.store_transitions_in_vector(verbose=self.verbose)
-        observable_manager = ObservableManager(helper, atom_box, oxygen_lattice, self.proton_number,
+        observable_manager = ObservableManager(helper, self.oxygen_trajectory, atom_box,
+                                               oxygen_lattice, self.proton_number,
                                                self.md_timestep_fs, self.sweeps, msd_mode=msd_mode,
                                                variance_per_proton=self.variance_per_proton)
 

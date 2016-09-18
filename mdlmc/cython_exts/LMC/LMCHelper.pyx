@@ -73,7 +73,6 @@ cdef class AtomBox:
     cdef:
         public double[:, :, ::1] oxygen_trajectory
         public double[:, :, ::1] phosphorus_trajectory
-        public int[:] phosphorus_neighbors
         double[:] periodic_boundaries
         public double[:] periodic_boundaries_extended
         double[:, ::1] pbc_matrix
@@ -81,23 +80,13 @@ cdef class AtomBox:
         int oxygen_number_extended
         int phosphorus_number_extended
 
-    def __cinit__(self, double[:, :, ::1] oxygen_trajectory, double[:, :, ::1] phosphorus_trajectory,
-                  periodic_boundaries, box_multiplier):
-        self.oxygen_trajectory = oxygen_trajectory
-        self.phosphorus_trajectory = phosphorus_trajectory
+    def __cinit__(self, periodic_boundaries, box_multiplier):
         self.periodic_boundaries = np.asfarray(periodic_boundaries)
         self.box_multiplier = np.asarray(box_multiplier, dtype=np.int32)
-        self.oxygen_number_extended = self.oxygen_trajectory.shape[1] * box_multiplier[0] * \
-                                      box_multiplier[1] * box_multiplier[2]
-
-    def __init__(self, *args, **kwargs):
-        self.phosphorus_neighbors = self.determine_phosphorus_oxygen_pairs(0)
 
     def position_extended_box(self, int index, double [:, ::1] frame):
         cdef np.ndarray[np.float_t, ndim=1] pos = np.zeros(3)
-
         self.position_extended_box_ptr(index, &frame[0, 0], frame.shape[0], &pos[0])
-
         return pos
 
     cdef void position_extended_box_ptr(self, int index, double *frame, int frame_len,
@@ -193,12 +182,13 @@ cdef class AtomBox:
 
         return minimum_index, minimum_distance
 
-    def determine_phosphorus_oxygen_pairs(self, frame_number):
-        phosphorus_neighbors = np.zeros(self.oxygen_number_extended, np.int32)
-        oxygen_atoms = self.oxygen_trajectory[frame_number]
-        phosphorus_atoms = self.phosphorus_trajectory[frame_number]
-
-        for oxygen_index in range(self.oxygen_number_extended):
+    def determine_phosphorus_oxygen_pairs(self, double [:, ::1] oxygen_atoms, 
+                                          double [:, ::1] phosphorus_atoms):
+        print "go!"
+        cdef int oxygen_number_extended = oxygen_atoms.shape[0] * self.box_multiplier[0] * \
+                                          self.box_multiplier[1] * self.box_multiplier[2]
+        phosphorus_neighbors = np.zeros(oxygen_number_extended, np.int32)
+        for oxygen_index in range(oxygen_number_extended):
             phosphorus_index, _ = self.next_neighbor(oxygen_index, oxygen_atoms, phosphorus_atoms)
             phosphorus_neighbors[oxygen_index] = phosphorus_index
         return phosphorus_neighbors
@@ -207,9 +197,7 @@ cdef class AtomBox:
 cdef class AtomBoxCubic(AtomBox):
     """Subclass of AtomBox for orthogonal periodic MD boxes"""
 
-    def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
-                  double[:, :, ::1] phosphorus_trajectory,
-                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
+    def __cinit__(self, np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
         cdef int i
 
         self.pbc_matrix = np.zeros((3, 3))
@@ -241,9 +229,7 @@ cdef class AtomBoxMonoclin(AtomBox):
         public double[:, ::1] h
         public double[:, ::1] h_inv
 
-    def __cinit__(self, double[:, :, ::1] oxygen_trajectory, 
-                  double[:, :, ::1] phosphorus_trajectory,
-                  np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
+    def __cinit__(self, np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
 
         self.periodic_boundaries_extended = np.array(periodic_boundaries)
         for i in range(0, 3):
@@ -279,6 +265,9 @@ cdef class LMCRoutine:
     carries out the Monte Carlo steps."""
 
     cdef:
+        double [:, :, ::1] oxygen_trajectory
+        double [:, :, ::1] phosphorus_trajectory
+        public int[:] phosphorus_neighbors
         gsl_rng * r
         public int jumps
         # Create containers for the oxygen index from which the proton jump start, for the index of
@@ -298,7 +287,8 @@ cdef class LMCRoutine:
         public double[:, ::1] jumpmatrix
         bool calculate_jumpmatrix
 
-    def __cinit__(self, AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
+    def __cinit__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
+                  AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
                   double angle_threshold, double neighbor_search_radius, jumprate_type, *,
                   seed=None, bool calculate_jumpmatrix=False, verbose=False):
         cdef:
@@ -306,8 +296,6 @@ cdef class LMCRoutine:
             double[:] pbc_extended
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.jumps = 0
-        self.oxygen_number = atom_box.oxygen_number_extended
-        self.phosphorus_number = atom_box.phosphorus_number_extended
         self.cutoff_radius = cutoff_radius
         self.angle_threshold = angle_threshold
         self.neighbor_search_radius = neighbor_search_radius
@@ -315,6 +303,12 @@ cdef class LMCRoutine:
         self.calculate_jumpmatrix = calculate_jumpmatrix
         self.jumpmatrix = np.zeros((self.oxygen_number, self.oxygen_number))
         self.atom_box = atom_box
+        self.oxygen_trajectory = oxygen_trajectory
+        self.phosphorus_trajectory = phosphorus_trajectory
+        self.oxygen_number = self.oxygen_trajectory.shape[1] * self.atom_box.box_multiplier[0] * \
+                             self.atom_box.box_multiplier[1] * self.atom_box.box_multiplier[2]
+        self.phosphorus_number = self.phosphorus_trajectory.shape[1] * self.atom_box.box_multiplier[0] * \
+                                 self.atom_box.box_multiplier[1] * self.atom_box.box_multiplier[2]
         if type(seed) != int:
             seed = time.time()
         gsl_rng_set(self.r, seed)
@@ -335,6 +329,14 @@ cdef class LMCRoutine:
         else:
             raise Exception("Jump rate type unknown. Please choose between "
                             "MD_rates and AE_rates")
+                            
+    def __init__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
+                  AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
+                  double angle_threshold, double neighbor_search_radius, jumprate_type, *,
+                  seed=None, bool calculate_jumpmatrix=False, verbose=False):
+
+        self.phosphorus_neighbors = self.atom_box.determine_phosphorus_oxygen_pairs(self.oxygen_trajectory[0], self.phosphorus_trajectory[0])
+        self.determine_neighbors(0)
 
     def __dealloc__(self):
         gsl_rng_free(self.r)
@@ -342,18 +344,18 @@ cdef class LMCRoutine:
     def determine_neighbors(self, int frame_number, verbose=False):
         cdef:
             int i, j
-            int oxygen_len = self.atom_box.oxygen_trajectory.shape[1]
+            int oxygen_len = self.oxygen_trajectory.shape[1]
             double dist
             vector[int] neighbor_list
 
         self.neighbors.clear()
-        for i in range(self.atom_box.oxygen_number_extended):
+        for i in range(self.oxygen_number):
             neighbor_list.clear()
-            for j in range(self.atom_box.oxygen_number_extended):
+            for j in range(self.oxygen_number):
                 if i != j:
-                    dist = self.atom_box.distance_extended_box_ptr(i, &self.atom_box.oxygen_trajectory[
+                    dist = self.atom_box.distance_extended_box_ptr(i, &self.oxygen_trajectory[
                         frame_number, 0, 0], oxygen_len,
-                        j, &self.atom_box.oxygen_trajectory[frame_number, 0, 0], oxygen_len)
+                        j, &self.oxygen_trajectory[frame_number, 0, 0], oxygen_len)
                     if dist < self.neighbor_search_radius:
                         neighbor_list.push_back(j)
             self.neighbors.push_back(neighbor_list)
@@ -361,8 +363,8 @@ cdef class LMCRoutine:
     cdef calculate_transitions(self, int frame_number, double r_cut, double angle_thresh):
         cdef:
             int start_index, neighbor_index, destination_index
-            int oxygen_number_unextended = self.atom_box.oxygen_trajectory.shape[1]
-            int phosphorus_number_unextended = self.atom_box.phosphorus_trajectory.shape[1]
+            int oxygen_number_unextended = self.oxygen_trajectory.shape[1]
+            int phosphorus_number_unextended = self.phosphorus_trajectory.shape[1]
             double dist, PO_angle
             vector[np.int32_t] start_indices_tmp
             vector[np.int32_t] destination_indices_tmp
@@ -371,27 +373,27 @@ cdef class LMCRoutine:
         start_indices_tmp.clear()
         destination_indices_tmp.clear()
         jump_probability_tmp.clear()
-        for start_index in range(self.atom_box.oxygen_number_extended):
+        for start_index in range(self.oxygen_number):
             for neighbor_index in range(self.neighbors[start_index].size()):
                 destination_index = self.neighbors[start_index][neighbor_index]
                 dist = self.atom_box.distance_extended_box_ptr(start_index,
-                                                          &self.atom_box.oxygen_trajectory[
+                                                          &self.oxygen_trajectory[
                                                               frame_number, 0, 0],
                                                           oxygen_number_unextended,
                                                           destination_index,
-                                                          &self.atom_box.oxygen_trajectory[
+                                                          &self.oxygen_trajectory[
                                                               frame_number, 0, 0],
                                                           oxygen_number_unextended)
                 if dist < r_cut:
                     poo_angle = self.atom_box.angle_extended_box(
-                        self.atom_box.phosphorus_neighbors[start_index],
-                        &self.atom_box.phosphorus_trajectory[frame_number, 0, 0],
+                        self.phosphorus_neighbors[start_index],
+                        &self.phosphorus_trajectory[frame_number, 0, 0],
                         phosphorus_number_unextended,
                         start_index,
-                        &self.atom_box.oxygen_trajectory[frame_number, 0, 0],
+                        &self.oxygen_trajectory[frame_number, 0, 0],
                         oxygen_number_unextended,
                         destination_index,
-                        &self.atom_box.oxygen_trajectory[frame_number, 0, 0],
+                        &self.oxygen_trajectory[frame_number, 0, 0],
                         oxygen_number_unextended)
                     start_indices_tmp.push_back(start_index)
                     destination_indices_tmp.push_back(destination_index)
@@ -438,10 +440,10 @@ cdef class LMCRoutine:
 
     def store_transitions_in_vector(self, bool verbose=False):
         cdef int i
-        for i in range(self.atom_box.oxygen_trajectory.shape[0]):
+        for i in range(self.oxygen_trajectory.shape[0]):
             self.calculate_transitions(i, self.cutoff_radius, self.angle_threshold)
             if verbose and i % 1000 == 0:
-                print "# Saving transitions {} / {}".format(i, self.atom_box.oxygen_trajectory.shape[0]), "\r",
+                print "# Saving transitions {} / {}".format(i, self.oxygen_trajectory.shape[0]), "\r",
         print ""
         if verbose:
             print "# Done"
