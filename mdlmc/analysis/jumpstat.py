@@ -1,5 +1,4 @@
 #!/usr/bin/env python3 -u
-#encoding=utf-8
 
 import sys
 import numpy as np
@@ -10,50 +9,56 @@ import re
 import inspect
 import ipdb
 
-script_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 from mdlmc.cython_exts.atoms import numpyatom as cnpa
 from mdlmc.cython_exts.LMC import jumpstat_helper as jsh
 from mdlmc.IO import BinDump
 from mdlmc.atoms import numpyatom as npa
 
-def determine_PO_pairs(O_frame, P_frame, pbc):
-    P_neighbors = np.zeros(O_frame.shape[0], int)
-    for i in range(O_frame.shape[0]):
-        P_index = cnpa.next_neighbor(O_frame[i], P_frame, pbc)[0]
+def determine_phosphorus_oxygen_pairs(oxygen_frame, phosphorus_frame, pbc):
+    P_neighbors = np.zeros(oxygen_frame.shape[0], int)
+    for i in range(oxygen_frame.shape[0]):
+        P_index = cnpa.next_neighbor(oxygen_frame[i], phosphorus_frame, pbc)[0]
         P_neighbors[i] = P_index
     return P_neighbors
-    
-def jump_histo(dmin, dmax, bins, pbc, frames, Os, Hs, covevo, verbose=False, nonortho=False):
+
+
+def jump_histo(dmin, dmax, bins, pbc, frames, oxygen_trajectory, proton_trajectory,
+               covalent_neighbors, verbose=False, nonorthogonal_box=False):
         """Counts proton jumps at different distances"""
         start_time = time.time()
         
-        if nonortho == True:
-            h = np.array(pbc.reshape((3,3)).T, order="C")
+        if nonorthogonal_box:
+            h = np.array(pbc.reshape((3, 3)).T, order="C")
             h_inv = np.array(np.linalg.inv(h), order="C")
 
-        jumpcounter = np.zeros(bins, int)
+        jump_counter = np.zeros(bins, int)
 
-        for frame in range(Os.shape[0]-1):
-            if verbose == True and frame % 1000 == 0:
-                print("#Frame {}".format(frame), "\r", end=' ')
-            neighborchange = covevo[frame]!=covevo[frame+1]
-            if neighborchange.any():
-                    jump_protons = neighborchange.nonzero()[0]
-                    for i in jump_protons:
-                            # pdb.set_trace()
-                            O_before = covevo[frame, i]
-                            O_after = covevo[frame+1, i]
-                            if nonortho == True:
-                                O_dist = cnpa.length_nonortho_bruteforce(Os[frame, O_after], Os[frame, O_before], h, h_inv)
+        for frame in range(oxygen_trajectory.shape[0] - 1):
+            if verbose and frame % 1000 == 0:
+                print("# Frame {}".format(frame), "\r", end=' ')
+            neighbor_change = covalent_neighbors[frame] != covalent_neighbors[frame + 1]
+            if neighbor_change.any():
+                    jumping_protons, = neighbor_change.nonzero()
+                    for proton_index in jumping_protons:
+                            oxy_neighbor_before = covalent_neighbors[frame, proton_index]
+                            oxy_neighbor_after = covalent_neighbors[frame + 1, proton_index]
+                            if nonorthogonal_box:
+                                oxygen_distance = cnpa.length_nonortho_bruteforce(
+                                    oxygen_trajectory[frame, oxy_neighbor_after],
+                                    oxygen_trajectory[frame, oxy_neighbor_before], h, h_inv)
                             else:
-                                O_dist = cnpa.length(Os[frame, O_after], Os[frame, O_before], pbc)
-                            jumpcounter[(O_dist-dmin)/(dmax-dmin)*bins] += 1
+                                oxygen_distance = cnpa.length(
+                                    oxygen_trajectory[frame, oxy_neighbor_after],
+                                    oxygen_trajectory[frame, oxy_neighbor_before],
+                                    pbc)
+                            jump_counter[(oxygen_distance - dmin) / (dmax - dmin) * bins] += 1
         print("")
         print("#Proton jump histogram:")
-        for i in range(jumpcounter.size):
-                print("{:10} {:10}".format(dmin+(dmax-dmin)/bins*(.5+i), jumpcounter[i]))
+        for proton_index in range(jump_counter.size):
+            print("{:10} {:10}".format(dmin + (dmax - dmin) / bins * (.5 + proton_index),
+                                       jump_counter[proton_index]))
 
-        print("#Jumps total: {:}".format(jumpcounter.sum()))
+        print("#Jumps total: {:}".format(jump_counter.sum()))
 
 
 def jump_probs2(Os, Hs, proton_neighbors, pbc, dmin, dmax, bins, nonortho, verbose=True):
@@ -70,10 +75,6 @@ def jump_probs2(Os, Hs, proton_neighbors, pbc, dmin, dmax, bins, nonortho, verbo
             donors, acceptors = oxygen_frame[donor_indices], oxygen_frame[acceptor_indices]
             distances = np.sqrt((npa.distance(donors, acceptors, pbc) ** 2).sum(axis=-1))
             histo_jumps, edges_jumps = np.histogram(distances, bins=bins, range=(dmin, dmax))
-            ipdb.set_trace()
-            
-        
-        
 
 
 def main(*args):
@@ -109,25 +110,29 @@ def main(*args):
     if args.verbose == True:
         print("# PBC used:\n#", pbc)
 
-    trajectory = BinDump.npload_atoms(args.filename, create_if_not_existing=True, verbose=args.verbose)
+    trajectory = BinDump.npload_atoms(args.filename, create_if_not_existing=True,
+                                      verbose=args.verbose)
     BinDump.mark_acidic_protons(trajectory, pbc, nonortho=nonortho, verbose=args.verbose)
     Os, Hs = cnpa.select_atoms(trajectory, "O", "AH")
 
-    covevo_filename = re.sub("\..{3}$", "", args.filename)+"_covevo.npy"
-    if not os.path.exists(covevo_filename):
+    covalent_neighbors_filename = re.sub("\..{3}$", "", args.filename)+"_covevo.npy"
+    if not os.path.exists(covalent_neighbors_filename):
         print("# Creating array of nearest oxygen neighbor over time for all protons")
-        BinDump.npsave_covevo(covevo_filename, Os, Hs, pbc, nonortho=nonortho, verbose=args.verbose)
+        BinDump.npsave_covevo(covalent_neighbors_filename, Os, Hs, pbc, nonortho=nonortho,
+                              verbose=args.verbose)
     else:
-        print("# Found array with nearest oxygen neighbor over time:", covevo_filename)
+        print("# Found array with nearest oxygen neighbor over time:", covalent_neighbors_filename)
 
-    covevo = np.load(covevo_filename)
+    covalent_neighbors = np.load(covalent_neighbors_filename)
 
     if args.mode == "jumpprobs":
-        jump_probs2(Os, Hs, covevo, pbc, args.dmin, args.dmax, args.bins, verbose=True, nonortho=nonortho)
+        jump_probs2(Os, Hs, covalent_neighbors, pbc, args.dmin, args.dmax, args.bins, verbose=True,
+                    nonortho=nonortho)
     elif args.mode == "O_RDF":
         pass
     else:
-        jump_histo(args.dmin, args.dmax, args.bins, args.verbose, pbc, args.frames, Os, Hs, covevo, verbose=True, nonortho=nonortho)
+        jump_histo(args.dmin, args.dmax, args.bins, args.verbose, pbc, args.frames, Os, Hs,
+                   covalent_neighbors, verbose=True, nonorthogonal_box=nonortho)
 
 if __name__ == "__main__":
     main()
