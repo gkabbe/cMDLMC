@@ -4,7 +4,7 @@ import numpy as np
 import math
 import sys
 
-xyzatom = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
+dtype_xyz = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
 
 atom_masses = dict()
 atom_masses["H"] = 1.008
