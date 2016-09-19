@@ -80,7 +80,7 @@ cdef class AtomBox:
         int oxygen_number_extended
         int phosphorus_number_extended
 
-    def __cinit__(self, periodic_boundaries, box_multiplier):
+    def __cinit__(self, periodic_boundaries, box_multiplier=(1, 1, 1)):
         self.periodic_boundaries = np.asfarray(periodic_boundaries)
         self.box_multiplier = np.asarray(box_multiplier, dtype=np.int32)
 
@@ -145,12 +145,21 @@ cdef class AtomBox:
             mh.dot_product_ptr(diff_2_1, diff_2_1, 3)) / sqrt(
             mh.dot_product_ptr(diff_2_3, diff_2_3, 3)))
 
+    cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
+        return 0
+        
+    cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
+        return 0
+
     cdef void distance_vector(self, double * atompos_1, double * atompos_2, double * diffvec) nogil:
         pass
 
+    cpdef double angle(self, double [:] atompos_1, double [:] atompos_2, double [:] atompos_3):
+        return self.angle_ptr(&atompos_1[0], &atompos_2[0], &atompos_3[0])
+
     cdef double angle_ptr(self, double * atompos_1, double * atompos_2, double * atompos_3) nogil:
         return 0
-
+        
     cdef void distance_vector_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len,
                                                int index_2, double * frame_2, int frame_2_len,
                                                double * diffvec) nogil:
@@ -165,7 +174,23 @@ cdef class AtomBox:
             self.position_extended_box_ptr(index_2, frame_2, frame_2_len, &pos_2[0])
             self.distance_vector(pos_1, pos_2, diffvec)
 
-    def next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
+    def next_neighbor(self, double [:] pos, double [:, ::1] frame_2):
+        cdef:
+            double distance, minimum_distance = 1e30
+            int minimum_index = -1
+            int index_2
+            int atom_number = frame_2.shape[0] * self.box_multiplier[0] * self.box_multiplier[1] * \
+                              self.box_multiplier[2]
+
+        for index_2 in range(atom_number):
+            distance = self.distance_ptr(&pos[0], &frame_2[index_2, 0])
+            if distance < minimum_distance:
+                minimum_distance = distance
+                minimum_index = index_2
+
+        return minimum_index, minimum_distance
+
+    def next_neighbor_extended_box(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
         cdef:
             double distance, minimum_distance = 1e30
             int minimum_index = -1
@@ -189,15 +214,30 @@ cdef class AtomBox:
                                           self.box_multiplier[1] * self.box_multiplier[2]
         phosphorus_neighbors = np.zeros(oxygen_number_extended, np.int32)
         for oxygen_index in range(oxygen_number_extended):
-            phosphorus_index, _ = self.next_neighbor(oxygen_index, oxygen_atoms, phosphorus_atoms)
+            phosphorus_index, _ = self.next_neighbor_extended_box(oxygen_index, oxygen_atoms, 
+                                                              phosphorus_atoms)
             phosphorus_neighbors[oxygen_index] = phosphorus_index
         return phosphorus_neighbors
 
+    def get_acidic_proton_indices(self, atoms, verbose=False):
+        """Expects numpy array 'atoms' of dtype 'xyz_dtype'"""
+        acidic_indices = []
+        protons = atoms[atoms["name"] == "H"]
+        proton_indices, = np.where(atoms["name"] == "H")
+        all_other_atoms = atoms[atoms["name"] != "H"]
+        for i, single_proton in enumerate(protons):
+            nn_index, next_neighbor = self.next_neighbor(single_proton["pos"], all_other_atoms["pos"])
+            if all_other_atoms["name"][nn_index] == "O":
+                acidic_indices.append(proton_indices[i])
+        if verbose:
+            print("# Acidic indices: ", acidic_indices)
+            print("# Number of acidic protons: ", len(acidic_indices))
+        return acidic_indices
 
 cdef class AtomBoxCubic(AtomBox):
     """Subclass of AtomBox for orthogonal periodic MD boxes"""
 
-    def __cinit__(self, np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
+    def __cinit__(self, np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier=(1, 1, 1)):
         cdef int i
 
         self.pbc_matrix = np.zeros((3, 3))
@@ -212,7 +252,7 @@ cdef class AtomBoxCubic(AtomBox):
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return cnpa.length_ptr(atompos_1, atompos_2, & self.periodic_boundaries_extended[0])
 
-    cdef double distance(self, double[:] atompos_1, double[:] atompos_2):
+    cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
         return cnpa.length(atompos_1, atompos_2, self.periodic_boundaries_extended)
 
     cdef void distance_vector(self, double * atompos_1, double * atompos_2, double * diffvec) nogil:
@@ -229,7 +269,7 @@ cdef class AtomBoxMonoclin(AtomBox):
         public double[:, ::1] h
         public double[:, ::1] h_inv
 
-    def __cinit__(self, np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier):
+    def __cinit__(self, np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier=(1, 1, 1)):
 
         self.periodic_boundaries_extended = np.array(periodic_boundaries)
         for i in range(0, 3):
