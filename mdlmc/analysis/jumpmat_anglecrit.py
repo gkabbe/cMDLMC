@@ -29,7 +29,7 @@ def compare(trajectory_path, pbc, recalc=False, anglecut=np.pi/2, distcut=3.0):
     Os = np.array(trajectory[trajectory["name"] == "O"].reshape(trajectory_length, O_number)["pos"])
     Ps = np.array(trajectory[trajectory["name"] == "P"].reshape(trajectory_length, P_number)["pos"])
     P_neighbors = get_P_neighbors(Os[0], Ps[0], pbc)
-    Hs = BinDump.npget_acidHs(trajectory, pbc)
+    Hs = BinDump.get_acidic_protons(trajectory, pbc)
     H_number = Hs.shape[0]
     jumpmat = np.zeros((O_number, O_number), int)
     anglemat = np.zeros((O_number, O_number), int)

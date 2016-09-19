@@ -13,23 +13,7 @@ from mdlmc.cython_exts.atoms import numpyatom as cython_npa
 from mdlmc.atoms import numpyatom as npa
 
 
-def npget_acidHs(atoms, pbc, only_indices=False):
-    if len(atoms.shape) > 2 or len(atoms.shape) == 0:
-        print("Expecting array with dimensions (No. of frames, no. of atoms) or (no. of atoms)")
-    elif len(atoms.shape) == 2:
-        atoms = atoms[0]
-    else:
-        pass
-    acidH_indices = []
-    atoms_pos = np.array(atoms["pos"], order="C")
-    for i, atom in enumerate(atoms_pos):
-        if atoms[i]["name"] == "H" and atoms[cython_npa.next_neighbor(
-                atom, atoms_pos, pbc, exclude_identical_position=True)[0]]["name"] == "O":
-            acidH_indices.append(i)
-    if only_indices:
-        return acidH_indices
-    else:
-        return atoms_pos[acidH_indices]
+
 
 
 def npsave_atoms(np_filename, trajectory, nobackup=True, verbose=False):

@@ -69,7 +69,9 @@ cdef class AEFunction(JumprateFunction):
 
 
 cdef class AtomBox:
-    """The AtomBox class takes care of all distance and angle calculations."""
+    """The AtomBox class takes care of all distance and angle calculations.
+    Depending on the periodic boundary conditions of the system, either the subclass 
+    AtomBoxCubic or AtomBoxMonoclin need to be instantiated."""
     cdef:
         public double[:, :, ::1] oxygen_trajectory
         public double[:, :, ::1] phosphorus_trajectory

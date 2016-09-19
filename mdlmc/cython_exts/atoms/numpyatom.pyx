@@ -7,7 +7,7 @@ cimport numpy as np
 from cython_gsl cimport round
 from mdlmc.cython_exts.helper cimport math_helper as mh
 from libcpp.vector cimport vector
-from mdlmc.atoms.numpyatom import distance, distance_pbc_nonortho
+from mdlmc.atoms.numpyatom import distance, distance_pbc_nonortho, get_acidic_proton_indices
 
 cdef extern from "math.h":
     double sqrt(double x) nogil

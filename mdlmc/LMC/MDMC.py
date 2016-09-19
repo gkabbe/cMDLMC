@@ -272,6 +272,7 @@ class MDMC:
                                       neighbor_search_radius=self.neighbor_search_radius,
                                       jumprate_type=self.jumprate_type, verbose=self.verbose)
         helper.store_transitions_in_vector(verbose=self.verbose)
+
         observable_manager = ObservableManager(helper, self.oxygen_trajectory, atom_box,
                                                oxygen_lattice, self.proton_number,
                                                self.md_timestep_fs, self.sweeps, msd_mode=msd_mode,
