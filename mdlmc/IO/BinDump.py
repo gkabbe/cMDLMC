@@ -1,23 +1,14 @@
 #!/usr/bin/env python3
 
-import sys
 import os
-import numpy as np
-import pickle
-import ipdb
-import time
 import re
-import inspect
 
-from mdlmc.cython_exts.atoms import numpyatom as cython_npa
+import numpy as np
 from mdlmc.atoms import numpyatom as npa
-
-
-
+from mdlmc.cython_exts.atoms import numpyatom as cython_npa
 
 
 def npsave_atoms(np_filename, trajectory, nobackup=True, verbose=False):
-
     if compressed:
         suffix = ".npz"
     else:
@@ -136,41 +127,3 @@ def npload_memmap(filename, verbose=False):
 def mark_acidic_protons(traj, pbc, nonortho=False, verbose=False):
     indices = cython_npa.get_acidic_proton_indices(traj[0], pbc, nonortho=nonortho, verbose=verbose)
     traj["name"][:, indices] = "AH"
-
-
-def npsave_covevo(fname, Os, Hs, pbc, nonortho=False, verbose=False):
-    """Saves the evolution of the covalent bonds of the hydrogen atoms with the oxygen atoms -> covevo"""
-    print("# Determining covevo..")
-    start_time = time.time()
-    covevo = np.zeros((Hs.shape[0], Hs.shape[1]), int)
-
-    if nonortho:
-        if verbose:
-            print("# Nonorthogonal periodic boundaries")
-        hmat = np.array(pbc.reshape((3, 3)).T, order="C")
-        hmat_inv = np.array(np.linalg.inv(hmat), order="C")
-
-        for i in range(covevo.shape[0]):
-            for j in range(covevo.shape[1]):
-                covevo[i, j] = cython_npa.next_neighbor_nonortho(Hs[i, j], Os[i], hmat, hmat_inv)[0]
-            if verbose and i % 100 == 0:
-                print("# Frame {: 6d} ({:5.0f} fps)".format(
-                    i, float(i) / (time.time() - start_time)), end=' ')
-                print("\r", end=' ')
-        print("")
-    else:
-        for i in range(covevo.shape[0]):
-            for j in range(covevo.shape[1]):
-                covevo[i, j] = cython_npa.next_neighbor(Hs[i, j], Os[i], pbc=pbc)[0]
-            if verbose and i % 100 == 0:
-                print("# Frame {: 6d} ({:5.0f} fps)".format(
-                    i, float(i) / (time.time() - start_time)), end='\r')
-                print("")
-        print("")
-
-    if verbose:
-        print("# Saving covevo in {}".format(fname))
-    np.save(fname, covevo)
-    if verbose:
-        print("# Total time: {} seconds".format(time.time() - start_time))
-    return covevo
