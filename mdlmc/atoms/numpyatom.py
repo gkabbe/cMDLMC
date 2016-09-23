@@ -3,9 +3,9 @@
 import sys
 import numpy as np
 
+from mdlmc.cython_exts.LMC.LMCHelper import AtomBoxCubic, AtomBoxMonoclin
 
 dtype_xyz = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
-
 
 atom_masses = {'C': 12.001,
                'Cl': 35.45,
@@ -17,7 +17,27 @@ atom_masses = {'C': 12.001,
                'Se': 78.971}
 
 
+def get_acidic_protons(frame, atom_box, verbose=False):
+    """Returns the indices of all protons whose closest neighbor is an oxygen atom"""
+    if len(frame.shape) > 1:
+        raise ValueError("Argument frame should be a one dimensional numpy array of type dtype_xyz")
+    acidic_indices = []
+    H_atoms = np.array(frame["pos"][frame["name"] == "H"])
+    H_indices = np.where(frame["name"] == "H")[0]
+    not_H_atoms = np.array(frame["pos"][frame["name"] != "H"])
+    not_H_atoms_names = frame["name"][frame["name"] != "H"]
+    for i, H in enumerate(H_atoms):
+        nn_index, next_neighbor = atom_box.next_neighbor(H, not_H_atoms)
+        if not_H_atoms_names[nn_index] == "O":
+            acidic_indices.append(H_indices[i])
+    if verbose:
+        print("# Acidic indices: ", acidic_indices)
+        print("# Number of acidic protons: ", len(acidic_indices))
+    return acidic_indices
+
+
 def select_atoms(xyzatom_traj, *atomnames):
+    """Select atoms from a trajectory of dtype \"dtype_xyz\"."""
     selections = []
     frames = xyzatom_traj.shape[0]
     for atomname in atomnames:
@@ -70,4 +90,3 @@ def print_center_of_mass(npa_traj):
 def print_center_of_mass_commandline(*args):
     trajectory = np.load(sys.argv[1])["trajectory"]
     print_center_of_mass(trajectory)
-
