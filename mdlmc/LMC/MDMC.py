@@ -9,7 +9,6 @@ import argparse
 from mdlmc.IO.xyz_parser import load_atoms
 from mdlmc.IO.config_parser import print_confighelp, load_configfile
 from mdlmc.cython_exts.LMC import LMCHelper
-from mdlmc.cython_exts.atoms import numpyatom as npa
 
 
 def get_git_version():
@@ -35,16 +34,16 @@ class ObservableManager:
         self.md_timestep = md_timestep
         self.output = output
         self.sweeps = sweeps
-        self.format_strings = ['{:10d}',           # Sweeps
-                               '{:>10}',        # Time steps
-                               '{:18.8f}',      # MSD x component
-                               '{:18.8f}',      # MSD y component
-                               '{:18.8f}',      # MSD z component
-                               '{:}',           # MSD higher order
-                               '{:8d}',         # OH bond autocorrelation
-                               '{:10d}',        # Number of proton jumps
-                               '{:10.2f}',      # Simulation speed
-                               '{:}']           # Remaining time
+        self.format_strings = ['{:10d}',    # Sweeps
+                               '{:>10}',    # Time steps
+                               '{:18.8f}',  # MSD x component
+                               '{:18.8f}',  # MSD y component
+                               '{:18.8f}',  # MSD z component
+                               '{:}',       # MSD higher order
+                               '{:8d}',     # OH bond autocorrelation
+                               '{:10d}',    # Number of proton jumps
+                               '{:10.2f}',  # Simulation speed
+                               '{:}']       # Remaining time
 
         if msd_mode == "higher_msd":
             self.mean_square_displacement = np.zeros((4, 3))
@@ -67,7 +66,7 @@ class ObservableManager:
         self.proton_pos_snapshot[:] = proton_pos_new
 
     def calculate_msd_standard(self):
-        self.mean_square_displacement[:] = (self.displacement ** 2).sum(axis=0) / \
+        self.mean_square_displacement[:] = (self.displacement**2).sum(axis=0) / \
                                            self.displacement.shape[0]
         return self.mean_square_displacement
 
@@ -185,16 +184,14 @@ class MDMC:
         # Save settings as object variable
         self.__dict__.update(file_kwargs)
 
-        self.oxygen_trajectory, self.phosphorus_trajectory = load_atoms(self.filename,
-                                                                        self.auxiliary_file,
-                                                                        "O", "P",
-                                                                        clip=self.clip_trajectory,
-                                                                        verbose=self.verbose)
+        self.oxygen_trajectory, self.phosphorus_trajectory = \
+            load_atoms(self.filename, "O", "P", auxiliary_file=self.auxiliary_file,
+                       clip=self.clip_trajectory, verbose=self.verbose)
 
         if self.seed is not None:
             np.random.seed(self.seed)
         else:
-            self.seed = np.random.randint(2 ** 32)
+            self.seed = np.random.randint(2**32)
             np.random.seed(self.seed)
 
         self.oxygennumber = self.oxygen_trajectory.shape[1]
