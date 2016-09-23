@@ -75,7 +75,7 @@ def oxygen_distance_at_proton_jump(dmin, dmax, bins, pbc, atoms, covalently_bond
     for frame in range(oxygen_trajectory.shape[0] - 1):
         oxygen_distances = []
         if verbose and frame % 1000 == 0:
-            print("# Frame {}".format(frame), end="\r")
+            print("# Frame {}".format(frame), end="\r", flush=True)
         # Detect jumps by checking, when the next oxygen neighbor of a proton changes
         neighbor_change = covalently_bonded_oxygens[frame] != covalently_bonded_oxygens[frame + 1]
         if neighbor_change.any():
@@ -83,16 +83,17 @@ def oxygen_distance_at_proton_jump(dmin, dmax, bins, pbc, atoms, covalently_bond
             for proton_index in jumping_protons:
                 oxy_neighbor_before = covalently_bonded_oxygens[frame, proton_index]
                 oxy_neighbor_after = covalently_bonded_oxygens[frame + 1, proton_index]
-                oxygen_distance = atom_box.distance(oxygen_trajectory[frame, oxy_neighbor_after],
+                oxygen_distance = atom_box.length(oxygen_trajectory[frame, oxy_neighbor_after],
                                                     oxygen_trajectory[frame, oxy_neighbor_before])
-                oxygen_distances.append(oxygen_distance)
+                oxygen_distances.append(np.sqrt(oxygen_distance**2))
         histo, edges = np.histogram(oxygen_distances, bins=bins, range=(dmin, dmax))
         jump_counter += histo
+
+    distances = (edges[1:] + edges[:-1]) / 2
     print("")
     print("# Proton jump histogram:")
-    for proton_index in range(jump_counter.size):
-        print("{:10} {:10}".format(dmin + (dmax - dmin) / bins * (.5 + proton_index),
-                                   jump_counter[proton_index]))
+    for dist, count in zip(distances, jump_counter):
+        print(dist, count)
 
     print("# Jumps total: {:}".format(jump_counter.sum()))
 
@@ -105,8 +106,12 @@ def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
     jump_probs = np.zeros(bins, dtype=float)
 
     if nonorthogonal_box:
+        if verbose:
+            print("# Using nonorthogonal AtomBox")
         atom_box = AtomBoxMonoclinic(pbc)
     else:
+        if verbose:
+            print("# Using cubic AtomBox")
         atom_box = AtomBoxCubic(pbc)
 
     jump_probabilities = np.zeros(bins, float)
@@ -123,16 +128,16 @@ def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
             for proton_index in jumping_protons:
                 oxy_neighbor_before = covalently_bonded_oxygens[frame, proton_index]
                 oxy_neighbor_after = covalently_bonded_oxygens[frame + 1, proton_index]
-                oxygen_distance = atom_box.distance(oxygen_trajectory[frame, oxy_neighbor_after], oxygen_trajectory[frame, oxy_neighbor_before])
-                oxygen_distances_at_jump.append(oxygen_distance)
-
+                oxygen_distance = atom_box.length(oxygen_trajectory[frame, oxy_neighbor_after],
+                                                    oxygen_trajectory[frame, oxy_neighbor_before])
+                oxygen_distances_at_jump.append(oxygen_distance[0])
         histo_jump, edges = np.histogram(oxygen_distances_at_jump, bins=bins, range=(dmin, dmax))
         histo_ox, edges = np.histogram(
-            atom_box.distance_all_to_all(oxygen_trajectory[frame], oxygen_trajectory[frame]),
+            atom_box.length_all_to_all(oxygen_trajectory[frame], oxygen_trajectory[frame]),
             bins=bins, range=(dmin, dmax))
         mask = histo_ox != 0
         counter += mask
-        jump_probs[mask] += np.asfarray(histo_jump[mask]) / histo_ox[mask]
+        jump_probs[mask] += (np.asfarray(histo_jump[mask]) / histo_ox[mask])
     jump_probs /= counter
 
     ox_dists = (edges[:-1] + edges[1:]) / 2

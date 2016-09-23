@@ -73,7 +73,7 @@ cdef class AEFunction(JumprateFunction):
 cdef class AtomBox:
     """The AtomBox class takes care of all distance and angle calculations.
     Depending on the periodic boundary conditions of the system, either the subclass 
-    AtomBoxCubic or AtomBoxMonoclin need to be instantiated."""
+    AtomBoxCubic or AtomBoxMonoclinic need to be instantiated."""
     cdef:
         public double[:, :, ::1] oxygen_trajectory
         public double[:, :, ::1] phosphorus_trajectory
@@ -124,12 +124,23 @@ cdef class AtomBox:
 
         for i in range(arr1_view.shape[0]):
             self.distance_vector(&arr1_view[i, 0], &arr2_view[i, 0], &result_view[i, 0])
-           # for j in range(3):
-           #     result[i, j] = diffvec[j]
         return result
 
     @cython.boundscheck(True)
-    def distance_all_to_all(self, arr1, arr2):
+    def length(self, arr1, arr2):
+        cdef:
+            int i, j
+            double [:, ::1] arr1_view = arr1.reshape((-1, 3))
+            double [:, ::1] arr2_view = arr2.reshape((-1, 3))
+        result = np.zeros(arr1.shape[0])
+
+        for i in range(arr1_view.shape[0]):
+            result[i] = self.length_(arr1_view[i], arr2_view[i])
+
+        return result
+
+    @cython.boundscheck(True)
+    def length_all_to_all(self, arr1, arr2):
         cdef int i, j
         if len(arr1.shape) > 2 or len(arr2.shape) > 2:
             raise ValueError("shape needs to be <= 2")
@@ -142,10 +153,10 @@ cdef class AtomBox:
         # Only calculate half of the symmetric distance matrix
         for i in range(arr1b.shape[0]):
             for j in range(i):
-                result[i, j] = self.distance_ptr(&arr1b[i, 0], &arr2b[j, 0])
+                result[i, j] = self.length_ptr(&arr1b[i, 0], &arr2b[j, 0])
         return result
 
-    cdef double distance_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len,
+    cdef double length_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len,
                                           int index_2, double * frame_2, int frame_2_len) nogil:
         """Calculates the distance between two atoms, taking into account the periodic boundary
         conditions of the extended periodic box."""
@@ -171,10 +182,10 @@ cdef class AtomBox:
             mh.dot_product_ptr(diff_2_1, diff_2_1, 3)) / sqrt(
             mh.dot_product_ptr(diff_2_3, diff_2_3, 3)))
 
-    cdef double distance_(self, double[:] atompos_1, double[:] atompos_2):
+    cdef double length_(self, double[:] atompos_1, double[:] atompos_2):
         return 0
         
-    cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
+    cdef double length_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return 0
 
     cdef void distance_vector(self, double * atompos_1, double * atompos_2, double * diffvec) nogil:
@@ -202,19 +213,19 @@ cdef class AtomBox:
 
     def next_neighbor(self, double [:] pos, double [:, ::1] frame_2):
         cdef:
-            double distance, minimum_distance = 1e30
+            double length, minimum_length = 1e30
             int minimum_index = -1
             int index_2
             int atom_number = frame_2.shape[0] * self.box_multiplier[0] * self.box_multiplier[1] * \
                               self.box_multiplier[2]
 
         for index_2 in range(atom_number):
-            distance = self.distance_ptr(&pos[0], &frame_2[index_2, 0])
-            if distance < minimum_distance:
-                minimum_distance = distance
+            length = self.length_ptr(&pos[0], &frame_2[index_2, 0])
+            if length < minimum_length:
+                minimum_length = length
                 minimum_index = index_2
 
-        return minimum_index, minimum_distance
+        return minimum_index, minimum_length
 
     def next_neighbor_extended_box(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
         cdef:
@@ -225,7 +236,7 @@ cdef class AtomBox:
                               self.box_multiplier[2]
 
         for index_2 in range(atom_number):
-            distance = self.distance_extended_box_ptr(index_1, &frame_1[0, 0], frame_1.shape[0],
+            distance = self.length_extended_box_ptr(index_1, &frame_1[0, 0], frame_1.shape[0],
                                                   index_2, &frame_2[0, 0], frame_2.shape[0])
             if distance < minimum_distance:
                 minimum_distance = distance
@@ -262,7 +273,7 @@ cdef class AtomBox:
 cdef class AtomBoxCubic(AtomBox):
     """Subclass of AtomBox for orthogonal periodic MD boxes"""
 
-    def __cinit__(self, np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier=(1, 1, 1)):
+    def __cinit__(self, periodic_boundaries, box_multiplier=(1, 1, 1)):
         cdef int i
 
         self.pbc_matrix = np.zeros((3, 3))
@@ -270,14 +281,14 @@ cdef class AtomBoxCubic(AtomBox):
         self.pbc_matrix[1, 1] = periodic_boundaries[1]
         self.pbc_matrix[2, 2] = periodic_boundaries[2]
 
-        self.periodic_boundaries_extended = np.array(periodic_boundaries)
+        self.periodic_boundaries_extended = np.asfarray(periodic_boundaries)
         for i in range(3):
             self.periodic_boundaries_extended[i] *= box_multiplier[i]
 
-    cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
+    cdef double length_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return cnpa.length_ptr(atompos_1, atompos_2, & self.periodic_boundaries_extended[0])
 
-    cdef double distance_(self, double[:] atompos_1, double[:] atompos_2):
+    cdef double length_(self, double[:] atompos_1, double[:] atompos_2):
         return cnpa.length(atompos_1, atompos_2, self.periodic_boundaries_extended)
 
     cdef void distance_vector(self, double * atompos_1, double * atompos_2, double * diffvec) nogil:
@@ -294,9 +305,9 @@ cdef class AtomBoxMonoclinic(AtomBox):
         public double[:, ::1] h
         public double[:, ::1] h_inv
 
-    def __cinit__(self, np.ndarray[np.double_t, ndim=1] periodic_boundaries, box_multiplier=(1, 1, 1)):
+    def __cinit__(self, periodic_boundaries, box_multiplier=(1, 1, 1)):
 
-        self.periodic_boundaries_extended = np.array(periodic_boundaries)
+        self.periodic_boundaries_extended = np.asfarray(periodic_boundaries)
         for i in range(0, 3):
             for j in range(0, 3):
                 self.periodic_boundaries_extended[3 * i + j] *= box_multiplier[i]
@@ -308,11 +319,11 @@ cdef class AtomBoxMonoclinic(AtomBox):
         self.h_inv = np.array(np.linalg.inv(self.h), order="C")
         self.pbc_matrix = periodic_boundaries.reshape((3, 3))
 
-    cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
+    cdef double length_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return cnpa.length_nonortho_bruteforce_ptr(atompos_1, atompos_2, &self.h[0, 0],
                                                    &self.h_inv[0, 0])
 
-    cdef double distance_(self, double[:] atompos_1, double[:] atompos_2):
+    cdef double length_(self, double[:] atompos_1, double[:] atompos_2):
         return cnpa.length_nonortho_bruteforce_ptr(&atompos_1[0], &atompos_2[0], &self.h[0, 0],
                                                    &self.h_inv[0, 0])
 
@@ -418,7 +429,7 @@ cdef class LMCRoutine:
             neighbor_list.clear()
             for j in range(self.oxygen_number):
                 if i != j:
-                    dist = self.atom_box.distance_extended_box_ptr(i, &self.oxygen_trajectory[
+                    dist = self.atom_box.length_extended_box_ptr(i, &self.oxygen_trajectory[
                         frame_number, 0, 0], oxygen_len,
                         j, &self.oxygen_trajectory[frame_number, 0, 0], oxygen_len)
                     if dist < self.neighbor_search_radius:
@@ -441,7 +452,7 @@ cdef class LMCRoutine:
         for start_index in range(self.oxygen_number):
             for neighbor_index in range(self.neighbors[start_index].size()):
                 destination_index = self.neighbors[start_index][neighbor_index]
-                dist = self.atom_box.distance_extended_box_ptr(start_index,
+                dist = self.atom_box.length_extended_box_ptr(start_index,
                                                           &self.oxygen_trajectory[
                                                               frame_number, 0, 0],
                                                           oxygen_number_unextended,
