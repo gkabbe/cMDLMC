@@ -144,42 +144,30 @@ def load_trajectory_from_npz(npz_fname, *atom_names, clip=None, verbose=False):
         return trajectory
 
 
-def load_atoms(filename, auxiliary_file, *atom_names, verbose=False, clip=None):
-    if filename:
-        if auxiliary_file:
+def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=None):
+    if auxiliary_file:
+        if verbose:
+            print("# Both xyz file and auxiliary npz/npy file specified.")
+            print("# Will try to load from auxiliary file", auxiliary_file)
+        if not os.path.exists(auxiliary_file):
             if verbose:
-                print("# Both xyz file and auxiliary npz/npy file specified.")
-                print("# Will try to load from auxiliary file", auxiliary_file)
-            if not os.path.exists(auxiliary_file):
-                if verbose:
-                    print("# Specified auxiliary file does not exist.")
-                    print("# Creating it now...")
-                save_trajectory_to_npz(filename, npz_fname=auxiliary_file,
-                                       remove_com_movement=True, verbose=verbose)
-            return load_trajectory_from_npz(auxiliary_file, *atom_names, clip=clip,
-                                            verbose=verbose)
+                print("# Specified auxiliary file does not exist.")
+                print("# Creating it now...")
+            save_trajectory_to_npz(filename, npz_fname=auxiliary_file, remove_com_movement=True,
+                                   verbose=verbose)
+        return load_trajectory_from_npz(auxiliary_file, *atom_names, clip=clip, verbose=verbose)
+    else:
+        aux_fname = os.path.splitext(filename)[0] + ".npz"
+        if verbose:
+            print("# Looking for auxiliary file", aux_fname, "...")
+        if os.path.exists(aux_fname):
+            print("# Found it!")
+            return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip, verbose=verbose)
         else:
-            aux_fname = os.path.splitext(filename)[0] + ".npz"
             if verbose:
-                print("# Only xyz file specified.")
-                print("# Looking for auxiliary file", aux_fname, "...")
-            if os.path.exists(aux_fname):
-                print("# Found it!")
+                print("# No auxiliary file found.")
+                print("# Will create it now...")
+                save_trajectory_to_npz(filename, npz_fname=aux_fname, remove_com_movement=True,
+                                       verbose=verbose)
                 return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
                                                 verbose=verbose)
-            else:
-                if verbose:
-                    print("# No auxiliary file found.")
-                    print("# Will create it now...")
-                    save_trajectory_to_npz(filename, npz_fname=aux_fname,
-                                           remove_com_movement=True, verbose=verbose)
-                    return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
-                                                    verbose=verbose)
-    else:
-        print("# Found auxiliary file.")
-        print("# Loading from there...")
-        if auxiliary_file:
-            return load_trajectory_from_npz(auxiliary_file, *atom_names, clip=clip,
-                                                       verbose=verbose)
-        else:
-            raise InputError("Please specify either filename or auxiliary_file")
