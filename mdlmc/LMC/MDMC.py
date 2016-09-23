@@ -61,8 +61,8 @@ class ObservableManager:
                 proton_pos_new[proton_index - 1] = \
                     self.atom_box.position_extended_box(oxygen_index,
                                                         self.oxygen_trajectory[frame])
-        self.displacement += self.atom_box.distance_extended_box(proton_pos_new,
-                                                                 self.proton_pos_snapshot)
+        self.displacement += self.atom_box.distance(proton_pos_new,
+                                                    self.proton_pos_snapshot)
         self.proton_pos_snapshot[:] = proton_pos_new
 
     def calculate_msd_standard(self):
@@ -247,7 +247,7 @@ class MDMC:
         # Check periodic boundaries and determine whether cell is orthorhombic/cubic
         #  or non-orthorhombic/monoclin
         if self.nonortho:
-            atom_box = LMCHelper.AtomBoxMonoclin(self.pbc, self.box_multiplier)
+            atom_box = LMCHelper.AtomBoxMonoclinic(self.pbc, self.box_multiplier)
         else:
             atom_box = LMCHelper.AtomBoxCubic(self.pbc, self.box_multiplier)
 

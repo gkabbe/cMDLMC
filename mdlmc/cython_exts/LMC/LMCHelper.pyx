@@ -1,13 +1,15 @@
 # cython: profile=True
 # cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
 import time
-import numpy as np
 
+import numpy as np
+import cython
 cimport numpy as np
 from cython_gsl cimport *
 from libcpp.vector cimport vector
 from libcpp cimport bool
 from libc.stdio cimport *
+
 cimport mdlmc.cython_exts.atoms.numpyatom as cnpa
 cimport mdlmc.cython_exts.helper.math_helper as mh
 
@@ -106,23 +108,45 @@ cdef class AtomBox:
                                                       + j * self.pbc_matrix[1, ix] \
                                                       + k * self.pbc_matrix[2, ix]
 
-    def distance_extended_box(self, arr1, arr2):
+    @cython.boundscheck(True)
+    def distance(self, arr1, arr2):
         cdef:
             int i, j
-            double diffvec[3]
-            np.ndarray[np.double_t, ndim=2] arr1_ = arr1.reshape((-1, 3))
-            np.ndarray[np.double_t, ndim=2] arr2_ = arr2.reshape((-1, 3))
-
+        arr1 = arr1.reshape((-1, 3))
+        arr2 = arr2.reshape((-1, 3))
         result = np.zeros(arr1.shape)
+        
+        cdef:
+            double [:, ::1] arr1_view = arr1
+            double [:, ::1] arr2_view = arr2
+            double [:, ::1] result_view = result
 
-        for i in range(arr1.shape[0]):
-            self.distance_vector(&arr1_[i, 0], &arr2_[i, 0], &diffvec[0])
-            for j in range(3):
-                result[i, j] = diffvec[j]
+
+        for i in range(arr1_view.shape[0]):
+            self.distance_vector(&arr1_view[i, 0], &arr2_view[i, 0], &result_view[i, 0])
+           # for j in range(3):
+           #     result[i, j] = diffvec[j]
         return result
 
-    cdef double distance_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len, int index_2,
-                                       double * frame_2, int frame_2_len) nogil:
+    @cython.boundscheck(True)
+    def distance_all_to_all(self, arr1, arr2):
+        cdef int i, j
+        if len(arr1.shape) > 2 or len(arr2.shape) > 2:
+            raise ValueError("shape needs to be <= 2")
+
+        cdef double [:, ::1] arr1b = arr1.reshape((-1, 3))
+        cdef double [:, ::1] arr2b = arr2.reshape((-1, 3))
+
+        result = np.zeros((arr1.shape[0], arr2.shape[0]))
+
+        # Only calculate half of the symmetric distance matrix
+        for i in range(arr1b.shape[0]):
+            for j in range(i):
+                result[i, j] = self.distance_ptr(&arr1b[i, 0], &arr2b[j, 0])
+        return result
+
+    cdef double distance_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len,
+                                          int index_2, double * frame_2, int frame_2_len) nogil:
         """Calculates the distance between two atoms, taking into account the periodic boundary
         conditions of the extended periodic box."""
         cdef double dist[3]
@@ -147,7 +171,7 @@ cdef class AtomBox:
             mh.dot_product_ptr(diff_2_1, diff_2_1, 3)) / sqrt(
             mh.dot_product_ptr(diff_2_3, diff_2_3, 3)))
 
-    cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
+    cdef double distance_(self, double[:] atompos_1, double[:] atompos_2):
         return 0
         
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
@@ -253,7 +277,7 @@ cdef class AtomBoxCubic(AtomBox):
     cdef double distance_ptr(self, double * atompos_1, double * atompos_2) nogil:
         return cnpa.length_ptr(atompos_1, atompos_2, & self.periodic_boundaries_extended[0])
 
-    cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
+    cdef double distance_(self, double[:] atompos_1, double[:] atompos_2):
         return cnpa.length(atompos_1, atompos_2, self.periodic_boundaries_extended)
 
     cdef void distance_vector(self, double * atompos_1, double * atompos_2, double * diffvec) nogil:
@@ -264,7 +288,7 @@ cdef class AtomBoxCubic(AtomBox):
                               &self.periodic_boundaries_extended[0])
 
 
-cdef class AtomBoxMonoclin(AtomBox):
+cdef class AtomBoxMonoclinic(AtomBox):
     """Subclass of AtomBox for monoclinic periodic MD boxes"""
     cdef:
         public double[:, ::1] h
@@ -288,7 +312,7 @@ cdef class AtomBoxMonoclin(AtomBox):
         return cnpa.length_nonortho_bruteforce_ptr(atompos_1, atompos_2, &self.h[0, 0],
                                                    &self.h_inv[0, 0])
 
-    cpdef double distance(self, double[:] atompos_1, double[:] atompos_2):
+    cdef double distance_(self, double[:] atompos_1, double[:] atompos_2):
         return cnpa.length_nonortho_bruteforce_ptr(&atompos_1[0], &atompos_2[0], &self.h[0, 0],
                                                    &self.h_inv[0, 0])
 
