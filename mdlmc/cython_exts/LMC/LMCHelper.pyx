@@ -211,7 +211,6 @@ cdef class AtomBox:
 
     def determine_phosphorus_oxygen_pairs(self, double [:, ::1] oxygen_atoms, 
                                           double [:, ::1] phosphorus_atoms):
-        print "go!"
         cdef int oxygen_number_extended = oxygen_atoms.shape[0] * self.box_multiplier[0] * \
                                           self.box_multiplier[1] * self.box_multiplier[2]
         phosphorus_neighbors = np.zeros(oxygen_number_extended, np.int32)
