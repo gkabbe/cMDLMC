@@ -150,9 +150,8 @@ cdef class AtomBox:
 
         result = np.zeros((arr1.shape[0], arr2.shape[0]))
 
-        # Only calculate half of the symmetric distance matrix
         for i in range(arr1b.shape[0]):
-            for j in range(i):
+            for j in range(arr2b.shape[0]):
                 result[i, j] = self.length_ptr(&arr1b[i, 0], &arr2b[j, 0])
         return result
 

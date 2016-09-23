@@ -84,8 +84,8 @@ def oxygen_distance_at_proton_jump(dmin, dmax, bins, pbc, atoms, covalently_bond
                 oxy_neighbor_before = covalently_bonded_oxygens[frame, proton_index]
                 oxy_neighbor_after = covalently_bonded_oxygens[frame + 1, proton_index]
                 oxygen_distance = atom_box.length(oxygen_trajectory[frame, oxy_neighbor_after],
-                                                    oxygen_trajectory[frame, oxy_neighbor_before])
-                oxygen_distances.append(np.sqrt(oxygen_distance**2))
+                                                  oxygen_trajectory[frame, oxy_neighbor_before])
+                oxygen_distances.append(np.sqrt(oxygen_distance ** 2))
         histo, edges = np.histogram(oxygen_distances, bins=bins, range=(dmin, dmax))
         jump_counter += histo
 
@@ -101,9 +101,11 @@ def oxygen_distance_at_proton_jump(dmin, dmax, bins, pbc, atoms, covalently_bond
 def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
                                                covalently_bonded_oxygens, *, verbose=False,
                                                nonorthogonal_box=False):
-    """Determines the probability of a proton jump for a given oxygen distance"""
-    start_time = time.time()
-    jump_probs = np.zeros(bins, dtype=float)
+    """Determine the probability of a proton jump for a given oxygen distance.
+    For each frame a distance histogram of oxygen pairs with one oxygen bonded to a proton is
+    determined. Then, a distance histogram of the oxygen pairs between which a proton jump occurs at
+    the next time step, is determined.
+    Dividing the first with the latter results in a probability for a proton jump."""
 
     if nonorthogonal_box:
         if verbose:
@@ -129,27 +131,31 @@ def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
                 oxy_neighbor_before = covalently_bonded_oxygens[frame, proton_index]
                 oxy_neighbor_after = covalently_bonded_oxygens[frame + 1, proton_index]
                 oxygen_distance = atom_box.length(oxygen_trajectory[frame, oxy_neighbor_after],
-                                                    oxygen_trajectory[frame, oxy_neighbor_before])
+                                                  oxygen_trajectory[frame, oxy_neighbor_before])
                 oxygen_distances_at_jump.append(oxygen_distance[0])
         histo_jump, edges = np.histogram(oxygen_distances_at_jump, bins=bins, range=(dmin, dmax))
-        histo_ox, edges = np.histogram(
-            atom_box.length_all_to_all(oxygen_trajectory[frame], oxygen_trajectory[frame]),
-            bins=bins, range=(dmin, dmax))
+        # Only consider oxygen pairs, with one oxygen bonded to a proton
+        occupied_oxygen_indices = covalently_bonded_oxygens[frame]
+        occ_mask = np.zeros(oxygen_trajectory.shape[1], bool)
+        occ_mask[occupied_oxygen_indices] = 1
+        all_to_all = atom_box.length_all_to_all(oxygen_trajectory[frame, occ_mask],
+                                                oxygen_trajectory[frame, ~occ_mask])
+        histo_ox, edges = np.histogram(all_to_all, bins=bins, range=(dmin, dmax))
         mask = histo_ox != 0
         counter += mask
-        jump_probs[mask] += (np.asfarray(histo_jump[mask]) / histo_ox[mask])
-    jump_probs /= counter
+        jump_probabilities[mask] += (np.asfarray(histo_jump[mask]) / histo_ox[mask])
+    jump_probabilities /= counter
 
     ox_dists = (edges[:-1] + edges[1:]) / 2
 
     print("")
     print("# Proton jump histogram:")
-    for ox_dist, jump_prob in zip(ox_dists, jump_probs):
+    for ox_dist, jump_prob in zip(ox_dists, jump_probabilities):
         print(ox_dist, jump_prob)
 
 
 def main(*args):
-    parser = argparse.ArgumentParser(description="Jumpstats",
+    parser = argparse.ArgumentParser(description="Proton jump statistics",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("filename", help="trajectory")
     parser.add_argument("pbc", type=float, nargs="+",
@@ -162,8 +168,8 @@ def main(*args):
     parser.add_argument("--verbose", "-v", action="store_true", default="False", help="Verbosity")
     parser.add_argument("--mode", "-m", choices=["jumpprobs", "jumphisto"],
                         default="jumpprobs", help="Choose whether to calculate probability "
-                                                  "histogram \
-        or the histogram of proton jumps for different oxygen distances")
+                                                  "histogram or the histogram of proton jumps for "
+                                                  "different oxygen distances")
     args = parser.parse_args()
 
     if len(args.pbc) == 3:
@@ -172,14 +178,13 @@ def main(*args):
         if args.verbose:
             print("#Got 9 pbc values. Assuming nonorthorhombic box")
         nonorthorhombic_box = True
-
     else:
-        print("Wrong number of PBC arguments", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError("Wrong number of PBC arguments")
     pbc = np.array(args.pbc)
 
     if args.verbose:
-        print("# PBC used:\n#", pbc)
+        print("# PBC used:")
+        print("#", pbc)
 
     atoms = xyz_parser.load_atoms(args.filename, verbose=args.verbose)
 
