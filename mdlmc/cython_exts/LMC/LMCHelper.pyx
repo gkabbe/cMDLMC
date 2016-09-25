@@ -451,14 +451,10 @@ cdef class LMCRoutine:
         for start_index in range(self.oxygen_number):
             for neighbor_index in range(self.neighbors[start_index].size()):
                 destination_index = self.neighbors[start_index][neighbor_index]
-                dist = self.atom_box.length_extended_box_ptr(start_index,
-                                                          &self.oxygen_trajectory[
-                                                              frame_number, 0, 0],
-                                                          oxygen_number_unextended,
-                                                          destination_index,
-                                                          &self.oxygen_trajectory[
-                                                              frame_number, 0, 0],
-                                                          oxygen_number_unextended)
+                dist = self.atom_box.length_extended_box_ptr(
+                    start_index, &self.oxygen_trajectory[frame_number, 0, 0],
+                    oxygen_number_unextended, destination_index,
+                    &self.oxygen_trajectory[frame_number, 0, 0], oxygen_number_unextended)
                 if dist < r_cut:
                     poo_angle = self.atom_box.angle_extended_box(
                         self.phosphorus_neighbors[start_index],
