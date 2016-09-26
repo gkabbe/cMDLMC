@@ -494,21 +494,6 @@ cdef class LMCRoutine:
     def return_transitions(self, int frame):
         return self.start_indices[frame], self.destination_indices[frame], self.jump_probability[frame]
 
-    def sweep_list(self, np.uint8_t[:] proton_lattice):
-        cdef:
-            int i, j, index_origin, index_destin
-            int steps = self.start_tmp.size()
-        for j in range(steps):
-            i = gsl_rng_uniform_int(self.r, steps)
-            index_origin = self.start_tmp[i]
-            index_destin = self.destination_tmp[i]
-            if proton_lattice[index_origin] > 0 and proton_lattice[index_destin] == 0:
-                if gsl_rng_uniform(self.r) < self.jump_probability_tmp[i]:
-                    proton_lattice[index_destin] = proton_lattice[index_origin]
-                    proton_lattice[index_origin] = 0
-                    self.jumps += 1
-        return self.jumps
-
     def store_jumprates(self, bool verbose=False):
         cdef int i
         for i in range(self.oxygen_trajectory.shape[0]):
