@@ -91,9 +91,6 @@ def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
     with open(xyz_fname, "rb") as f:
         frame_length = int(f.readline()) + 2
         f.seek(0)
-        if verbose:
-            print("# Determining trajectory length...")
-        f.seek(0)
 
         chunk_size = 1000
         counter = 0
