@@ -24,7 +24,7 @@ def determine_phosphorus_oxygen_pairs(oxygen_frame, phosphorus_frame, atom_box):
 
 def determine_covalently_bonded_oxygens(trajectory, pbc, *, nonorthorhombic_box=False,
                                         verbose=False):
-    """Saves for each proton at every time step the index of its closest oxygen neighbor"""
+    """Saves for each proton the index of its closest oxygen neighbor for every time step"""
 
     if nonorthorhombic_box:
         if verbose:

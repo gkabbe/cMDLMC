@@ -299,7 +299,7 @@ cdef class AtomBoxCubic(AtomBox):
 
 
 cdef class AtomBoxMonoclinic(AtomBox):
-    """Subclass of AtomBox for monoclinic periodic MD boxes"""
+    """Subclass of AtomBox for nonorthogonal periodic MD boxes"""
     cdef:
         public double[:, ::1] h
         public double[:, ::1] h_inv

@@ -234,6 +234,9 @@ class MDMC:
                 print("# {:20} {:>20}".format(k, str(v)))
 
     def initialize_oxygen_lattice(self, box_multiplier):
+        """The oxygen lattice stores the occupation state of each oxygen.
+        Protons are numbered from 1 to proton_number"""
+
         proton_lattice = np.zeros(
             self.oxygennumber * box_multiplier[0] * box_multiplier[1] * box_multiplier[2], np.uint8)
         proton_lattice[:self.proton_number] = range(1, self.proton_number + 1)
