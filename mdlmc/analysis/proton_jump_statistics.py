@@ -1,6 +1,5 @@
 #!/usr/bin/env python3 -u
 
-import sys
 import time
 import argparse
 import os
@@ -8,7 +7,6 @@ import re
 from collections import Counter
 
 import numpy as np
-import ipdb
 
 from mdlmc.IO import xyz_parser
 from mdlmc.atoms import numpyatom as npa
