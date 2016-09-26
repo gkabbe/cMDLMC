@@ -509,7 +509,7 @@ cdef class LMCRoutine:
                     self.jumps += 1
         return self.jumps
 
-    def store_transitions_in_vector(self, bool verbose=False):
+    def store_jumprates(self, bool verbose=False):
         cdef int i
         for i in range(self.oxygen_trajectory.shape[0]):
             self.calculate_transitions(i, self.cutoff_radius, self.angle_threshold)
@@ -519,7 +519,7 @@ cdef class LMCRoutine:
         if verbose:
             print "# Done"
 
-    def sweep_from_vector(self, int frame, np.uint8_t[:] proton_lattice):
+    def sweep(self, int frame, np.uint8_t[:] proton_lattice):
         cdef:
             int step, i, index_origin, index_destination
             int trajectory_length
@@ -537,7 +537,7 @@ cdef class LMCRoutine:
                     proton_lattice[index_origin] = 0
                     self.jumps += 1
 
-    def sweep_from_vector_jumpmatrix(self, int frame, np.uint8_t[:] proton_lattice):
+    def sweep_with_jumpmatrix(self, int frame, np.uint8_t[:] proton_lattice):
         cdef:
             int step, i, index_origin, index_destination
             int trajectory_length

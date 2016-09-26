@@ -271,7 +271,7 @@ class MDMC:
                                       angle_threshold=self.angle_threshold,
                                       neighbor_search_radius=self.neighbor_search_radius,
                                       jumprate_type=self.jumprate_type, verbose=self.verbose)
-        helper.store_transitions_in_vector(verbose=self.verbose)
+        helper.store_jumprates(verbose=self.verbose)
 
         observable_manager = ObservableManager(helper, self.oxygen_trajectory, atom_box,
                                                oxygen_lattice, self.proton_number,
@@ -290,7 +290,7 @@ class MDMC:
                     frame = sweep
                 else:
                     frame = np.random.randint(self.oxygen_trajectory.shape[0])
-            helper.sweep_from_vector(sweep % self.oxygen_trajectory.shape[0], oxygen_lattice)
+            helper.sweep(sweep % self.oxygen_trajectory.shape[0], oxygen_lattice)
 
         if not self.xyz_output:
             observable_manager.print_observable_names()
@@ -312,9 +312,9 @@ class MDMC:
                 observable_manager.calculate_auto_correlation()
                 observable_manager.print_observables(sweep)
             if self.jumpmatrix_filename is not None:
-                helper.sweep_from_vector_jumpmatrix(frame, oxygen_lattice)
+                helper.sweep_with_jumpmatrix(frame, oxygen_lattice)
             else:
-                helper.sweep_from_vector(frame, oxygen_lattice)
+                helper.sweep(frame, oxygen_lattice)
 
         if self.jumpmatrix_filename is not None:
             np.savetxt(self.jumpmatrix_filename, helper.jumpmatrix)
