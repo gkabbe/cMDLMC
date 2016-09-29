@@ -93,6 +93,12 @@ def print_confighelp(args):
         print(text_width * "-")
         print("")
         print("")
+        
+
+def print_config_template(args):
+     parser_dict = CONFIG_DICT
+     for k, v in parser_dict.items():
+          print(k, v["default"])
 
 
 CONFIG_DICT = OrderedDict([
@@ -150,7 +156,7 @@ CONFIG_DICT = OrderedDict([
     ("skip_frames",
      {
          "parse_fct": parse_int,
-         "default": "no_default",
+         "default": 0,
          "help": "How many frames to skip when updating the topology from the MD trajectory. A "
                  "skip of zero frames means that all frames are read from the trajectory."
      }),
@@ -241,7 +247,7 @@ CONFIG_DICT = OrderedDict([
     ("periodic_wrap",
      {
          "parse_fct": parse_bool,
-         "default": True,
+         "default": False,
          "help": "If true, proton motion will be wrapped into the periodic box."
      }),
     ("jumpmatrix_filename",

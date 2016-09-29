@@ -4,10 +4,9 @@ import os
 import sys
 import time
 import numpy as np
-import ipdb
 import argparse
 from mdlmc.IO.xyz_parser import load_atoms
-from mdlmc.IO.config_parser import print_confighelp, load_configfile
+from mdlmc.IO.config_parser import print_confighelp, load_configfile, print_config_template
 from mdlmc.cython_exts.LMC import LMCHelper
 
 
@@ -161,7 +160,7 @@ class ObservableManager:
                                                                                   autocorrelation, \
                                                                                   helper.get_jumps()
 
-    def print_OsHs(self, Os, proton_lattice, sweep, timestep_fs):
+    def print_xyz(self, Os, proton_lattice, sweep, timestep_fs):
         proton_indices = np.where(proton_lattice > 0)[0]
         print(Os.shape[0] + self.proton_number)
         print("Time:", sweep * timestep_fs)
@@ -185,7 +184,7 @@ class MDMC:
         self.__dict__.update(file_kwargs)
 
         self.oxygen_trajectory, self.phosphorus_trajectory = \
-            load_atoms(self.filename, "O", "P", auxiliary_file=self.auxiliary_file,
+            load_atoms(self.filename, "O", self.o_neighbor, auxiliary_file=self.auxiliary_file,
                        clip=self.clip_trajectory, verbose=self.verbose)
 
         if self.seed is not None:
@@ -262,8 +261,6 @@ class MDMC:
             print("# Sweeps:", self.sweeps, file=self.output)
         self.print_settings()
 
-        start_time = time.time()
-
         helper = LMCHelper.LMCRoutine(self.oxygen_trajectory, self.phosphorus_trajectory,
                                       atom_box=atom_box,
                                       jumprate_parameter_dict=self.jumprate_params_fs,
@@ -319,20 +316,6 @@ class MDMC:
         if self.jumpmatrix_filename is not None:
             np.savetxt(self.jumpmatrix_filename, helper.jumpmatrix)
 
-        self.averaged_results /= (self.sweeps / self.reset_freq)
-        self.averaged_results[:, 0] = list(range(0, self.reset_freq, self.print_freq))
-        self.averaged_results[:, 1] = self.averaged_results[:, 0] * self.md_timestep_fs
-        print("# {}".format("-" * 98))
-        print("# Averaged Results:")
-        print("# {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10}".format(
-            "Sweeps", "Time", "MSD_x", "MSD_y", "MSD_z", "Autocorr", "Jumps"), file=self.output)
-        for line in self.averaged_results:
-            print("  {:>10} {:>10}    {:>18} {:>18} {:>18} {:>8} {:>10}".format(*line),
-                  file=self.output)
-
-        print("# Total time: {:.1f} minutes".format((time.time() - start_time) / 60),
-              file=self.output)
-
 
 def start_lmc(args):
     md_mc = MDMC(configfile=args.config_file)
@@ -344,10 +327,12 @@ def main(*args):
         description="cMD/LMC", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers()
     parser_config_help = subparsers.add_parser("config_help", help="config file help")
+    parser_config_file = subparsers.add_parser("config_file", help="Print config file template")
     parser_config_load = subparsers.add_parser(
         "config_load", help="Load config file and start cMD/LMC run")
     parser_config_load.add_argument("config_file", help="Config file")
     parser_config_help.set_defaults(func=print_confighelp)
+    parser_config_file.set_defaults(func=print_config_template)
     parser_config_load.set_defaults(func=start_lmc)
     args = parser.parse_args()
     args.func(args)
