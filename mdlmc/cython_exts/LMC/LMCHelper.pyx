@@ -44,6 +44,18 @@ cdef class FermiFunction(JumprateFunction):
         return self.a / (1 + exp((x - self.b) / self.c))
 
 
+cdef class ExponentialFunction(JumprateFunction):
+    cdef:
+        double a, b
+        
+    def __cinit__(self, double a, double b):
+        self.a = a
+        self.b = b
+        
+    cpdef double evaluate(self, double x):
+        return self.a * exp(self.b * x)
+
+
 cdef class AEFunction(JumprateFunction):
     cdef:
         double A, a, b, d0, T
@@ -401,9 +413,13 @@ cdef class LMCRoutine:
             d0 = jumprate_parameter_dict["d0"]
             T = jumprate_parameter_dict["T"]
             self.jumprate_fct = AEFunction(A, a, b, d0, T)
+        elif jumprate_type == "Exponential_rates":
+            a = jumprate_parameter_dict["a"]
+            b = jumprate_parameter_dict["b"]
+            self.jumprate_fct = ExponentialFunction(a, b)
         else:
             raise Exception("Jump rate type unknown. Please choose between "
-                            "MD_rates and AE_rates")
+                            "MD_rates, Exponential_rates and AE_rates")
                             
     def __init__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
                   AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
