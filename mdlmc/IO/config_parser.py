@@ -93,12 +93,15 @@ def print_confighelp(args):
         print(text_width * "-")
         print("")
         print("")
-        
+
 
 def print_config_template(args):
-     parser_dict = CONFIG_DICT
-     for k, v in parser_dict.items():
-          print(k, v["default"])
+    parser_dict = CONFIG_DICT
+    for k, v in parser_dict.items():
+        if v["default"] is None:
+            print(k, "<MISSING VALUE>")
+        else:
+            print(k, v["default"])
 
 
 CONFIG_DICT = OrderedDict([
@@ -293,7 +296,7 @@ CONFIG_DICT = OrderedDict([
      {
          "parse_fct": parse_bool,
          "default": False,
-         "help": "Calculates higher MSDs."
+         "help": "Calculates higher mean squared displacements."
      }),
     ("variance_per_proton",
      {
@@ -302,5 +305,12 @@ CONFIG_DICT = OrderedDict([
          "help": "If True, calculate variance over all proton trajectories. "
                  "Else, calculate variance over all time windows. In each time window, "
                  "the MSD has already been averaged over all proton trajectories."
+     }),
+    ("angle_dependency",
+     {
+         "parse_fct": parse_bool,
+         "default": True,
+         "help": "If True, use angle cutoff (set jump rates to zero, if angle between oxygen 1 "
+                 "neighbor, oxygen 1 and oxygen 2 is below angle_threshold."
      })
 ])
