@@ -24,7 +24,7 @@ cdef double PI = np.pi
 cdef double R = 1.9872041e-3   # universal gas constant in kcal/mol/K
 
 
-# Define Function Objects. These can later be substituted easily by LMCHelper
+# Define Function Objects. These can later be substituted easily by LMCRoutine
 cdef class JumprateFunction:
     cpdef double evaluate(self, double x):
         return 0
@@ -55,7 +55,7 @@ cdef class ExponentialFunction(JumprateFunction):
         return self.a * exp(self.b * x)
 
 
-cdef class AEFunction(JumprateFunction):
+cdef class ActivationEnergyFunction(JumprateFunction):
     cdef:
         double A, a, b, d0, T
 
@@ -99,8 +99,7 @@ cdef class LMCRoutine:
         public vector[vector[np.int32_t]] destination_indices
         public vector[vector[np.float32_t]] jump_probability
         public vector[vector[int]] neighbors
-        int oxygen_number
-        int phosphorus_number
+        int oxygen_number, phosphorus_number
         double cutoff_radius, angle_threshold
         double neighbor_search_radius
         public JumprateFunction jumprate_fct
@@ -147,7 +146,7 @@ cdef class LMCRoutine:
             b = jumprate_parameter_dict["b"]
             d0 = jumprate_parameter_dict["d0"]
             T = jumprate_parameter_dict["T"]
-            self.jumprate_fct = AEFunction(A, a, b, d0, T)
+            self.jumprate_fct = ActivationEnergyFunction(A, a, b, d0, T)
         elif jumprate_type == "Exponential_rates":
             a = jumprate_parameter_dict["a"]
             b = jumprate_parameter_dict["b"]
@@ -238,9 +237,9 @@ cdef class LMCRoutine:
     def print_transitions(self, int frame):
         cdef int i
         for i in range(self.start_indices[frame].size()):
-            print self.start_indices[frame][i], self.destination_indices[frame][i], \
-                  self.jump_probability[frame][i]
-        print "In total", self.start_indices[frame].size(), "connections"
+            print(self.start_indices[frame][i], self.destination_indices[frame][i],
+                   self.jump_probability[frame][i])
+        print("In total", self.start_indices[frame].size(), "connections")
 
     def return_transitions(self, int frame):
         return self.start_indices[frame], self.destination_indices[frame], self.jump_probability[frame]
@@ -250,10 +249,11 @@ cdef class LMCRoutine:
         for i in range(self.oxygen_trajectory.shape[0]):
             self.calculate_transitions(i, self.cutoff_radius, self.angle_threshold)
             if verbose and i % 1000 == 0:
-                print "# Saving transitions {} / {}".format(i, self.oxygen_trajectory.shape[0]), "\r",
-        print ""
+                print ("# Saving transitions {} / {}".format(i, self.oxygen_trajectory.shape[0]),
+                       end="\r")
+        print("")
         if verbose:
-            print "# Done"
+            print("# Done")
 
     def sweep(self, int frame, np.uint8_t[:] proton_lattice):
         cdef:
