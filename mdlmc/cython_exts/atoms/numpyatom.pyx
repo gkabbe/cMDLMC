@@ -1,5 +1,7 @@
-#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=True
-#cython: initializedcheck=False, profile=False
+# cython: profile=False
+# cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
+# cython: language_level = 3
+
 import numpy as np
 cimport numpy as np
 
@@ -152,7 +154,7 @@ def bruteforce_test(double [:] a1_pos, double [:] a2_pos, double [:,::1] h, doub
     l1 = length_nonortho_bruteforce(a1_pos, a2_pos, h, h_inv)
     diff_nonortho_bruteforce(a1_pos, a2_pos, diffvec, h, h_inv)
 
-    print l1, np.linalg.norm(diffvec)
+    print(l1, np.linalg.norm(diffvec))
 
 
 cpdef double length(double [:] a1_pos, double [:] a2_pos, double [:] pbc):

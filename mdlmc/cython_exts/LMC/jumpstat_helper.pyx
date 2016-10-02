@@ -1,4 +1,6 @@
-#cython: wraparound=False, boundscheck=False, cdivision=False, initializedcheck=False, profile=False
+# cython: profile=False
+# cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
+# cython: language_level = 3
 # TODO: Cleanup
 import numpy as np
 import sys
@@ -93,7 +95,9 @@ def jump_probs(double [:,:,::1] Os, double [:,:,::1] Hs, cnp.int64_t [:,::1] cov
                     if nonortho == False:
                         distance = cnpa.length(Os[i, O_i], Os[i, O_j], pbc)
                     else:
-                        distance = cnpa.length_nonortho_bruteforce_ptr(&Os[i, O_i, 0], &Os[i, O_j, 0], &h[0,0], &h_inv[0,0])
+                        distance = cnpa.length_nonortho_bruteforce_ptr(&Os[i, O_i, 0],
+                                                                       &Os[i, O_j, 0], &h[0, 0],
+                                                                       &h_inv[0, 0])
                     # distance = length_ptr(O_ptr+i*Os.shape[1]*Os.shape[2]+O_i*Os.shape[2], O_ptr+i*Os.shape[1]*Os.shape[2]+O_j*Os.shape[2], &pbc[0])
                     if distance < dmax and distance >=dmin:
                         binind = int((distance-dmin)/(dmax-dmin)*bins)
@@ -108,10 +112,11 @@ def jump_probs(double [:,:,::1] Os, double [:,:,::1] Hs, cnp.int64_t [:,::1] cov
                 probhisto[j].push_back(float(actual_jumpers[j])/possible_jumpers[j])
         if verbose == True:
             if i%100 == 0:
-                print "# {:} {:.2f} fps".format(i, i/(time.time()-start_time)),"\r",
-    print ""
+                print("# {:} {:.2f} fps".format(i, i/(time.time()-start_time)), end="\r")
+    print("")
 
-    print "# Oxygen distance, jump probability, jump probability standard deviation"
+    print("# Oxygen distance, jump probability, jump probability standard deviation")
     for i in xrange(bins):
         if len(probhisto[i]) > 0:
-            print dmin + (dmax-dmin)/bins/2 + i*(dmax-dmin)/bins, np.array(probhisto[i]).mean(), np.sqrt(np.array(probhisto[i]).var())
+            print(dmin + (dmax - dmin) / bins / 2 + i * (dmax - dmin) / bins,
+                  np.array(probhisto[i]).mean(), np.sqrt(np.array(probhisto[i]).var()))

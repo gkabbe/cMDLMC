@@ -1,5 +1,9 @@
-import cython
+# cython: profile=False
+# cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
+# cython: language_level = 3
 
+import cython
+import numpy as np
 cimport numpy as np
 
 cimport mdlmc.cython_exts.atoms.numpyatom as cnpa
@@ -73,7 +77,7 @@ cdef class AtomBox:
             int i, j
             double [:, ::1] arr1_view = arr1.reshape((-1, 3))
             double [:, ::1] arr2_view = arr2.reshape((-1, 3))
-        result = np.zeros(arr1.shape[0])
+        result = np.zeros(arr1_view.shape[0])
 
         for i in range(arr1_view.shape[0]):
             result[i] = self.length_(arr1_view[i], arr2_view[i])

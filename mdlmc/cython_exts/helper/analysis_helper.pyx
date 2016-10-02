@@ -1,4 +1,6 @@
-#cython: boundscheck=False, wraparound=False, boundscheck=False, cdivision=True, initializedcheck=False
+# cython: profile=False
+# cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
+# cython: language_level = 3
 
 import cython
 import time
@@ -32,5 +34,5 @@ def get_anglematrix(double [:, :, ::1] Opos, double [:, :, ::1] Ppos, np.int64_t
                             anglemat[O_i, O_j] = True
         if i % 1000 == 0:
             if i != 0:
-                print "frame {:06d} -- {:.2f} sec. left".format(i, (time.time() - start_time)/i*(Opos.shape[0]-i)), "\r",
-    print ""
+                print("frame {:06d} -- {:.2f} sec. left".format(i, (time.time() - start_time)/i*(Opos.shape[0]-i)), end="\r")
+    print("")

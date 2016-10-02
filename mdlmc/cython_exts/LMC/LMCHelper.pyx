@@ -1,5 +1,6 @@
 # cython: profile=False
 # cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
+# cython: language_level = 3
 import time
 
 import numpy as np
@@ -134,7 +135,7 @@ cdef class LMCRoutine:
             seed = time.time()
         gsl_rng_set(self.r, seed)
         if verbose:
-            print "# Using seed", seed
+            print("# Using seed", seed)
         if jumprate_type == "MD_rates":
             a = jumprate_parameter_dict["a"]
             b = jumprate_parameter_dict["b"]
