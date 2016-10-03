@@ -12,4 +12,5 @@ mdkmc.egg-info/
 build
 dist
 version_hash.py
-
+doxy/
+mdlmc.egg-info/
