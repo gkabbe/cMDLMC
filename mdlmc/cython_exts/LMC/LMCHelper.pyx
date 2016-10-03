@@ -27,7 +27,7 @@ cdef double R = 1.9872041e-3   # universal gas constant in kcal/mol/K
 
 # Define Function Objects. These can later be substituted easily by LMCRoutine
 cdef class JumprateFunction:
-    cpdef double evaluate(self, double x):
+    cpdef double evaluate(self, double distance):
         return 0
 
 
@@ -40,8 +40,8 @@ cdef class FermiFunction(JumprateFunction):
         self.b = b
         self.c = c
 
-    cpdef double evaluate(self, double x):
-        return self.a / (1 + exp((x - self.b) / self.c))
+    cpdef double evaluate(self, double distance):
+        return self.a / (1 + exp((distance - self.b) / self.c))
 
 
 cdef class ExponentialFunction(JumprateFunction):
@@ -52,8 +52,8 @@ cdef class ExponentialFunction(JumprateFunction):
         self.a = a
         self.b = b
         
-    cpdef double evaluate(self, double x):
-        return self.a * exp(self.b * x)
+    cpdef double evaluate(self, double distance):
+        return self.a * exp(self.b * distance)
 
 
 cdef class ActivationEnergyFunction(JumprateFunction):
@@ -67,19 +67,30 @@ cdef class ActivationEnergyFunction(JumprateFunction):
         self.d0 = d0
         self.T = T
 
-    cpdef double evaluate(self, double x):
+    cpdef double evaluate(self, double distance):
         cdef double E
-        if x <= self.d0:
+        if distance <= self.d0:
             E = 0
         else:
-            E = self.a * (x - self.d0) / sqrt(self.b + 1.0 / (x - self.d0) / (x - self.d0))
+            E = self.a * (distance - self.d0) / sqrt(self.b + 1.0 / (distance - self.d0) / (distance - self.d0))
         return self.A * exp(-E / (R * self.T))
 
-    cpdef double get_energy(self, double x):
-        if x <= self.x0:
+    cpdef double get_energy(self, double distance):
+        if distance <= self.d0:
             return 0
         else:
-            return self.a * (x - self.d0) / sqrt(self.b + 1.0 / (x - self.d0) / (x - self.d0))
+            return self.a * (distance - self.d0) / sqrt(self.b + 1.0 / (distance - self.d0) / (distance - self.d0))
+
+
+cdef class AngleCutoff:
+    # Angle threshold in radians
+    cdef double theta_0
+
+    def __cinit__(self, double theta_0):
+        self.theta_0 = theta_0
+
+    cpdef int evaluate(self, double angle_rad):
+        return angle_rad >= self.theta_0
 
 
 cdef class LMCRoutine:
@@ -101,9 +112,11 @@ cdef class LMCRoutine:
         public vector[vector[np.float32_t]] jump_probability
         public vector[vector[int]] neighbors
         int oxygen_number, phosphorus_number
-        double cutoff_radius, angle_threshold
+        double cutoff_radius
+        # double angle_threshold
         double neighbor_search_radius
         public JumprateFunction jumprate_fct
+        public AngleCutoff angle_fct
         public AtomBox atom_box
         np.uint32_t saved_frame_counter
         public double[:, ::1] jumpmatrix
@@ -155,6 +168,8 @@ cdef class LMCRoutine:
         else:
             raise Exception("Jump rate type unknown. Please choose between "
                             "MD_rates, Exponential_rates and AE_rates")
+
+        self.angle_fct = AngleCutoff(angle_threshold)
                             
     def __init__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
                   AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
@@ -219,10 +234,8 @@ cdef class LMCRoutine:
                         oxygen_number_unextended)
                     start_indices_tmp.push_back(start_index)
                     destination_indices_tmp.push_back(destination_index)
-                    if poo_angle >= angle_thresh:
-                        jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist))
-                    else:
-                        jump_probability_tmp.push_back(0)
+                    jump_probability_tmp.push_back(
+                        self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle))
 
         self.start_indices.push_back(start_indices_tmp)
         self.destination_indices.push_back(destination_indices_tmp)
