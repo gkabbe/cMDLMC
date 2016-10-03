@@ -65,7 +65,7 @@ cdef read_mat(double * mat):
 		
 	for i in range(3):
 		for j in range(3):
-			print mat[3*i+j]
+			print(mat[3*i+j])
 		
 def mat_test(double [:,::1] mat, double[:] vec):
 	matrix_mult_ptr(&mat[0,0], &vec[0])
