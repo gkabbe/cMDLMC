@@ -113,7 +113,6 @@ cdef class LMCRoutine:
         public vector[vector[int]] neighbors
         int oxygen_number, phosphorus_number
         double cutoff_radius
-        # double angle_threshold
         double neighbor_search_radius
         public JumprateFunction jumprate_fct
         public AngleCutoff angle_fct
@@ -132,7 +131,6 @@ cdef class LMCRoutine:
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.jumps = 0
         self.cutoff_radius = cutoff_radius
-        self.angle_threshold = angle_threshold
         self.neighbor_search_radius = neighbor_search_radius
         self.saved_frame_counter = 0
         self.calculate_jumpmatrix = calculate_jumpmatrix
@@ -168,7 +166,6 @@ cdef class LMCRoutine:
         else:
             raise Exception("Jump rate type unknown. Please choose between "
                             "MD_rates, Exponential_rates and AE_rates")
-
         self.angle_fct = AngleCutoff(angle_threshold)
                             
     def __init__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
@@ -201,7 +198,7 @@ cdef class LMCRoutine:
                         neighbor_list.push_back(j)
             self.neighbors.push_back(neighbor_list)
 
-    cdef calculate_transitions(self, int frame_number, double r_cut, double angle_thresh):
+    cdef calculate_transitions(self, int frame_number, double r_cut):
         cdef:
             int start_index, neighbor_index, destination_index
             int oxygen_number_unextended = self.oxygen_trajectory.shape[1]
@@ -261,7 +258,7 @@ cdef class LMCRoutine:
     def store_jumprates(self, bool verbose=False):
         cdef int i
         for i in range(self.oxygen_trajectory.shape[0]):
-            self.calculate_transitions(i, self.cutoff_radius, self.angle_threshold)
+            self.calculate_transitions(i, self.cutoff_radius)
             if verbose and i % 1000 == 0:
                 print ("# Saving transitions {} / {}".format(i, self.oxygen_trajectory.shape[0]),
                        end="\r")
@@ -295,7 +292,7 @@ cdef class LMCRoutine:
         trajectory_length = self.atom_box.oxygen_trajectory.shape[0]
         while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame + 1:
             self.calculate_transitions(
-                self.saved_frame_counter, self.cutoff_radius, self.angle_threshold)
+                self.saved_frame_counter, self.cutoff_radius)
         steps = self.start_indices[frame].size()
         for step in range(steps):
             i = gsl_rng_uniform_int(self.r, steps)
