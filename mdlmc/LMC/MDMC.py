@@ -211,7 +211,7 @@ class MDMC:
             self.nonortho = True
 
     def print_settings(self):
-        print("# I'm using the following settings:")
+        print("# I'm using the following settings:", file=self.output)
         for k, v in self.__dict__.items():
             if "trajectory" in k:
                 pass
@@ -222,15 +222,15 @@ class MDMC:
             elif k == "default_dict":
                 pass
             elif k == "h":
-                print("# h = {} {} {}".format(*v[0]))
-                print("#     {} {} {}".format(*v[1]))
-                print("#     {} {} {}".format(*v[2]))
+                print("# h = {} {} {}".format(*v[0]), file=self.output)
+                print("#     {} {} {}".format(*v[1]), file=self.output)
+                print("#     {} {} {}".format(*v[2]), file=self.output)
             elif k == "h_inv":
-                print("# h_inv = {} {} {}".format(*v[0]))
-                print("#         {} {} {}".format(*v[1]))
-                print("#         {} {} {}".format(*v[2]))
+                print("# h_inv = {} {} {}".format(*v[0]), file=self.output)
+                print("#         {} {} {}".format(*v[1]), file=self.output)
+                print("#         {} {} {}".format(*v[2]), file=self.output)
             else:
-                print("# {:20} {:>20}".format(k, str(v)))
+                print("# {:20} {:>20}".format(k, str(v)), file=self.output)
 
     def initialize_oxygen_lattice(self, box_multiplier):
         """The oxygen lattice stores the occupation state of each oxygen.
