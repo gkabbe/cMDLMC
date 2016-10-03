@@ -1,5 +1,5 @@
-# cython: profile=False
-# cython: boundscheck=False, wraparound=False, cdivision=True, initializedcheck=False
+# cython: profile = False
+# cython: boundscheck = False, wraparound = False, cdivision = True, initializedcheck = False
 # cython: language_level = 3
 
 import numpy as np
