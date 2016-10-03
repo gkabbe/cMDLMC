@@ -25,7 +25,7 @@ def fake_load_configfile(*args, **kwargs):
 
 
 def fake_load_atoms(*args, **kwargs):
-    return [np.random.random((20, 3)) for i in range(len(args) - 1)]
+    return [np.random.random((1, 20, 3)) for i in range(len(args) - 1)]
 
 
 class TestMDMC(unittest.TestCase):
@@ -35,3 +35,15 @@ class TestMDMC(unittest.TestCase):
         mdmc = MDMC("bla")
         mdmc.print_settings()
         print(fake_output.getvalue())
+
+    @patch("mdlmc.LMC.MDMC.load_atoms", side_effect=fake_load_atoms)
+    @patch("mdlmc.LMC.MDMC.load_configfile", side_effect=fake_load_configfile)
+    def test_initialize_oxygen_lattice(self, fake_cfg, fake_atoms):
+        mdmc = MDMC("sth")
+        mdmc.proton_number = 10
+        oxy_lattice = mdmc.initialize_oxygen_lattice((1, 1, 1))
+        self.assertEqual((oxy_lattice > 0).sum(), mdmc.proton_number)
+
+
+    def test_md_lmc_run(self):
+        pass
