@@ -1,7 +1,7 @@
-from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
-
 import unittest
 import numpy as np
+
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
 
 np.random.seed(0)
 
@@ -43,7 +43,7 @@ class TestAtomBoxes(unittest.TestCase):
     def test_atomboxcubic_nextneighbor(self):
         pbc = np.asfarray([100, 100, 100])
         atom = np.zeros(3)
-        atoms = np.random.uniform((0.3, 50), size=(20, 3))
+        atoms = np.random.uniform(0.3, 50, size=(20, 3))
         atombox = AtomBoxCubic(pbc)
 
         index, distance = atombox.next_neighbor()
