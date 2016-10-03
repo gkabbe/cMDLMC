@@ -8,6 +8,7 @@ import argparse
 from mdlmc.IO.xyz_parser import load_atoms
 from mdlmc.IO.config_parser import print_confighelp, load_configfile, print_config_template
 from mdlmc.cython_exts.LMC import LMCHelper
+from mdlmc.cython_exts.LMC import PBCHelper
 
 
 def get_git_version():
@@ -249,9 +250,9 @@ class MDMC:
         # Check periodic boundaries and determine whether cell is orthorhombic/cubic
         #  or non-orthorhombic/monoclin
         if self.nonortho:
-            atom_box = LMCHelper.AtomBoxMonoclinic(self.pbc, self.box_multiplier)
+            atom_box = PBCHelper.AtomBoxMonoclinic(self.pbc, self.box_multiplier)
         else:
-            atom_box = LMCHelper.AtomBoxCubic(self.pbc, self.box_multiplier)
+            atom_box = PBCHelper.AtomBoxCubic(self.pbc, self.box_multiplier)
 
         oxygen_lattice = self.initialize_oxygen_lattice(self.box_multiplier)
 
