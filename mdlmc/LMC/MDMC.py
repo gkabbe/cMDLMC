@@ -239,15 +239,7 @@ def prepare_lmc(args):
         settings.nonortho = False
     else:
         settings.nonortho = True
-
     print_settings(settings)
-
-    cmd_lmc_run(oxygen_trajectory, phosphorus_trajectory, settings, verbose=verbose)
-
-
-def cmd_lmc_run(oxygen_trajectory, phosphorus_trajectory, settings, *, verbose=False):
-    """Main function. """
-
     if settings.nonortho:
         atom_box = PBCHelper.AtomBoxMonoclinic(settings.pbc, settings.box_multiplier)
     else:
@@ -269,12 +261,19 @@ def cmd_lmc_run(oxygen_trajectory, phosphorus_trajectory, settings, *, verbose=F
                                   neighbor_search_radius=settings.neighbor_search_radius,
                                   jumprate_type=settings.jumprate_type, verbose=settings.verbose)
     helper.store_jumprates(verbose=verbose)
-
     observable_manager = ObservableManager(helper, oxygen_trajectory, atom_box,
                                            oxygen_lattice, settings.proton_number,
                                            settings.md_timestep_fs, settings.sweeps,
                                            msd_mode=msd_mode,
-                                           variance_per_proton=settings.variance_per_proton)
+                                           variance_per_proton=settings.variance_per_proton,
+                                           output=settings.output)
+    cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper,
+                observable_manager, settings, verbose=verbose)
+
+
+def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings, *,
+                verbose=False):
+    """Main function. """
 
     # Equilibration
     for sweep in range(settings.equilibration_sweeps):
