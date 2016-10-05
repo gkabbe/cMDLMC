@@ -93,7 +93,8 @@ setup(name='mdlmc',
                               'convergence=mdlmc.analysis.convergence:main',
                               'center_of_mass=mdlmc.atoms.numpyatom:print_center_of_mass_commandline',
                               'rdf=mdlmc.analysis.rdf:main',
-                              'free-energy=mdlmc.analysis.free_energy:main'
+                              'free-energy=mdlmc.analysis.free_energy:main',
+                              'topo=mdlmc.misc.topology:main'
                               ],
       },
       include_package_data=True,
