@@ -1,12 +1,11 @@
-#!/usr/bin/env python3 -u
-# -*- coding: utf-8 -*-
-import os
+#!/usr/bin/env python3
+import argparse
 import sys
 import time
+
 import numpy as np
-import argparse
-from mdlmc.IO.xyz_parser import load_atoms
 from mdlmc.IO.config_parser import print_confighelp, load_configfile, print_config_template
+from mdlmc.IO.xyz_parser import load_atoms
 from mdlmc.cython_exts.LMC import LMCHelper
 from mdlmc.cython_exts.LMC import PBCHelper
 
