@@ -170,120 +170,29 @@ class ObservableManager:
             print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]))
 
 
-class MDMC:
-    def __init__(self, configfile):
-        try:
-            get_git_version()
-        except ImportError:
-            print("# No commit information found", file=sys.stderr)
-        file_kwargs = load_configfile(configfile, verbose=True)
-        if ("verbose", True) in file_kwargs.items():
-            print("# Config file specified. Loading settings from there.")
-
-        # Save settings as object variable
-        self.__dict__.update(file_kwargs)
-
-        self.oxygen_trajectory, self.phosphorus_trajectory = \
-            load_atoms(self.filename, "O", self.o_neighbor, auxiliary_file=self.auxiliary_file,
-                       clip=self.clip_trajectory, verbose=self.verbose)
-
-        if self.seed is not None:
-            np.random.seed(self.seed)
+def print_settings(settings):
+    print("# I'm using the following settings:", file=settings.output)
+    for k, v in sorted(settings.__dict__.items()):
+        if k == "h":
+            print("# h = {} {} {}".format(*v[0]), file=settings.output)
+            print("#     {} {} {}".format(*v[1]), file=settings.output)
+            print("#     {} {} {}".format(*v[2]), file=settings.output)
+        elif k == "h_inv":
+            print("# h_inv = {} {} {}".format(*v[0]), file=settings.output)
+            print("#         {} {} {}".format(*v[1]), file=settings.output)
+            print("#         {} {} {}".format(*v[2]), file=settings.output)
         else:
-            self.seed = np.random.randint(2**32)
-            np.random.seed(self.seed)
+            print("# {:20} {:>20}".format(k, str(v)), file=settings.output)
 
-        self.oxygennumber = self.oxygen_trajectory.shape[1]
-        self.oxygennumber_extended = self.oxygen_trajectory.shape[1] * self.box_multiplier[0] * \
-                                     self.box_multiplier[1] * \
-                                     self.box_multiplier[2]
 
-        # Multiply Arrhenius prefactor (unit 1/fs) with MD time step (unit fs), to get the
-        # correct rates
-        if "A" in list(self.jumprate_params_fs.keys()):
-            self.jumprate_params_fs["A"] *= self.md_timestep_fs
-        else:
-            self.jumprate_params_fs["a"] *= self.md_timestep_fs
-
-        if len(self.pbc) == 3:
-            self.nonortho = False
-        else:
-            self.nonortho = True
-
-    def print_settings(self):
-        print("# I'm using the following settings:", file=self.output)
-        for k, v in self.__dict__.items():
-            if "trajectory" in k:
-                pass
-            elif k == "angles":
-                pass
-            elif k == "P_neighbors":
-                pass
-            elif k == "default_dict":
-                pass
-            elif k == "h":
-                print("# h = {} {} {}".format(*v[0]), file=self.output)
-                print("#     {} {} {}".format(*v[1]), file=self.output)
-                print("#     {} {} {}".format(*v[2]), file=self.output)
-            elif k == "h_inv":
-                print("# h_inv = {} {} {}".format(*v[0]), file=self.output)
-                print("#         {} {} {}".format(*v[1]), file=self.output)
-                print("#         {} {} {}".format(*v[2]), file=self.output)
-            else:
-                print("# {:20} {:>20}".format(k, str(v)), file=self.output)
-
-def initialize_oxygen_lattice(box_multiplier):
+def initialize_oxygen_lattice(oxygen_number, proton_number):
     """The oxygen lattice stores the occupation state of each oxygen.
     Protons are numbered from 1 to proton_number"""
-    oxygen_lattice = np.zeros(
-        self.oxygennumber * box_multiplier[0] * box_multiplier[1] * box_multiplier[2], np.uint8)
-    oxygen_lattice[:self.proton_number] = range(1, self.proton_number + 1)
+    oxygen_lattice = np.zeros(oxygen_number, np.uint8)
+    oxygen_lattice[:proton_number] = range(1, proton_number + 1)
     np.random.shuffle(oxygen_lattice)
 
     return oxygen_lattice
-
-
-def cmd_lmc_run(helper, observable_manager):
-    """Main function. """
-
-    # Equilibration
-    for sweep in range(self.equilibration_sweeps):
-        if sweep % 1000 == 0:
-            print("# Equilibration sweep {}/{}".format(sweep, self.equilibration_sweeps),
-                  end='\r', file=self.output)
-        if sweep % (self.skip_frames + 1) == 0:
-            if not self.shuffle:
-                frame = sweep
-            else:
-                frame = np.random.randint(self.oxygen_trajectory.shape[0])
-        helper.sweep(sweep % self.oxygen_trajectory.shape[0], oxygen_lattice)
-
-    if not self.xyz_output:
-        observable_manager.print_observable_names()
-
-    # Run
-    observable_manager.start_timer()
-    for sweep in range(0, self.sweeps):
-        if sweep % (self.skip_frames + 1) == 0:
-            if not self.shuffle:
-                frame = sweep % self.oxygen_trajectory.shape[0]
-            else:
-                frame = np.random.randint(self.oxygen_trajectory.shape[0])
-
-        if sweep % self.reset_freq == 0:
-            observable_manager.reset_observables(frame)
-        if sweep % self.print_freq == 0:
-            observable_manager.calculate_displacement(frame)
-            observable_manager.calculate_msd()
-            observable_manager.calculate_auto_correlation()
-            observable_manager.print_observables(sweep)
-        if self.jumpmatrix_filename is not None:
-            helper.sweep_with_jumpmatrix(frame, oxygen_lattice)
-        else:
-            helper.sweep(frame, oxygen_lattice)
-
-    if self.jumpmatrix_filename is not None:
-        np.savetxt(self.jumpmatrix_filename, helper.jumpmatrix)
 
 
 def prepare_lmc(args):
@@ -292,65 +201,114 @@ def prepare_lmc(args):
         get_git_version()
     except ImportError:
         print("# No commit information found", file=sys.stderr)
-    file_kwargs = load_configfile(args.configfile, verbose=True)
-    if ("verbose", True) in file_kwargs.items():
+    settings = load_configfile(args.config_file, verbose=True)
+    verbose = settings.verbose
+    if verbose:
         print("# Config file specified. Loading settings from there.")
 
-    self.oxygen_trajectory, self.phosphorus_trajectory = \
-        load_atoms(self.filename, "O", self.o_neighbor, auxiliary_file=self.auxiliary_file,
-                   clip=self.clip_trajectory, verbose=self.verbose)
+    oxygen_trajectory, phosphorus_trajectory = load_atoms(settings.filename, "O",
+                                                          settings.o_neighbor,
+                                                          auxiliary_file=settings.auxiliary_file,
+                                                          clip=settings.clip_trajectory,
+                                                          verbose=verbose)
 
-    if self.seed is None:
-        self.seed = np.random.randint(2**32)
-    np.random.seed(self.seed)
+    if settings.seed is None:
+        settings.seed = np.random.randint(2**32)
+    np.random.seed(settings.seed)
 
-    self.oxygennumber = self.oxygen_trajectory.shape[1]
-    self.oxygennumber_extended = self.oxygen_trajectory.shape[1] * self.box_multiplier[0] * \
-                                 self.box_multiplier[1] * self.box_multiplier[2]
+    settings.oxygen_number = oxygen_trajectory.shape[1]
+    settings.oxygen_number_extended = oxygen_trajectory.shape[1] * settings.box_multiplier[0] * \
+                                      settings.box_multiplier[1] * settings.box_multiplier[2]
 
     # Multiply Arrhenius prefactor (unit 1/fs) with MD time step (unit fs), to get the
-    # correct rates
-    if "A" in list(self.jumprate_params_fs.keys()):
-        self.jumprate_params_fs["A"] *= self.md_timestep_fs
+    # correct rates per time step
+    if "A" in list(settings.jumprate_params_fs.keys()):
+        settings.jumprate_params_fs["A"] *= settings.md_timestep_fs
     else:
-        self.jumprate_params_fs["a"] *= self.md_timestep_fs
-
-    if len(self.pbc) == 3:
-        self.nonortho = False
-    else:
-        self.nonortho = True
-
+        settings.jumprate_params_fs["a"] *= settings.md_timestep_fs
 
     # Check periodic boundaries and determine whether cell is orthorhombic/cubic
-    #  or non-orthorhombic/monoclin
-    if self.nonortho:
-        atom_box = PBCHelper.AtomBoxMonoclinic(self.pbc, self.box_multiplier)
+    #  or non-orthorhombic/monoclinic
+    if len(settings.pbc) == 3:
+        settings.nonortho = False
     else:
-        atom_box = PBCHelper.AtomBoxCubic(self.pbc, self.box_multiplier)
+        settings.nonortho = True
 
-    oxygen_lattice = self.initialize_oxygen_lattice(self.box_multiplier)
+    print_settings(settings)
 
-    msd_mode = "higher_msd" if self.higher_msd else "standard_msd"
+    cmd_lmc_run(oxygen_trajectory, phosphorus_trajectory, settings, verbose=verbose)
 
-    if self.verbose:
-        print("# Sweeps:", self.sweeps, file=self.output)
-    self.print_settings()
 
-    helper = LMCHelper.LMCRoutine(self.oxygen_trajectory, self.phosphorus_trajectory,
+def cmd_lmc_run(oxygen_trajectory, phosphorus_trajectory, settings, *, verbose=False):
+    """Main function. """
+
+    if settings.nonortho:
+        atom_box = PBCHelper.AtomBoxMonoclinic(settings.pbc, settings.box_multiplier)
+    else:
+        atom_box = PBCHelper.AtomBoxCubic(settings.pbc, settings.box_multiplier)
+
+    oxygen_lattice = initialize_oxygen_lattice(settings.oxygen_number_extended,
+                                               settings.proton_number)
+
+    msd_mode = "higher_msd" if settings.higher_msd else "standard_msd"
+
+    if verbose:
+        print("# Sweeps:", settings.sweeps, file=settings.output)
+
+    helper = LMCHelper.LMCRoutine(oxygen_trajectory, phosphorus_trajectory,
                                   atom_box=atom_box,
-                                  jumprate_parameter_dict=self.jumprate_params_fs,
-                                  cutoff_radius=self.cutoff_radius,
-                                  angle_threshold=self.angle_threshold,
-                                  neighbor_search_radius=self.neighbor_search_radius,
-                                  jumprate_type=self.jumprate_type, verbose=self.verbose)
-    helper.store_jumprates(verbose=self.verbose)
+                                  jumprate_parameter_dict=settings.jumprate_params_fs,
+                                  cutoff_radius=settings.cutoff_radius,
+                                  angle_threshold=settings.angle_threshold,
+                                  neighbor_search_radius=settings.neighbor_search_radius,
+                                  jumprate_type=settings.jumprate_type, verbose=settings.verbose)
+    helper.store_jumprates(verbose=verbose)
 
-    observable_manager = ObservableManager(helper, self.oxygen_trajectory, atom_box,
-                                           oxygen_lattice, self.proton_number,
-                                           self.md_timestep_fs, self.sweeps, msd_mode=msd_mode,
-                                           variance_per_proton=self.variance_per_proton)
+    observable_manager = ObservableManager(helper, oxygen_trajectory, atom_box,
+                                           oxygen_lattice, settings.proton_number,
+                                           settings.md_timestep_fs, settings.sweeps,
+                                           msd_mode=msd_mode,
+                                           variance_per_proton=settings.variance_per_proton)
 
-    cmd_lmc_run(helper, observable_manager, verbose=verbose)
+    # Equilibration
+    for sweep in range(settings.equilibration_sweeps):
+        if sweep % 1000 == 0:
+            print("# Equilibration sweep {}/{}".format(sweep, settings.equilibration_sweeps),
+                  end='\r', file=settings.output)
+        if sweep % (settings.skip_frames + 1) == 0:
+            if not settings.shuffle:
+                frame = sweep
+            else:
+                frame = np.random.randint(oxygen_trajectory.shape[0])
+        helper.sweep(sweep % oxygen_trajectory.shape[0], oxygen_lattice)
+
+    if not settings.xyz_output:
+        observable_manager.print_observable_names()
+
+    # Run
+    observable_manager.start_timer()
+    for sweep in range(0, settings.sweeps):
+        if sweep % (settings.skip_frames + 1) == 0:
+            if not settings.shuffle:
+                frame = sweep % oxygen_trajectory.shape[0]
+            else:
+                frame = np.random.randint(oxygen_trajectory.shape[0])
+
+        if sweep % settings.reset_freq == 0:
+            observable_manager.reset_observables(frame)
+        if sweep % settings.print_freq == 0:
+            observable_manager.calculate_displacement(frame)
+            observable_manager.calculate_msd()
+            observable_manager.calculate_auto_correlation()
+            observable_manager.print_observables(sweep)
+        if settings.jumpmatrix_filename is not None:
+            helper.sweep_with_jumpmatrix(frame, oxygen_lattice)
+        else:
+            helper.sweep(frame, oxygen_lattice)
+
+    if settings.jumpmatrix_filename is not None:
+        np.savetxt(settings.jumpmatrix_filename, helper.jumpmatrix)
+
 
 def main(*args):
     parser = argparse.ArgumentParser(
