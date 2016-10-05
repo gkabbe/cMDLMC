@@ -169,6 +169,11 @@ class ObservableManager:
         for index in proton_indices:
             print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]))
 
+def check_settings(settings):
+    if settings.sweeps % settings.reset_freq != 0:
+        raise ValueError("sweeps needs to be a multiple of reset_freq!")
+    if settings.sweeps <= 0:
+        raise ValueError("sweeps needs to be larger zero")
 
 def print_settings(settings):
     print("# I'm using the following settings:", file=settings.output)
@@ -202,6 +207,7 @@ def prepare_lmc(args):
     except ImportError:
         print("# No commit information found", file=sys.stderr)
     settings = load_configfile(args.config_file, verbose=True)
+    check_settings(settings)
     verbose = settings.verbose
     if verbose:
         print("# Config file specified. Loading settings from there.")
