@@ -87,8 +87,7 @@ class ObservableManager:
         for oxy_ind, prot_ind in enumerate(self.oxygen_lattice):
             if prot_ind > 0:
                 self.proton_pos_snapshot[prot_ind - 1] = \
-                    self.atom_box.position_extended_box(oxy_ind,
-                                                        self.oxygen_trajectory[frame])
+                    self.atom_box.position_extended_box(oxy_ind, self.oxygen_trajectory[frame])
 
         self.oxygen_lattice_snapshot = np.copy(self.oxygen_lattice)
 
@@ -160,14 +159,15 @@ class ObservableManager:
                                                                                   autocorrelation, \
                                                                                   helper.get_jumps()
 
-    def print_xyz(self, Os, proton_lattice, sweep, timestep_fs):
-        proton_indices = np.where(proton_lattice > 0)[0]
-        print(Os.shape[0] + self.proton_number)
-        print("Time:", sweep * timestep_fs)
+    def print_xyz(self, Os, oxygen_lattice, sweep, timestep_fs):
+        proton_indices = np.where(oxygen_lattice > 0)[0]
+        print(Os.shape[0] + self.proton_number, output=self.output)
+        print("Time:", sweep * timestep_fs, output=self.output)
         for i in range(Os.shape[0]):
-            print("O        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[i]))
+            print("O        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[i]), output=self.output)
         for index in proton_indices:
-            print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]))
+            print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]), output=self.output)
+
 
 def check_settings(settings):
     if settings.sweeps % settings.reset_freq != 0:
@@ -196,7 +196,6 @@ def initialize_oxygen_lattice(oxygen_number, proton_number):
     oxygen_lattice = np.zeros(oxygen_number, np.uint8)
     oxygen_lattice[:proton_number] = range(1, proton_number + 1)
     np.random.shuffle(oxygen_lattice)
-
     return oxygen_lattice
 
 
@@ -217,22 +216,18 @@ def prepare_lmc(args):
                                                           auxiliary_file=settings.auxiliary_file,
                                                           clip=settings.clip_trajectory,
                                                           verbose=verbose)
-
     if settings.seed is None:
         settings.seed = np.random.randint(2**32)
     np.random.seed(settings.seed)
-
     settings.oxygen_number = oxygen_trajectory.shape[1]
     settings.oxygen_number_extended = oxygen_trajectory.shape[1] * settings.box_multiplier[0] * \
                                       settings.box_multiplier[1] * settings.box_multiplier[2]
-
     # Multiply Arrhenius prefactor (unit 1/fs) with MD time step (unit fs), to get the
     # correct rates per time step
     if "A" in list(settings.jumprate_params_fs.keys()):
         settings.jumprate_params_fs["A"] *= settings.md_timestep_fs
     else:
         settings.jumprate_params_fs["a"] *= settings.md_timestep_fs
-
     # Check periodic boundaries and determine whether cell is orthorhombic/cubic
     #  or non-orthorhombic/monoclinic
     if len(settings.pbc) == 3:
@@ -244,15 +239,11 @@ def prepare_lmc(args):
         atom_box = PBCHelper.AtomBoxMonoclinic(settings.pbc, settings.box_multiplier)
     else:
         atom_box = PBCHelper.AtomBoxCubic(settings.pbc, settings.box_multiplier)
-
     oxygen_lattice = initialize_oxygen_lattice(settings.oxygen_number_extended,
                                                settings.proton_number)
-
     msd_mode = "higher_msd" if settings.higher_msd else "standard_msd"
-
     if verbose:
         print("# Sweeps:", settings.sweeps, file=settings.output)
-
     helper = LMCHelper.LMCRoutine(oxygen_trajectory, phosphorus_trajectory,
                                   atom_box=atom_box,
                                   jumprate_parameter_dict=settings.jumprate_params_fs,
@@ -286,10 +277,8 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
             else:
                 frame = np.random.randint(oxygen_trajectory.shape[0])
         helper.sweep(sweep % oxygen_trajectory.shape[0], oxygen_lattice)
-
     if not settings.xyz_output:
         observable_manager.print_observable_names()
-
     # Run
     observable_manager.start_timer()
     for sweep in range(0, settings.sweeps):
@@ -312,7 +301,6 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
             helper.sweep_with_jumpmatrix(frame, oxygen_lattice)
         else:
             helper.sweep(frame, oxygen_lattice)
-
     if settings.jumpmatrix_filename is not None:
         np.savetxt(settings.jumpmatrix_filename, helper.jumpmatrix)
 
