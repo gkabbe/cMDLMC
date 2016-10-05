@@ -299,14 +299,16 @@ def cmd_lmc_run(oxygen_trajectory, phosphorus_trajectory, settings, *, verbose=F
                 frame = sweep % oxygen_trajectory.shape[0]
             else:
                 frame = np.random.randint(oxygen_trajectory.shape[0])
-
         if sweep % settings.reset_freq == 0:
             observable_manager.reset_observables(frame)
         if sweep % settings.print_freq == 0:
-            observable_manager.calculate_displacement(frame)
-            observable_manager.calculate_msd()
-            observable_manager.calculate_auto_correlation()
-            observable_manager.print_observables(sweep)
+            if settings.xyz_output:
+                observable_manager.print_xyz(oxygen_trajectory[frame], oxygen_lattice)
+            else:
+                observable_manager.calculate_displacement(frame)
+                observable_manager.calculate_msd()
+                observable_manager.calculate_auto_correlation()
+                observable_manager.print_observables(sweep)
         if settings.jumpmatrix_filename is not None:
             helper.sweep_with_jumpmatrix(frame, oxygen_lattice)
         else:
