@@ -52,6 +52,10 @@ def parse_bool(line):
 
 
 def load_configfile(config_filename, verbose=False):
+    class Settings:
+        def __init__(self, dict_):
+            self.__dict__.update(dict_)
+
     parser_dict = CONFIG_DICT
     config_dict = dict()
     with open(config_filename, "r") as f:
@@ -76,7 +80,7 @@ def load_configfile(config_filename, verbose=False):
                     print("# Will use default value: {}".format(value["default"]))
                 config_dict[key] = value["default"]
 
-    return config_dict
+    return Settings(config_dict)
 
 
 def print_confighelp(args):
