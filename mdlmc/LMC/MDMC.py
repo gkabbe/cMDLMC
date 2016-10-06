@@ -175,6 +175,7 @@ def check_settings(settings):
     if settings.sweeps <= 0:
         raise ValueError("sweeps needs to be larger zero")
 
+
 def print_settings(settings):
     print("# I'm using the following settings:", file=settings.output)
     for k, v in sorted(settings.__dict__.items()):
@@ -211,8 +212,16 @@ def prepare_lmc(args):
     if verbose:
         print("# Config file specified. Loading settings from there.")
 
-    oxygen_trajectory, phosphorus_trajectory = load_atoms(settings.filename, "O",
-                                                          settings.o_neighbor,
+    if settings.o_neighbor:
+        atoms_to_load = ("O", settings.o_neighbor)
+    else:
+        # Quick hack: use the oxyen trajectory as oxygen neighbor to initialize LMCRoutine,
+        # but don't actually use it
+        atoms_to_load = ("O", "O")
+        print("# No oxygen neighbor specified, therefore the angle dependency will be switched off")
+        settings.angle_dependency = False
+
+    oxygen_trajectory, phosphorus_trajectory = load_atoms(settings.filename, *atoms_to_load,
                                                           auxiliary_file=settings.auxiliary_file,
                                                           clip=settings.clip_trajectory,
                                                           verbose=verbose)
@@ -250,7 +259,8 @@ def prepare_lmc(args):
                                   cutoff_radius=settings.cutoff_radius,
                                   angle_threshold=settings.angle_threshold,
                                   neighbor_search_radius=settings.neighbor_search_radius,
-                                  jumprate_type=settings.jumprate_type, verbose=settings.verbose)
+                                  jumprate_type=settings.jumprate_type, verbose=settings.verbose,
+                                  seed=settings.seed, angle_dependency=settings.angle_dependency)
     helper.store_jumprates(verbose=verbose)
     observable_manager = ObservableManager(helper, oxygen_trajectory, atom_box,
                                            oxygen_lattice, settings.proton_number,
@@ -265,7 +275,6 @@ def prepare_lmc(args):
 def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings, *,
                 verbose=False):
     """Main function. """
-
     # Equilibration
     for sweep in range(settings.equilibration_sweeps):
         if sweep % 1000 == 0:
@@ -279,6 +288,7 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
         helper.sweep(sweep % oxygen_trajectory.shape[0], oxygen_lattice)
     if not settings.xyz_output:
         observable_manager.print_observable_names()
+
     # Run
     observable_manager.start_timer()
     for sweep in range(0, settings.sweeps):
@@ -287,8 +297,10 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
                 frame = sweep % oxygen_trajectory.shape[0]
             else:
                 frame = np.random.randint(oxygen_trajectory.shape[0])
+
         if sweep % settings.reset_freq == 0:
             observable_manager.reset_observables(frame)
+
         if sweep % settings.print_freq == 0:
             if settings.xyz_output:
                 observable_manager.print_xyz(oxygen_trajectory[frame], oxygen_lattice)
@@ -297,10 +309,12 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
                 observable_manager.calculate_msd()
                 observable_manager.calculate_auto_correlation()
                 observable_manager.print_observables(sweep)
+
         if settings.jumpmatrix_filename is not None:
             helper.sweep_with_jumpmatrix(frame, oxygen_lattice)
         else:
             helper.sweep(frame, oxygen_lattice)
+
     if settings.jumpmatrix_filename is not None:
         np.savetxt(settings.jumpmatrix_filename, helper.jumpmatrix)
 
@@ -311,6 +325,8 @@ def main(*args):
     subparsers = parser.add_subparsers()
     parser_config_help = subparsers.add_parser("config_help", help="config file help")
     parser_config_file = subparsers.add_parser("config_file", help="Print config file template")
+    parser_config_file.add_argument("--sorted", action="store_true",
+                                    help="Sort config parameters lexicographically")
     parser_config_load = subparsers.add_parser(
         "config_load", help="Load config file and start cMD/LMC run")
     parser_config_load.add_argument("config_file", help="Config file")
