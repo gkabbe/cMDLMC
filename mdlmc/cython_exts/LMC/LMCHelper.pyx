@@ -90,15 +90,25 @@ cdef class ActivationEnergyFunction(JumprateFunction):
             return self.a * (distance - self.d0) / sqrt(self.b + 1.0 / (distance - self.d0) / (distance - self.d0))
 
 
-cdef class AngleCutoff:
+cdef class AngleFunction:
+    cpdef double evaluate(self, double angle_rad):
+        return 0
+
+
+cdef class AngleDummy(AngleFunction):
+    cpdef double evaluate(self, double angle_rad):
+        return 1
+
+
+cdef class AngleCutoff(AngleFunction):
     # Angle threshold in radians
     cdef double theta_0
 
     def __cinit__(self, double theta_0):
         self.theta_0 = theta_0
 
-    cpdef int evaluate(self, double angle_rad):
-        return angle_rad >= self.theta_0
+    cpdef double evaluate(self, double angle_rad):
+        return <double> angle_rad >= self.theta_0
 
 
 cdef class LMCRoutine:
