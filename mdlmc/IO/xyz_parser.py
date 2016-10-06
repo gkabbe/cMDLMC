@@ -100,7 +100,7 @@ def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
         while data.shape[0] > 0:
             counter += chunk_size
             fps = counter / (time.time() - start_time)
-            print("# {:6d} ({:.2f} fps)".format(counter, fps), end="\r")
+            print("# {:6d} ({:.2f} fps)".format(counter, fps), end="\r", flush=True)
             trajectory.append(data)
             data = parse_xyz(f, frame_length, no_of_frames=chunk_size)
         print("")
