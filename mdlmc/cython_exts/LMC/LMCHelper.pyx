@@ -133,7 +133,7 @@ cdef class LMCRoutine:
         double cutoff_radius
         double neighbor_search_radius
         public JumprateFunction jumprate_fct
-        public AngleCutoff angle_fct
+        public AngleFunction angle_fct
         public AtomBox atom_box
         np.uint32_t saved_frame_counter
         public double[:, ::1] jumpmatrix
@@ -142,7 +142,7 @@ cdef class LMCRoutine:
     def __cinit__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
                   AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
                   double angle_threshold, double neighbor_search_radius, jumprate_type, *,
-                  seed=None, bool calculate_jumpmatrix=False, verbose=False):
+                  seed=None, bool calculate_jumpmatrix=False, verbose=False, angle_dependency=True):
         cdef:
             int i
             double[:] pbc_extended
@@ -184,14 +184,18 @@ cdef class LMCRoutine:
         else:
             raise Exception("Jump rate type unknown. Please choose between "
                             "MD_rates, Exponential_rates and AE_rates")
-        self.angle_fct = AngleCutoff(angle_threshold)
-                            
+        if angle_dependency:
+            self.angle_fct = AngleCutoff(angle_threshold)
+        else:
+            self.angle_fct = AngleDummy()
+
     def __init__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
                   AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
                   double angle_threshold, double neighbor_search_radius, jumprate_type, *,
-                  seed=None, bool calculate_jumpmatrix=False, verbose=False):
+                  seed=None, bool calculate_jumpmatrix=False, verbose=False, angle_dependency=True):
 
-        self.phosphorus_neighbors = self.atom_box.determine_phosphorus_oxygen_pairs(self.oxygen_trajectory[0], self.phosphorus_trajectory[0])
+        self.phosphorus_neighbors = self.atom_box.determine_phosphorus_oxygen_pairs(
+            self.oxygen_trajectory[0], self.phosphorus_trajectory[0])
         self.determine_neighbors(0)
 
     def __dealloc__(self):
