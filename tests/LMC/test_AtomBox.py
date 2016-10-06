@@ -38,18 +38,21 @@ class TestAtomBoxes(unittest.TestCase):
         atom_2 = np.asfarray([3, 0, 0])
         atom_3 = np.asfarray([3, 34, 0])
 
-        self.assertAlmostEqual(self.atombox_cubic.angle(atom_1, atom_2, atom_3), np.pi/2)
+        self.assertAlmostEqual(self.atombox_cubic.angle(atom_1, atom_2, atom_3), np.pi / 2)
 
     def test_atomboxcubic_nextneighbor(self):
         pbc = np.asfarray([100, 100, 100])
-        atom = np.zeros(3)
         atoms = np.random.uniform(0.3, 50, size=(20, 3))
         atombox = AtomBoxCubic(pbc)
 
-        index, distance = atombox.next_neighbor()
+        for i in range(10):
+            atom = np.random.uniform(0, 50, size=3)
+            index, distance = atombox.next_neighbor(atom, atoms)
+            index_cmp = np.argmin(np.sqrt(((atom - atoms)**2).sum(axis=-1)))
+            self.assertEqual(index, index_cmp)
 
     def test_compare_cubic_and_monoclinic(self):
-
+        """"Make sure both boxes give the same result for same box vectors"""
         atom_1 = np.random.uniform(-10, 10, size=(10, 3))
         atom_2 = np.random.uniform(-10, 10, size=(10, 3))
         atom_3 = np.random.uniform(-10, 10, size=(10, 3))
@@ -65,4 +68,3 @@ class TestAtomBoxes(unittest.TestCase):
             self.assertTrue(np.isclose(dist_c, dist_m).all())
             self.assertAlmostEqual(len_c, len_m)
             self.assertAlmostEqual(angle_c, angle_m)
-
