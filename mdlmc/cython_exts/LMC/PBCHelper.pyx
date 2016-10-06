@@ -155,7 +155,23 @@ cdef class AtomBox:
             self.position_extended_box_ptr(index_2, frame_2, frame_2_len, &pos_2[0])
             self.distance_vector(pos_1, pos_2, diffvec)
 
-    def next_neighbor(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
+    def next_neighbor(self, double [:] pos, double [:, ::1] frame_2):
+        cdef:
+            double length, minimum_length = 1e30
+            int minimum_index = -1
+            int index_2
+            int atom_number = frame_2.shape[0] * self.box_multiplier[0] * self.box_multiplier[1] * \
+                              self.box_multiplier[2]
+
+        for index_2 in range(atom_number):
+            length = self.length_ptr(&pos[0], &frame_2[index_2, 0])
+            if length < minimum_length:
+                minimum_length = length
+                minimum_index = index_2
+
+        return minimum_index, minimum_length
+
+    def next_neighbor_extended_box(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
         cdef:
             double distance, minimum_distance = 1e30
             int minimum_index = -1
@@ -178,8 +194,8 @@ cdef class AtomBox:
                                           self.box_multiplier[1] * self.box_multiplier[2]
         phosphorus_neighbors = np.zeros(oxygen_number_extended, np.int32)
         for oxygen_index in range(oxygen_number_extended):
-            phosphorus_index, _ = self.next_neighbor(oxygen_index, oxygen_atoms,
-                                                              phosphorus_atoms)
+            phosphorus_index, _ = self.next_neighbor_extended_box(oxygen_index, oxygen_atoms,
+                                                                  phosphorus_atoms)
             phosphorus_neighbors[oxygen_index] = phosphorus_index
         return phosphorus_neighbors
 
