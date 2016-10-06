@@ -101,7 +101,10 @@ def print_confighelp(args):
 
 def print_config_template(args):
     parser_dict = CONFIG_DICT
-    for k, v in parser_dict.items():
+    items = parser_dict.items()
+    if args.sorted:
+        items = sorted(items)
+    for k, v in items:
         if v["default"] is None:
             print(k, "<MISSING VALUE>")
         else:
@@ -134,17 +137,9 @@ CONFIG_DICT = OrderedDict([
     ("o_neighbor",
      {
          "parse_fct": parse_string,
-         "default": "P",
+         "default": None,
          "help": "Name of the heavy atoms the oxygens are bonded to."
                  " Needed for the calculation of angle dependent jump rates."
-     }),
-    ("jumprate_type",
-     {
-         "parse_fct": parse_string,
-         "default": "no_default",
-         "help": "Choose between jump rates determined from static DFT activation energy "
-                 "calculations (AE_rates) and jump rates determined from AIMD simulations ("
-                 "MD_rates)."
      }),
     ("sweeps",
      {
@@ -279,22 +274,33 @@ CONFIG_DICT = OrderedDict([
                  "are sufficient. In the case of non-orthogonal boxes, 9 entries are needed, "
                  "three for each unit cell vector."
      }),
+    ("jumprate_type",
+     {
+         "parse_fct": parse_string,
+         "default": "no_default",
+         "help": "Choose between jump rates determined from static DFT activation energy "
+                 "calculations (AE_rates), jump rates determined from AIMD simulations ("
+                 "MD_rates), and Exponential_rates."
+     }),
     ("jumprate_params_fs",
      {
          "parse_fct": get_jumprate_parameters,
          "default": "no_default",
          "help": "Specify the parameters used for the calculation of the distance dependent "
-                 "jump rate. If the jump rate type is \"MD_rates\", a dict containing values "
+                 "jump rate. If jumprate_type is set to \"MD_rates\", a dict containing values "
                  "for a, b, and c is expected (parameters for a fermi like step function ω(d) = "
                  "a / (1 + exp((x - b) / c)). "
                  ""
-                 "If the jump rate type is \"AE_rates\", the expected "
+                 "If jumprate_type is set to \"AE_rates\", the expected "
                  "parameters are A, a, b, d0, and T. "
                  "a, b and d0 are fit parameters for the activation energy function "
                  "E(d) = a * (d - d0) / sqrt(b + 1 / (d - d0)**2), whereas A and T are parameters "
                  "of the Arrhenius equation , which converts the "
                  "activation energy to a jump rate: "
                  "ω(d) = A * exp(-E(d)/(k_B * T))"
+                 ""
+                 "If jumprate_type is set to \"Exponential_rates\", the jump rate function is "
+                 "defined asω(d) = a * exp(b * x) with parameters a, b"
      }),
     ("higher_msd",
      {
