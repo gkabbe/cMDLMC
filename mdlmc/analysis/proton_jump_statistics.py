@@ -10,7 +10,7 @@ import numpy as np
 
 from mdlmc.IO import xyz_parser
 from mdlmc.atoms import numpyatom as npa
-from mdlmc.cython_exts.LMC.LMCHelper import AtomBoxMonoclinic, AtomBoxCubic
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxMonoclinic, AtomBoxCubic
 
 
 def determine_phosphorus_oxygen_pairs(oxygen_frame, phosphorus_frame, atom_box):
