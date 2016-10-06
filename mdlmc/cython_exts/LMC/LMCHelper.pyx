@@ -32,6 +32,8 @@ cdef class JumprateFunction:
 
 
 cdef class FermiFunction(JumprateFunction):
+    """Calculates the jump probability according to the function
+        f(x) = a / ( (1 + exp(x - b) / c)"""
     cdef:
         double a, b, c
 
@@ -45,6 +47,8 @@ cdef class FermiFunction(JumprateFunction):
 
 
 cdef class ExponentialFunction(JumprateFunction):
+    """Calculates the jump probability according to the function
+        f(x) = a * exp(b*x)"""
     cdef:
         double a, b
         
@@ -57,6 +61,10 @@ cdef class ExponentialFunction(JumprateFunction):
 
 
 cdef class ActivationEnergyFunction(JumprateFunction):
+    """Calculates the activation energy according to the function
+        E(x) = a * (x - d0) / sqrt(b + 1 / (x -d0)**2)
+    Finally, E(x) is inserted into the Arrhenius equation
+        f(x, T) = A * exp(-E(x)/(k_B * T)"""
     cdef:
         double A, a, b, d0, T
 
