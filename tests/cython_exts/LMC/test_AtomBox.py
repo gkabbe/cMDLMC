@@ -51,6 +51,72 @@ class TestAtomBoxes(unittest.TestCase):
             index_cmp = np.argmin(np.sqrt(((atom - atoms)**2).sum(axis=-1)))
             self.assertEqual(index, index_cmp)
 
+    def test_atomboxcubic_position_extended_box(self):
+        pbc = np.asfarray([10, 10, 10])
+        atom1 = np.asfarray([[0, 0, 0]])
+
+        box_multiplier = (1, 1, 10)
+        atombox = AtomBoxCubic(pbc, box_multiplier=box_multiplier)
+
+        for i in range(10):
+            pos = atombox.position_extended_box(i, atom1)
+            pos_target = np.asfarray([0, 0, 10]) * i
+            print(pos, pos_target)
+            self.assertTrue(np.allclose(pos, pos_target))
+
+        box_multiplier = (1, 10, 1)
+        atombox = AtomBoxCubic(pbc, box_multiplier=box_multiplier)
+
+        for i in range(10):
+            pos = atombox.position_extended_box(i, atom1)
+            pos_target = np.asfarray([0, 10, 0]) * i
+            print(pos, pos_target)
+            self.assertTrue(np.allclose(pos, pos_target))
+
+        box_multiplier = (10, 1, 1)
+        atombox = AtomBoxCubic(pbc, box_multiplier=box_multiplier)
+
+        for i in range(10):
+            pos = atombox.position_extended_box(i, atom1)
+            pos_target = np.asfarray([10, 0, 0]) * i
+            print(pos, pos_target)
+            self.assertTrue(np.allclose(pos, pos_target))
+
+        box_multiplier = (5, 5, 5)
+        atombox = AtomBoxCubic(pbc, box_multiplier=box_multiplier)
+
+        index = 0
+        for i in range(5):
+            for j in range(5):
+                for k in range(5):
+                    pos = atombox.position_extended_box(index, atom1)
+                    pos_target = i * np.asfarray([10, 0, 0]) + j * np.asfarray(
+                        [0, 10, 0]) + k * np.asfarray([0, 0, 10])
+                    print(pos, pos_target)
+                    self.assertTrue(np.allclose(pos, pos_target))
+                    index += 1
+
+    def test_atomboxcubic_nextneighbor_extended_box(self):
+        """Test that """
+        pbc = np.asfarray([10, 10, 10])
+        atoms_1 = np.asfarray([[0, 0, 0]])
+        atoms_2 = np.asfarray([[0, 0, 1]])
+
+        box_multipliers = [(1, 1, 1), (2, 1, 1), (1, 2, 1), (1, 1, 2), (2, 2, 1), (2, 1, 2),
+                           (2, 2, 2), (2, 2, 2), (2, 2, 2)]
+
+        indices = [0, 1, 1, 1, 2, 2, 3, 4, 5]
+
+        for bm, index in zip(box_multipliers, indices):
+            atombox = AtomBoxCubic(pbc, box_multiplier=bm)
+            print(atombox.next_neighbor_extended_box(index, atoms_1, atoms_2))
+
+        box_multiplier = (1, 1, 5)
+        atoms_1 = np.asfarray([[0, 0, 0]])
+        atoms_2 = np.asfarray([[0, 0, 9]])
+        atombox = AtomBoxCubic(pbc, box_multiplier=box_multiplier)
+        print(atombox.next_neighbor_extended_box(0, atoms_1, atoms_2))
+
     def test_compare_cubic_and_monoclinic(self):
         """"Make sure both boxes give the same result for same box vectors"""
         atom_1 = np.random.uniform(-10, 10, size=(10, 3))

@@ -30,8 +30,8 @@ cdef class AtomBox:
     #     int phosphorus_number_extended
 
     def __cinit__(self, periodic_boundaries, box_multiplier=(1, 1, 1)):
-        self.periodic_boundaries = np.asfarray(periodic_boundaries)
-        self.box_multiplier = np.asarray(box_multiplier, dtype=np.int32)
+        self.periodic_boundaries = np.array(periodic_boundaries, dtype=float)
+        self.box_multiplier = np.array(box_multiplier, dtype=np.int32)
 
     def position_extended_box(self, int index, double [:, ::1] frame):
         cdef np.ndarray[np.float_t, ndim=1] pos = np.zeros(3)
@@ -48,6 +48,7 @@ cdef class AtomBox:
        i = box_index / (self.box_multiplier[1] * self.box_multiplier[2])
        j = (box_index / self.box_multiplier[2]) % self.box_multiplier[1]
        k = box_index % self.box_multiplier[2]
+
        for ix in range(3):
            position[ix] =  frame[3 * atom_index + ix] + i * self.pbc_matrix[0, ix] \
                                                       + j * self.pbc_matrix[1, ix] \
@@ -171,7 +172,8 @@ cdef class AtomBox:
 
         return minimum_index, minimum_length
 
-    def next_neighbor_extended_box(self, int index_1, double [:, ::1] frame_1, double [:, ::1] frame_2):
+    def next_neighbor_extended_box(self, int index_1, double [:, ::1] frame_1,
+                                   double [:,::1] frame_2):
         cdef:
             double distance, minimum_distance = 1e30
             int minimum_index = -1
@@ -225,7 +227,7 @@ cdef class AtomBoxCubic(AtomBox):
         self.pbc_matrix[1, 1] = periodic_boundaries[1]
         self.pbc_matrix[2, 2] = periodic_boundaries[2]
 
-        self.periodic_boundaries_extended = np.asfarray(periodic_boundaries)
+        self.periodic_boundaries_extended = np.array(periodic_boundaries, dtype=float)
         for i in range(3):
             self.periodic_boundaries_extended[i] *= box_multiplier[i]
 
@@ -251,7 +253,7 @@ cdef class AtomBoxMonoclinic(AtomBox):
 
     def __cinit__(self, periodic_boundaries, box_multiplier=(1, 1, 1)):
 
-        self.periodic_boundaries_extended = np.asfarray(periodic_boundaries)
+        self.periodic_boundaries_extended = np.array(periodic_boundaries, dtype=float)
         for i in range(0, 3):
             for j in range(0, 3):
                 self.periodic_boundaries_extended[3 * i + j] *= box_multiplier[i]

@@ -2,9 +2,9 @@ cdef class AtomBox:
     cdef:
         public double[:, :, ::1] oxygen_trajectory
         public double[:, :, ::1] phosphorus_trajectory
-        double[:] periodic_boundaries
+        public double[:] periodic_boundaries
         public double[:] periodic_boundaries_extended
-        double[:, ::1] pbc_matrix
+        public double[:, ::1] pbc_matrix
         int[:] box_multiplier
         int oxygen_number_extended
         int phosphorus_number_extended
