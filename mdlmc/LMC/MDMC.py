@@ -200,13 +200,13 @@ def initialize_oxygen_lattice(oxygen_number, proton_number):
     return oxygen_lattice
 
 
-def prepare_lmc(args):
+def prepare_lmc(config_file):
     # First, print some info about the commit being used
     try:
         get_git_version()
     except ImportError:
         print("# No commit information found", file=sys.stderr)
-    settings = load_configfile(args.config_file, verbose=True)
+    settings = load_configfile(config_file, verbose=True)
     check_settings(settings)
     verbose = settings.verbose
     if verbose:
@@ -268,13 +268,16 @@ def prepare_lmc(args):
                                            msd_mode=msd_mode,
                                            variance_per_proton=settings.variance_per_proton,
                                            output=settings.output)
-    cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper,
-                observable_manager, settings, verbose=verbose)
+    return oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings
 
 
-def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings, *,
-                verbose=False):
+def cmd_lmc_run(args):
     """Main function. """
+
+    oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings = prepare_lmc(
+        args.config_file)
+    verbose = settings.verbose
+
     # Equilibration
     for sweep in range(settings.equilibration_sweeps):
         if sweep % 1000 == 0:
@@ -332,7 +335,7 @@ def main(*args):
     parser_config_load.add_argument("config_file", help="Config file")
     parser_config_help.set_defaults(func=print_confighelp)
     parser_config_file.set_defaults(func=print_config_template)
-    parser_config_load.set_defaults(func=prepare_lmc)
+    parser_config_load.set_defaults(func=cmd_lmc_run)
     args = parser.parse_args()
     args.func(args)
 
