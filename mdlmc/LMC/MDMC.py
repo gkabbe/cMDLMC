@@ -324,6 +324,13 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
         np.savetxt(settings.jumpmatrix_filename, helper.jumpmatrix)
 
 
+def kmc_run(args):
+    oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings = prepare_lmc(
+        args.config_file)
+    verbose = settings.verbose
+    t = 0
+
+
 def main(*args):
     parser = argparse.ArgumentParser(
         description="cMD/LMC", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
