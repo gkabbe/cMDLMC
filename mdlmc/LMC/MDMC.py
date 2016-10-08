@@ -325,10 +325,21 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
 
 
 def kmc_run(args):
+    import ipdb
     oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings = prepare_lmc(
         args.config_file)
     verbose = settings.verbose
+
     t = 0
+    frame = 0
+
+    # First try: use fixed transition rates from the first frame
+
+    start, destination, probabilities = helper.return_transitions(frame)
+    while 1:
+        proton_position = np.where(oxygen_lattice)[0][0]
+        transition_indices, = np.where(np.array(start) == proton_position)
+        total_transition_rate = np.array(probabilities)[transition_indices].sum()
 
 
 def main(*args):
@@ -339,12 +350,14 @@ def main(*args):
     parser_config_file = subparsers.add_parser("config_file", help="Print config file template")
     parser_config_file.add_argument("--sorted", "-s", action="store_true",
                                     help="Sort config parameters lexicographically")
-    parser_config_load = subparsers.add_parser(
-        "config_load", help="Load config file and start cMD/LMC run")
-    parser_config_load.add_argument("config_file", help="Config file")
+    parser_cmdlmc = subparsers.add_parser("cmdlmc", help="Load config file and start cMD/LMC run")
+    parser_cmdlmc.add_argument("config_file", help="Config file")
+    parser_kmc = subparsers.add_parser("kmc", help="Load config file and start kmc run")
+    parser_kmc.add_argument("config_file", help="Config file")
     parser_config_help.set_defaults(func=print_confighelp)
     parser_config_file.set_defaults(func=print_config_template)
-    parser_config_load.set_defaults(func=cmd_lmc_run)
+    parser_cmdlmc.set_defaults(func=cmd_lmc_run)
+    parser_kmc.set_defaults(func=kmc_run)
     args = parser.parse_args()
 
     if args.subparser_name == "config_file":
