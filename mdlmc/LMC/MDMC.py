@@ -330,16 +330,21 @@ def kmc_run(args):
         args.config_file)
     verbose = settings.verbose
 
-    t = 0
+    t, dt = 0, settings.md_timestep_fs
+
     frame = 0
 
-    # First try: use fixed transition rates from the first frame
-
-    start, destination, probabilities = helper.return_transitions(frame)
     while 1:
         proton_position = np.where(oxygen_lattice)[0][0]
-        transition_indices, = np.where(np.array(start) == proton_position)
-        total_transition_rate = np.array(probabilities)[transition_indices].sum()
+        random_ = -np.log(np.random.random())
+        prob_sum = 0
+        while prob_sum < random_:
+            start, destination, probabilities = helper.return_transitions(frame)
+            transition_indices, = np.where(np.array(start) == proton_position)
+            total_transition_rate = np.array(probabilities)[transition_indices].sum()
+            prob_sum += total_transition_rate * dt
+            frame, t = frame + 1, t + dt
+        ipdb.set_trace()
 
 
 def main(*args):
