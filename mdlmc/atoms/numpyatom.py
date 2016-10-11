@@ -74,6 +74,16 @@ def numpy_print(atoms, names=None, outfile=None):
                                                x["pos"][1], x["pos"][2]), file=outfile)
 
 
+def print_npz(*args):
+    try:
+        npz_file = np.load(sys.argv[1])
+    except:
+        print("Usage:", sys.argv[0], "<npz filename>")
+    for frame in npz_file["trajectory"]:
+        numpy_print(frame)
+    npz_file.close()
+
+
 def remove_center_of_mass_movement(npa_traj):
     mass_array = np.array([atom_masses[name] for name in npa_traj[0]["name"]])[None, :, None]
     center_of_mass = (mass_array * npa_traj["pos"]).sum(axis=1)[:, None, :] / mass_array.sum()
