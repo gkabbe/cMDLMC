@@ -284,7 +284,7 @@ cdef class LMCRoutine:
             self.calculate_transitions(i, self.cutoff_radius)
             if verbose and i % 1000 == 0:
                 print ("# Saving transitions {} / {}".format(i, self.oxygen_trajectory.shape[0]),
-                       end="\r")
+                       end="\r", flush=True)
         print("")
         if verbose:
             print("# Done")
