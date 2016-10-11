@@ -325,26 +325,44 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
 
 
 def kmc_run(args):
-    import ipdb
+    """Kinetic Monte Carlo run for a single excess charge"""
+    def determine_probsum(probabilities, transition_indices, dt):
+        total_transition_rate = np.array(probabilities)[transition_indices].sum()
+        return total_transition_rate * dt
+
     oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings = prepare_lmc(
         args.config_file)
-    verbose = settings.verbose
 
+    trajectory_length = oxygen_trajectory.shape[0]
     t, dt = 0, settings.md_timestep_fs
+    frame, sweep, jumps = 0, 0, 0
+    total_sweeps = settings.sweeps
 
-    frame = 0
-
-    while 1:
+    while sweep < total_sweeps:
         proton_position = np.where(oxygen_lattice)[0][0]
-        random_ = -np.log(np.random.random())
+        time_selector = -np.log(np.random.random())
         prob_sum = 0
-        while prob_sum < random_:
+        start, destination, probabilities = helper.return_transitions(frame)
+        transition_indices, = np.where(np.array(start) == proton_position)
+        prob_sum += determine_probsum(probabilities, transition_indices, dt)
+        while prob_sum < time_selector:
+            print("{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}".format(sweep, t, *oxygen_trajectory[
+                frame, proton_position], jumps), flush=True)
+            sweep, t = sweep + 1, t + dt
+            frame = sweep % trajectory_length
             start, destination, probabilities = helper.return_transitions(frame)
             transition_indices, = np.where(np.array(start) == proton_position)
-            total_transition_rate = np.array(probabilities)[transition_indices].sum()
-            prob_sum += total_transition_rate * dt
-            frame, t = frame + 1, t + dt
-        ipdb.set_trace()
+            prob_sum += determine_probsum(probabilities, transition_indices, dt)
+        jumps += 1
+        transition_probs = np.array(probabilities)[transition_indices]
+        destination_indices = np.array(destination)[transition_indices]
+        event_selector = np.random.random() * transition_probs.sum()
+        transition_index = np.searchsorted(np.cumsum(transition_probs), event_selector)
+        oxygen_lattice[proton_position] = 0
+        proton_position = destination_indices[transition_index]
+        oxygen_lattice[proton_position] = 1
+        print("{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}".format(sweep, t, *oxygen_trajectory[
+            frame, proton_position], jumps), flush=True)
 
 
 def main(*args):
