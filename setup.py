@@ -97,7 +97,8 @@ setup(name='mdlmc',
                               'topo=mdlmc.misc.topology:main',
                               'print_npz=mdlmc.atoms.numpyatom:print_npz',
                               'trajzip=mdlmc.misc.trajzip:main',
-                              'trajread=mdlmc.misc.trajread:main'
+                              'trajread=mdlmc.misc.trajread:main',
+                              'excess_charge_pos=mdlmc.analysis.excess_charge_analyzer:main'
                               ],
       },
       include_package_data=True,
