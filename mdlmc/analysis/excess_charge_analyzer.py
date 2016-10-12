@@ -5,7 +5,8 @@ from mdlmc.IO import xyz_parser
 
 def main(*args):
     parser = argparse.ArgumentParser(
-        description="cMD/LMC", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        description="Determine the excess charge movement in a water box",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("trajectory", help="Trajectory in npz format")
     parser.add_argument("pbc", nargs=3, help="periodic boundary conditions")
     args = parser.parse_args()
