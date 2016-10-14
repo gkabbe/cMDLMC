@@ -158,7 +158,8 @@ def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=N
         if verbose:
             print("# Looking for auxiliary file", aux_fname, "...")
         if os.path.exists(aux_fname):
-            print("# Found it!")
+            if verbose:
+                print("# Found it!")
             return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip, verbose=verbose)
         else:
             if verbose:
