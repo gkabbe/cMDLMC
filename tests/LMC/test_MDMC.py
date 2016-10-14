@@ -8,16 +8,6 @@ import numpy as np
 from mdlmc.LMC.MDMC import cmd_lmc_run, initialize_oxygen_lattice
 
 
-class MockLMCHelper:
-    def LMCRoutine(self, *args, **kwargs):
-        return "bullshit"
-
-
-class MockPBCHelper:
-    def AtomBoxMonoclinic(self, *args, **kwargs):
-        return "quark"
-
-
 class Setting:
     pass
 
