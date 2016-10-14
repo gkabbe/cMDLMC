@@ -68,46 +68,56 @@ class TestMDMC(unittest.TestCase):
             # Make sure the protons are enumerated from 1 to prot_number
             self.assertTrue(oxy_lattice.sum() == int(prot_number * (prot_number + 1) / 2))
 
+    @patch("mdlmc.LMC.MDMC.prepare_lmc")
     @patch("mdlmc.LMC.MDMC.ObservableManager")
     @patch("mdlmc.LMC.MDMC.LMCHelper.LMCRoutine")
-    def test_cmdlmc_sweep_calls(self, mock_rout, mock_obs):
+    def test_cmdlmc_sweep_calls(self, mock_rout, mock_obs, prep_lmc):
+        """Assert the right number of sweep calls from the cmdlmc function."""
         settings = copy.deepcopy(self.mock_settings)
+        prep_lmc.return_value = self.oxy_traj, self.oxy_lattice, mock_rout, mock_obs, settings
+        args = MagicMock()
         # Make sure that the number of sweeps is correct
         settings.jumpmatrix_filename = None
 
-        cmd_lmc_run(self.oxy_traj, self.oxy_lattice, mock_rout, mock_obs, settings)
+        cmd_lmc_run(args)
         self.assertEqual(mock_rout.sweep.call_count,
                          settings.sweeps + settings.equilibration_sweeps)
 
+    @patch("mdlmc.LMC.MDMC.prepare_lmc")
     @patch("mdlmc.LMC.MDMC.np.savetxt")
     @patch("mdlmc.LMC.MDMC.ObservableManager")
     @patch("mdlmc.LMC.MDMC.LMCHelper.LMCRoutine")
-    def test_cmdlmc_sweep_with_jumpmatrix_calls(self, mock_rout, mock_obs, mock_savetxt):
+    def test_cmdlmc_sweep_with_jumpmatrix_calls(self, mock_rout, mock_obs, mock_savetxt, prep_lmc):
+        """Assert the right number of sweep_with_jumpmatrix calls from the cmdlmc function"""
         settings = copy.deepcopy(self.mock_settings)
+        prep_lmc.return_value = self.oxy_traj, self.oxy_lattice, mock_rout, mock_obs, settings
+        args = MagicMock()
         settings.jumpmatrix_filename = "sth"
-        cmd_lmc_run(self.oxy_traj, self.oxy_lattice, mock_rout, mock_obs, settings)
+        cmd_lmc_run(args)
         # During the equilibration nothing is written to the jumpmatrix
         self.assertEqual(mock_rout.sweep_with_jumpmatrix.call_count, settings.sweeps)
         # In the end, it will be written to disk
         self.assertEqual(mock_savetxt.call_count, 1)
 
+    @patch("mdlmc.LMC.MDMC.prepare_lmc")
     @patch("mdlmc.LMC.MDMC.ObservableManager")
     @patch("mdlmc.LMC.MDMC.LMCHelper.LMCRoutine")
-    def test_cmdlmc_xyz_output_calls(self, mock_lmc_routine, mock_observable_manager):
+    def test_cmdlmc_xyz_output_calls(self, mock_rout, mock_obs, prep_lmc):
         np.random.seed(1)
         settings = copy.deepcopy(self.mock_settings)
         settings.xyz_output = True
+        prep_lmc.return_value = self.oxy_traj, self.oxy_lattice, mock_rout, mock_obs, settings
+        args = MagicMock()
         print_freq = np.random.randint(1, 50, size=5)
         sweeps = np.random.randint(2, 10) * print_freq
 
         for s, r in zip(sweeps, print_freq):
             settings.sweeps = s
             settings.print_freq = r
-            cmd_lmc_run(self.oxy_traj, self.oxy_lattice, mock_lmc_routine, mock_observable_manager,
-                        settings)
-            self.assertEqual(mock_observable_manager.print_xyz.call_count,
+            cmd_lmc_run(args)
+            self.assertEqual(mock_obs.print_xyz.call_count,
                              settings.sweeps // settings.print_freq)
-            mock_observable_manager.reset_mock()
+            mock_obs.reset_mock()
 
     @patch.object("mdlmc.LMC.MDMC.ObservableManager", "proton_pos_snapshot")
     def test_observable_manager_calculate_displacement(self, mock_proton_pos_snapshot):
