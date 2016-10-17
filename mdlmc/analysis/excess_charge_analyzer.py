@@ -9,16 +9,24 @@ def excess_charge_collective_variable(oxygen_pos, proton_pos):
     return proton_pos.sum(axis=0) - 2 * oxygen_pos.sum(axis=0)
 
 
-def determine_hydronium_position(oxygen_pos, proton_pos, atombox):
-    closest_oxygen_indices = np.zeros(proton_pos.shape[0], dtype=int)
-    for proton_index, proton in enumerate(proton_pos):
-        oxygen_index, _ = atombox.next_neighbor(proton, oxygen_pos)
-        closest_oxygen_indices[proton_index] = oxygen_index
-    for i in range(oxygen_pos.shape[0]):
-        if (closest_oxygen_indices == i).sum() == 3:
-            return oxygen_pos[i]
-    else:
-        raise RuntimeError("Could not determine excess charge position.")
+class HydroniumHelper:
+    def __init__(self):
+        self.last_hydronium_index = -1
+        self.jumps = -1
+
+    def determine_hydronium_position(self, oxygen_pos, proton_pos, atombox):
+        closest_oxygen_indices = np.zeros(proton_pos.shape[0], dtype=int)
+        for proton_index, proton in enumerate(proton_pos):
+            oxygen_index, _ = atombox.next_neighbor(proton, oxygen_pos)
+            closest_oxygen_indices[proton_index] = oxygen_index
+        for i in range(oxygen_pos.shape[0]):
+            if (closest_oxygen_indices == i).sum() == 3:
+                if i != self.last_hydronium_index:
+                    self.last_hydronium_index = i
+                    self.jumps += 1
+                return oxygen_pos[i]
+        else:
+            raise RuntimeError("Could not determine excess charge position.")
 
 
 def main(*args):
@@ -42,7 +50,10 @@ def track_collective_variable(args):
     pbc = np.array(args.pbc)
     atombox = AtomBoxCubic(pbc)
     oxygens, protons = xyz_parser.load_trajectory_from_npz(args.trajectory, "O", "H")
-    excess_charge_start_position = determine_hydronium_position(oxygens[0], protons[0], atombox)
+    hydronium_helper = HydroniumHelper()
+    excess_charge_start_position = hydronium_helper.determine_hydronium_position(oxygens[0],
+                                                                                 protons[0],
+                                                                                 atombox)
     excess_charge_colvar_0 = excess_charge_collective_variable(oxygens[0], protons[0])
     if args.visualize:
         atoms = xyz_parser.load_atoms(args.trajectory)
@@ -65,11 +76,14 @@ def track_hydronium_ion(args):
     oxygens, protons = xyz_parser.load_trajectory_from_npz(args.trajectory, "O", "H")
     if args.visualize:
         atoms = xyz_parser.load_atoms(args.trajectory)
+    hydronium_helper = HydroniumHelper()
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
-        hydronium_position = determine_hydronium_position(oxygen_frame, proton_frame, atombox)
+        hydronium_position = hydronium_helper.determine_hydronium_position(oxygen_frame,
+                                                                           proton_frame, atombox)
         if args.visualize:
             print(len(atoms[i]) + 1)
             print()
             for atom in atoms[i]:
                 print(atom["name"], " ".join(map(str, atom["pos"])))
         print("S", " ".join(map(str, hydronium_position)), flush=True)
+    print("Number of jumps:", hydronium_helper.jumps)
