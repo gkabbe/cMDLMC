@@ -324,6 +324,17 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
         np.savetxt(settings.jumpmatrix_filename, helper.jumpmatrix)
 
 
+def kmc_state_to_xyz(oxygens, protons, oxygen_lattice):
+    print(oxygens.shape[0] + protons.shape[0] + 1)
+    print()
+    for ox in oxygens:
+        print("O", " ".join([3 * "{:14.8f}"]).format(*ox))
+    for p in protons:
+        print("H", " ".join([3 * "{:14.8f}"]).format(*p))
+    oxygen_index = np.where(oxygen_lattice > 0)[0][0]
+    print("S", " ".join([3 * "{:14.8f}"]).format(*oxygens[oxygen_index]))
+
+
 def kmc_run(args):
     """Kinetic Monte Carlo run for a single excess charge"""
     def determine_probsum(probabilities, transition_indices, dt):
@@ -337,6 +348,10 @@ def kmc_run(args):
     t, dt = 0, settings.md_timestep_fs
     frame, sweep, jumps = 0, 0, 0
     total_sweeps = settings.sweeps
+    xyz_output = settings.xyz_output
+
+    if xyz_output:
+        proton_trajectory, = load_atoms(settings.filename, "H")
 
     while sweep < total_sweeps:
         proton_position = np.where(oxygen_lattice)[0][0]
@@ -346,8 +361,14 @@ def kmc_run(args):
         transition_indices, = np.where(np.array(start) == proton_position)
         prob_sum += determine_probsum(probabilities, transition_indices, dt)
         while prob_sum < time_selector:
-            print("{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}".format(sweep, t, *oxygen_trajectory[
-                frame, proton_position], jumps), flush=True)
+            if xyz_output:
+                kmc_state_to_xyz(oxygen_trajectory[frame], proton_trajectory[frame],
+                                 oxygen_lattice)
+            else:
+                print("{:18d} {:18.2f} {:15.8f}"
+                      " {:15.8f} {:15.8f} {:10d}".format(sweep, t,
+                                                         *oxygen_trajectory[frame, proton_position],
+                                                         jumps), flush=True)
             sweep, t = sweep + 1, t + dt
             frame = sweep % trajectory_length
             start, destination, probabilities = helper.return_transitions(frame)
@@ -361,8 +382,14 @@ def kmc_run(args):
         oxygen_lattice[proton_position] = 0
         proton_position = destination_indices[transition_index]
         oxygen_lattice[proton_position] = 1
-        print("{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}".format(sweep, t, *oxygen_trajectory[
-            frame, proton_position], jumps), flush=True)
+        if xyz_output:
+            kmc_state_to_xyz(oxygen_trajectory[frame], proton_trajectory[frame],
+                             oxygen_lattice)
+        else:
+            print("{:18d} {:18.2f} {:15.8f}"
+                  " {:15.8f} {:15.8f} {:10d}".format(sweep, t,
+                                                     *oxygen_trajectory[frame, proton_position],
+                                                     jumps), flush=True)
 
 
 def main(*args):
