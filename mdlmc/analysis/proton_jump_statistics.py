@@ -48,7 +48,7 @@ def determine_covalently_bonded_oxygens(trajectory, pbc, *, nonorthorhombic_box=
     proton_indices = npa.get_acidic_protons(trajectory[0], atom_box, verbose=verbose)
 
     proton_trajectory = np.array(trajectory["pos"][:, proton_indices])
-    oxygen_trajectory = npa.select_atoms(trajectory, "O")
+    oxygen_trajectory, = npa.select_atoms(trajectory, "O")
 
     print("# Determining covalently bonded oxygens over time..")
     start_time = time.time()
@@ -79,7 +79,7 @@ def oxygen_distance_at_proton_jump(dmin, dmax, bins, pbc, atoms, covalently_bond
 
     jump_counter = np.zeros(bins, int)
 
-    oxygen_trajectory = npa.select_atoms(atoms, "O")
+    oxygen_trajectory, = npa.select_atoms(atoms, "O")
 
     for frame in range(oxygen_trajectory.shape[0] - 1):
         oxygen_distances = []
@@ -127,7 +127,7 @@ def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
         atom_box = AtomBoxCubic(pbc)
 
     jump_probabilities = np.zeros(bins, float)
-    oxygen_trajectory = npa.select_atoms(atoms, "O")
+    oxygen_trajectory, = npa.select_atoms(atoms, "O")
     counter = np.zeros(bins, int)
 
     for frame in range(oxygen_trajectory.shape[0] - 1):

@@ -12,25 +12,27 @@ from functools import reduce
 ureg = pint.UnitRegistry()
 
 k = 1.38064852e-23 * ureg.joule / ureg.kelvin
-R = 8.3144621 * ureg.joule /  ureg.kelvin / ureg.mole
+R = 8.3144621 * ureg.joule / ureg.kelvin / ureg.mole
 N_A = 6.022140857e23 / ureg.mole
 
 
 def angle_vectorized(a1_pos, a2_pos, a3_pos, pbc):
-    a2_a1= npa.distance(a2_pos, a1_pos, pbc)
+    a2_a1 = npa.distance(a2_pos, a1_pos, pbc)
     a2_a3 = npa.distance(a2_pos, a3_pos, pbc)
     return np.degrees(np.arccos(np.einsum("ij, ij -> i", a2_a1, a2_a3) / np.sqrt(np.einsum("ij,ij->i", a2_a1, a2_a1)) / np.sqrt(np.einsum("ij,ij->i", a2_a3, a2_a3))))
 
 
 def potential_energy(dist):
     a, b, d_0 = 36 * ureg.kcal / ureg.mol / ureg.angstrom**2, -0.7 / ureg.angstrom**2, 2.22 * ureg.angstrom
-    
-    return a*(dist-d_0)/np.sqrt(b+1./(dist-d_0)**2)
+
+    return a * (dist - d_0) / np.sqrt(b + 1. / (dist - d_0)**2)
 
 
 def free_energy(dist, temp):
-    return - k * temp * np.log(np.exp(-1./(R*temp) * (potential_energy(dist))).mean()), - k * temp * np.log(np.sqrt(np.exp(-1./(R*temp) * (potential_energy(dist))).var()))
-    
+    return - k * temp * np.log(
+        np.exp(-1. / (R * temp) * (potential_energy(dist))).mean()), - k * temp * np.log(
+        np.sqrt(np.exp(-1. / (R * temp) * (potential_energy(dist))).var()))
+
 
 def determine_PO_pairs(ox_traj, p_traj, pbc):
     P_neighbors = np.zeros(ox_traj.shape[1], int)
@@ -39,7 +41,7 @@ def determine_PO_pairs(ox_traj, p_traj, pbc):
         P_index = npa.next_neighbor(ox, p_traj[0], pbc=pbc)[0]
         P_neighbors[i] = P_index
     return P_neighbors
-    
+
 
 def get_close_oxygen_indices(oxygen_traj, pbc):
     pairs = []
@@ -52,6 +54,7 @@ def get_close_oxygen_indices(oxygen_traj, pbc):
     pairs = [(i, j) for i, j in pairs if (j, i) in pairs and i < j]
     return pairs
 
+
 def get_hbond_indices(oxygen_traj, proton_traj, pbc):
     pairs = []
     for i, prot in enumerate(proton_traj[0]):
@@ -59,6 +62,7 @@ def get_hbond_indices(oxygen_traj, proton_traj, pbc):
         ox1, ox2 = np.argsort(dists)[:2]
         pairs.append((ox1, ox2))
     return pairs
+
 
 def get_hbond_indices_all_traj(oxygen_traj, proton_traj, pbc):
     pairs = []
@@ -68,27 +72,27 @@ def get_hbond_indices_all_traj(oxygen_traj, proton_traj, pbc):
         pairs.append((ox1, ox2))
     return pairs
 
+
 def free_energy_when_proton_in_middle(traj, pbc):
     BinDump.mark_acidic_protons(traj, pbc, verbose=True)
     oxygen_traj, proton_traj, phos_traj = npa.select_atoms(traj, "O", "AH", "P")
     p_neighbors = determine_PO_pairs(oxygen_traj, phos_traj, pbc)
     original_ox_indices = npa.map_indices(traj[0], "O")
     original_h_indices = npa.map_indices(traj[0], "AH")
-    
+
     # ox_pairs = get_close_oxygen_indices(oxygen_traj, pbc)
     oxygen_pairs = get_hbond_indices(oxygen_traj, proton_traj, pbc)
-    
+
     for i, (ox1, ox2) in enumerate(oxygen_pairs):
         r_oh = np.sqrt((npa.distance(proton_traj[:, i], oxygen_traj[:, ox1], pbc) ** 2).sum(axis=-1))
         r_ho = np.sqrt((npa.distance(proton_traj[:, i], oxygen_traj[:, ox2], pbc) ** 2).sum(axis=-1))
         r_oo = np.sqrt((npa.distance(oxygen_traj[:, ox1], oxygen_traj[:, ox2], pbc) ** 2).sum(axis=-1))
         ipdb.set_trace()
-    
-    
+
 
 def free_energy_from_oxygen_pairs(traj, pbc):
-    oxygen_traj = npa.select_atoms(traj, "O")
-    proton_traj = npa.select_atoms(traj, "H")
+    oxygen_traj, = npa.select_atoms(traj, "O")
+    proton_traj, = npa.select_atoms(traj, "H")
     pairs = get_hbond_indices(oxygen_traj, proton_traj, pbc)
     # Calculate distance between oxygen 0 and oxygen 1 over whole trajectory
     free_energies = []
@@ -100,14 +104,15 @@ def free_energy_from_oxygen_pairs(traj, pbc):
         fe = free_energy(d_oo, 510. * ureg.kelvin)
         print(fe.to("kcal") * N_A)
         free_energies.append(fe)
-        
-    print("Free energy:", np.asfarray([(f.to("kcal")*N_A).magnitude for f in free_energies]).mean(), "kcal/mol")
+
+    print("Free energy:",
+          np.asfarray([(f.to("kcal") * N_A).magnitude for f in free_energies]).mean(), "kcal/mol")
 
 
 def free_energy_standard_hbond_criterion(traj, pbc):
-    oxygen_traj = npa.select_atoms(traj, "O")
-    proton_traj = npa.select_atoms(traj, "H")
-    
+    oxygen_traj, = npa.select_atoms(traj, "O")
+    proton_traj, = npa.select_atoms(traj, "H")
+
     chunk_size = 3000
     exp_val = 0
     dists = []
@@ -120,24 +125,22 @@ def free_energy_standard_hbond_criterion(traj, pbc):
             hb = is_hbond(ox1, ox2, p, pbc)
             if hb.any():
                 dist = np.sqrt((npa.distance(ox1[hb], ox2[hb], pbc) ** 2).sum(axis=-1))
-                dists += list(dist)   
+                dists += list(dist)
         print(start)
-            # print counter, ":", fe
-    
+
     dists = np.array(dists) * ureg.angstrom
-    result, error = free_energy(dists, 510*ureg.kelvin)
+    result, error = free_energy(dists, 510 * ureg.kelvin)
     print("Result for conventional geometric H-Bond criterion:")
     print(result.to("kcal") * N_A, error.to("kcal") * N_A)
     ipdb.set_trace()
-    
-    
+
+
 def free_energy_mdlmc(traj, pbc):
-    oxygen_traj = npa.select_atoms(traj, "O")
-    phos_traj = npa.select_atoms(traj, "P")
-    proton_traj = npa.select_atoms(traj, "H")
+    oxygen_traj, = npa.select_atoms(traj, "O")
+    phos_traj, = npa.select_atoms(traj, "P")
+    proton_traj, = npa.select_atoms(traj, "H")
     p_neighbors = determine_PO_pairs(oxygen_traj, phos_traj, pbc)
-   
-    
+
     chunk_size = 3000
     exp_val = 0
     dists = []
@@ -150,18 +153,17 @@ def free_energy_mdlmc(traj, pbc):
             hb = is_hbond_mdlmc(ox1, ox2, phos, pbc)
             if hb.any():
                 dist = np.sqrt((npa.distance(ox1[hb], ox2[hb], pbc) ** 2).sum(axis=-1))
-                dists += list(dist)   
+                dists += list(dist)
         print(start)
-            # print counter, ":", fe
-    
+
     dists = np.array(dists) * ureg.angstrom
-    result, error = free_energy(dists, 510*ureg.kelvin)
+    result, error = free_energy(dists, 510 * ureg.kelvin)
     print("Result for POO geometric H-Bond criterion:")
     print(result.to("kcal") * N_A, error.to("kcal") * N_A)
     print(result.to("eV"), error.to("eV"))
     ipdb.set_trace()
-    
-    
+
+
 def is_hbond(ox1, ox2, proton, pbc):
     return reduce(np.logical_and, [npa.angle_vectorized(ox1, proton, ox2, pbc) <= 60, np.linalg.norm(npa.distance(ox1, proton, pbc), axis=-1) <= 1.2,
                                    np.linalg.norm(npa.distance(ox2, proton, pbc), axis=-1) <= 2.2])
@@ -181,7 +183,7 @@ def main(*args):
     except IndexError:
         print("Usage: {} <filename.xyz> <pbc_x> <pbc_y> <pbc_z>".format(sys.argv[0]))
         raise
-    
+
     # free_energy_from_oxygen_pairs(traj, pbc)
     free_energy_standard_hbond_criterion(traj, pbc)
     # free_energy_mdlmc(traj, pbc)

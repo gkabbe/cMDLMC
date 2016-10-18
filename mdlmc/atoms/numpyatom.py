@@ -44,10 +44,7 @@ def select_atoms(xyzatom_traj, *atomnames):
         traj = xyzatom_traj[xyzatom_traj["name"] == atomname]["pos"]
         atomnumber = xyzatom_traj[0][xyzatom_traj[0]["name"] == atomname].size
         selections.append(np.array(traj.reshape((frames, atomnumber, 3)), order="C"))
-    if len(atomnames) > 1:
-        return selections
-    else:
-        return selections[0]
+    return selections
 
 
 def map_indices(frame, atomname):
