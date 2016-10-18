@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 from mdlmc.IO import xyz_parser
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
+import matplotlib.pylab as plt
 
 
 def excess_charge_collective_variable(oxygen_pos, proton_pos):
@@ -37,11 +38,23 @@ def main(*args):
     parser.add_argument("--visualize", action="store_true", help="Visualize excess charge position")
     parser.add_argument("trajectory", help="Trajectory in npz format")
     parser.add_argument("pbc", nargs=3, type=float, help="periodic boundary conditions")
+
     subparsers = parser.add_subparsers()
+
     parser_cv = subparsers.add_parser("cv", help="Track evolution of collective variable")
     parser_cv.set_defaults(func=track_collective_variable)
+
     parser_occupation = subparsers.add_parser("occupation", help="Track position of H3O+ ion")
     parser_occupation.set_defaults(func=track_hydronium_ion)
+
+    parser_histo = subparsers.add_parser("dist_histo",
+                                         help="Calculate distance histogram between hydronium and "
+                                              "the closest oxygen")
+    parser_histo.add_argument("--dmin", default=2.0, type=float, help="Minimum distance of histogram")
+    parser_histo.add_argument("--dmax", default=3.0, type=float, help="Maximum distance of histogram")
+    parser_histo.add_argument("--bins", default=50, type=int, help="Number of bins in histogram")
+    parser_histo.set_defaults(func=distance_histogram_between_hydronium_and_closest_oxygen)
+
     args = parser.parse_args()
     args.func(args)
 
@@ -90,3 +103,29 @@ def track_hydronium_ion(args):
         print("S", " ".join(map(str, hydronium_position)), flush=True)
     print("Number of jumps:", hydronium_helper.jumps)
 
+
+def distance_histogram_between_hydronium_and_closest_oxygen(args):
+    pbc = np.array(args.pbc)
+    atombox = AtomBoxCubic(pbc)
+    oxygens, protons = xyz_parser.load_trajectory_from_npz(args.trajectory, "O", "H")
+    hydronium_helper = HydroniumHelper()
+
+    # distance_histogram = np.zeros(args.bins, dtype=int)
+    distances = []
+
+    for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
+        if i % 1000 == 0:
+            print(i, end="\r", flush=True)
+        hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame,
+                                                                        proton_frame, atombox)
+        closest_oxygen_index, distance = atombox.next_neighbor(oxygen_frame[hydronium_index],
+                                                               oxygen_frame[np.arange(
+                                                                   oxygen_frame.shape[
+                                                                       0]) != hydronium_index])
+
+        distances.append(distance)
+
+    distance_count, edges = np.histogram(distances, bins=args.bins, range=(args.dmin, args.dmax))
+    distance = (edges[:-1] + edges[1:]) / 2
+    plt.plot(distance, distance_count)
+    plt.show()
