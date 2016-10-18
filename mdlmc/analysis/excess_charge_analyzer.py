@@ -47,13 +47,29 @@ def main(*args):
     parser_occupation = subparsers.add_parser("occupation", help="Track position of H3O+ ion")
     parser_occupation.set_defaults(func=track_hydronium_ion)
 
-    parser_histo = subparsers.add_parser("dist_histo",
-                                         help="Calculate distance histogram between hydronium and "
-                                              "the closest oxygen")
-    parser_histo.add_argument("--dmin", default=2.0, type=float, help="Minimum distance of histogram")
-    parser_histo.add_argument("--dmax", default=3.0, type=float, help="Maximum distance of histogram")
-    parser_histo.add_argument("--bins", default=50, type=int, help="Number of bins in histogram")
-    parser_histo.set_defaults(func=distance_histogram_between_hydronium_and_closest_oxygen)
+    parser_histo_closest = subparsers.add_parser("histo_closest",
+                                                 help="Calculate distance histogram between "
+                                                      "hydronium and the closest oxygen")
+    parser_histo_closest.add_argument("--dmin", default=2.0, type=float,
+                                      help="Minimum distance of histogram")
+    parser_histo_closest.add_argument("--dmax", default=3.0, type=float,
+                                      help="Maximum distance of histogram")
+    parser_histo_closest.add_argument("--bins", default=50, type=int,
+                                      help="Number of bins in histogram")
+    parser_histo_closest.add_argument("--plot", action="store_true", help="Plot result")
+    parser_histo_closest.set_defaults(func=distance_histogram_between_hydronium_and_closest_oxygen)
+
+    parser_histo_all = subparsers.add_parser("histo_all",
+                                                 help="Calculate distance histogram between "
+                                                      "hydronium and all oxygens")
+    parser_histo_all.add_argument("--dmin", default=2.0, type=float,
+                                      help="Minimum distance of histogram")
+    parser_histo_all.add_argument("--dmax", default=3.0, type=float,
+                                      help="Maximum distance of histogram")
+    parser_histo_all.add_argument("--bins", default=50, type=int,
+                                      help="Number of bins in histogram")
+    parser_histo_all.add_argument("--plot", action="store_true", help="Plot result")
+    parser_histo_all.set_defaults(func=distance_histogram_between_hydronium_and_all_oxygens)
 
     args = parser.parse_args()
     args.func(args)
@@ -127,5 +143,40 @@ def distance_histogram_between_hydronium_and_closest_oxygen(args):
 
     distance_count, edges = np.histogram(distances, bins=args.bins, range=(args.dmin, args.dmax))
     distance = (edges[:-1] + edges[1:]) / 2
-    plt.plot(distance, distance_count)
-    plt.show()
+    if args.plot:
+        plt.plot(distance, distance_count)
+        plt.show()
+
+    for d, c in zip(distance, distance_count):
+        print("{:10.4f} {:10.4f}".format(d, c))
+
+
+def distance_histogram_between_hydronium_and_all_oxygens(args):
+    pbc = np.array(args.pbc)
+    atombox = AtomBoxCubic(pbc)
+    oxygens, protons = xyz_parser.load_trajectory_from_npz(args.trajectory, "O", "H")
+    hydronium_helper = HydroniumHelper()
+
+    histogram = np.zeros(args.bins, dtype=int)
+
+    # distance_histogram = np.zeros(args.bins, dtype=int)
+    distances = []
+
+    for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
+        if i % 1000 == 0:
+            print(i, end="\r", flush=True)
+        hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame,
+                                                                        proton_frame, atombox)
+        distances = atombox.length_all_to_all(oxygen_frame[[hydronium_index]], oxygen_frame[
+            np.arange(oxygen_frame.shape[0]) != hydronium_index])
+
+        histo, edges = np.histogram(distances, bins=args.bins, range=(args.dmin, args.dmax))
+        histogram += histo
+    distance = (edges[:-1] + edges[1:]) / 2
+
+    if args.plot:
+        plt.plot(distance, histogram)
+        plt.show()
+
+    for d, c in zip(distance, histogram):
+        print(d, c)
