@@ -165,7 +165,7 @@ def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=N
             if verbose:
                 print("# No auxiliary file found.")
                 print("# Will create it now...")
-                save_trajectory_to_npz(filename, npz_fname=aux_fname, remove_com_movement=True,
-                                       verbose=verbose)
-                return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
+            save_trajectory_to_npz(filename, npz_fname=aux_fname, remove_com_movement=True,
+                                   verbose=verbose)
+            return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
                                                 verbose=verbose)
