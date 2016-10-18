@@ -14,7 +14,7 @@ class HydroniumHelper:
         self.last_hydronium_index = -1
         self.jumps = -1
 
-    def determine_hydronium_position(self, oxygen_pos, proton_pos, atombox):
+    def determine_hydronium_index(self, oxygen_pos, proton_pos, atombox):
         closest_oxygen_indices = np.zeros(proton_pos.shape[0], dtype=int)
         for proton_index, proton in enumerate(proton_pos):
             oxygen_index, _ = atombox.next_neighbor(proton, oxygen_pos)
@@ -24,9 +24,9 @@ class HydroniumHelper:
                 if i != self.last_hydronium_index:
                     self.last_hydronium_index = i
                     self.jumps += 1
-                return oxygen_pos[i]
+                return i
         else:
-            raise RuntimeError("Could not determine excess charge position.")
+            raise RuntimeError("Could not determine excess charge index.")
 
 
 def main(*args):
@@ -51,9 +51,10 @@ def track_collective_variable(args):
     atombox = AtomBoxCubic(pbc)
     oxygens, protons = xyz_parser.load_trajectory_from_npz(args.trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
-    excess_charge_start_position = hydronium_helper.determine_hydronium_position(oxygens[0],
-                                                                                 protons[0],
-                                                                                 atombox)
+    excess_charge_start_index = hydronium_helper.determine_hydronium_index(oxygens[0],
+                                                                              protons[0],
+                                                                              atombox)
+    excess_charge_start_position = oxygens[0, excess_charge_start_index]
     excess_charge_colvar_0 = excess_charge_collective_variable(oxygens[0], protons[0])
     if args.visualize:
         atoms = xyz_parser.load_atoms(args.trajectory)
@@ -78,8 +79,9 @@ def track_hydronium_ion(args):
         atoms = xyz_parser.load_atoms(args.trajectory)
     hydronium_helper = HydroniumHelper()
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
-        hydronium_position = hydronium_helper.determine_hydronium_position(oxygen_frame,
-                                                                           proton_frame, atombox)
+        hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame, proton_frame,
+                                                                     atombox)
+        hydronium_position = oxygen_frame[hydronium_index]
         if args.visualize:
             print(len(atoms[i]) + 1)
             print()
@@ -87,3 +89,4 @@ def track_hydronium_ion(args):
                 print(atom["name"], " ".join(map(str, atom["pos"])))
         print("S", " ".join(map(str, hydronium_position)), flush=True)
     print("Number of jumps:", hydronium_helper.jumps)
+
