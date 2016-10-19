@@ -335,14 +335,11 @@ def kmc_state_to_xyz(oxygens, protons, oxygen_lattice):
     print("S", " ".join([3 * "{:14.8f}"]).format(*oxygens[oxygen_index]))
 
 
-def kmc_run(args):
+def kmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings):
     """Kinetic Monte Carlo run for a single excess charge"""
     def determine_probsum(probabilities, transition_indices, dt):
         total_transition_rate = np.array(probabilities)[transition_indices].sum()
         return total_transition_rate * dt
-
-    oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings = prepare_lmc(
-        args.config_file)
 
     trajectory_length = oxygen_trajectory.shape[0]
     t, dt = 0, settings.md_timestep_fs
@@ -368,7 +365,7 @@ def kmc_run(args):
                 print("{:18d} {:18.2f} {:15.8f}"
                       " {:15.8f} {:15.8f} {:10d}".format(sweep, t,
                                                          *oxygen_trajectory[frame, proton_position],
-                                                         jumps), flush=True)
+                                                         jumps), flush=True, file=settings.output)
             sweep, t = sweep + 1, t + dt
             frame = sweep % trajectory_length
             start, destination, probabilities = helper.return_transitions(frame)
@@ -389,7 +386,7 @@ def kmc_run(args):
             print("{:18d} {:18.2f} {:15.8f}"
                   " {:15.8f} {:15.8f} {:10d}".format(sweep, t,
                                                      *oxygen_trajectory[frame, proton_position],
-                                                     jumps), flush=True)
+                                                     jumps), flush=True, file=settings.output)
 
 
 def main(*args):
@@ -404,8 +401,6 @@ def main(*args):
     parser_cmdlmc.add_argument("config_file", help="Config file")
     parser_kmc = subparsers.add_parser("kmc", help="Load config file and start kmc run")
     parser_kmc.add_argument("config_file", help="Config file")
-    parser_config_help.set_defaults(func=print_confighelp)
-    parser_config_file.set_defaults(func=print_config_template)
     parser_cmdlmc.set_defaults(func=cmd_lmc_run)
     parser_kmc.set_defaults(func=kmc_run)
     args = parser.parse_args()
