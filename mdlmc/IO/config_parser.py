@@ -83,7 +83,7 @@ def load_configfile(config_filename, verbose=False):
     return Settings(config_dict)
 
 
-def print_confighelp(args):
+def print_confighelp():
     text_width = 80
     parser_dict = CONFIG_DICT
     for k, v in parser_dict.items():

@@ -200,13 +200,13 @@ def initialize_oxygen_lattice(oxygen_number, proton_number):
     return oxygen_lattice
 
 
-def prepare_lmc(config_file):
+def prepare_lmc(settings):
     # First, print some info about the commit being used
     try:
         get_git_version()
     except ImportError:
         print("# No commit information found", file=sys.stderr)
-    settings = load_configfile(config_file, verbose=True)
+
     check_settings(settings)
     verbose = settings.verbose
     if verbose:
@@ -268,14 +268,12 @@ def prepare_lmc(config_file):
                                            msd_mode=msd_mode,
                                            variance_per_proton=settings.variance_per_proton,
                                            output=settings.output)
-    return oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings
+    return oxygen_trajectory, oxygen_lattice, helper, observable_manager
 
 
-def cmd_lmc_run(args):
+def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings):
     """Main function. """
 
-    oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings = prepare_lmc(
-        args.config_file)
     verbose = settings.verbose
 
     # Equilibration
@@ -325,10 +323,10 @@ def cmd_lmc_run(args):
 def main(*args):
     parser = argparse.ArgumentParser(
         description="cMD/LMC", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest="subparser_name")
     parser_config_help = subparsers.add_parser("config_help", help="config file help")
     parser_config_file = subparsers.add_parser("config_file", help="Print config file template")
-    parser_config_file.add_argument("--sorted", action="store_true",
+    parser_config_file.add_argument("--sorted", "-s", action="store_true",
                                     help="Sort config parameters lexicographically")
     parser_config_load = subparsers.add_parser(
         "config_load", help="Load config file and start cMD/LMC run")
@@ -337,7 +335,18 @@ def main(*args):
     parser_config_file.set_defaults(func=print_config_template)
     parser_config_load.set_defaults(func=cmd_lmc_run)
     args = parser.parse_args()
-    args.func(args)
+
+    if args.subparser_name == "config_file":
+        print_config_template(args)
+    elif args.subparser_name == "config_help":
+        print_confighelp()
+    else:
+
+        settings = load_configfile(args.config_file, verbose=True)
+
+        oxygen_trajectory, oxygen_lattice, helper, observable_manager = prepare_lmc(settings)
+
+        args.func(oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings)
 
 
 if __name__ == "__main__":
