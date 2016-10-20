@@ -29,7 +29,6 @@ def argparse_compatible(func):
         if len(args) == 1 and type(args[0]) == argparse.Namespace:
             expected_args = inspect.signature(func).parameters.keys()
             args = {arg: getattr(args[0], arg) for arg in expected_args if hasattr(args[0], arg)}
-            print(args)
             return func(**args)
         else:
             return func(*args, **kwargs)
