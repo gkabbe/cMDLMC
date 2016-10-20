@@ -1,9 +1,10 @@
 import argparse
-
+import matplotlib.pylab as plt
 import numpy as np
+
 from mdlmc.IO import xyz_parser
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
-import matplotlib.pylab as plt
+from mdlmc.misc.tools import argparse_compatible
 
 
 def excess_charge_collective_variable(oxygen_pos, proton_pos):
@@ -75,24 +76,25 @@ def main(*args):
     args.func(args)
 
 
-def track_collective_variable(args):
-    pbc = np.array(args.pbc)
+@argparse_compatible
+def track_collective_variable(trajectory, pbc, *, visualize=False):
+    pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_trajectory_from_npz(args.trajectory, "O", "H")
+    oxygens, protons = xyz_parser.load_trajectory_from_npz(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
     excess_charge_start_index = hydronium_helper.determine_hydronium_index(oxygens[0],
                                                                               protons[0],
                                                                               atombox)
     excess_charge_start_position = oxygens[0, excess_charge_start_index]
     excess_charge_colvar_0 = excess_charge_collective_variable(oxygens[0], protons[0])
-    if args.visualize:
-        atoms = xyz_parser.load_atoms(args.trajectory)
+    if visualize:
+        atoms = xyz_parser.load_atoms(trajectory)
 
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
         # Like in the PVPA paper, create a collective variable that tracks the excess charge motion
         excess_charge_colvar = excess_charge_collective_variable(oxygen_frame, proton_frame) \
                                - excess_charge_colvar_0 + excess_charge_start_position
-        if args.visualize:
+        if visualize:
             print(len(atoms[i]) + 1)
             print()
             for atom in atoms[i]:
@@ -100,18 +102,19 @@ def track_collective_variable(args):
         print("S", " ".join(map(str, excess_charge_colvar)), flush=True)
 
 
-def track_hydronium_ion(args):
-    pbc = np.array(args.pbc)
+@argparse_compatible
+def track_hydronium_ion(trajectory, pbc, *, visualize=False):
+    pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_trajectory_from_npz(args.trajectory, "O", "H")
-    if args.visualize:
-        atoms = xyz_parser.load_atoms(args.trajectory)
+    oxygens, protons = xyz_parser.load_trajectory_from_npz(trajectory, "O", "H")
+    if visualize:
+        atoms = xyz_parser.load_atoms(trajectory)
     hydronium_helper = HydroniumHelper()
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
         hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame, proton_frame,
                                                                      atombox)
         hydronium_position = oxygen_frame[hydronium_index]
-        if args.visualize:
+        if visualize:
             print(len(atoms[i]) + 1)
             print()
             for atom in atoms[i]:
@@ -120,10 +123,12 @@ def track_hydronium_ion(args):
     print("Number of jumps:", hydronium_helper.jumps)
 
 
-def distance_histogram_between_hydronium_and_closest_oxygen(args):
-    pbc = np.array(args.pbc)
+@argparse_compatible
+def distance_histogram_between_hydronium_and_closest_oxygen(trajectory, pbc, dmin, dmax, bins, *,
+                                                            plot=False):
+    pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_trajectory_from_npz(args.trajectory, "O", "H")
+    oxygens, protons = xyz_parser.load_trajectory_from_npz(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
 
     # distance_histogram = np.zeros(args.bins, dtype=int)
@@ -141,9 +146,9 @@ def distance_histogram_between_hydronium_and_closest_oxygen(args):
 
         distances.append(distance)
 
-    distance_count, edges = np.histogram(distances, bins=args.bins, range=(args.dmin, args.dmax))
+    distance_count, edges = np.histogram(distances, bins=bins, range=(dmin, dmax))
     distance = (edges[:-1] + edges[1:]) / 2
-    if args.plot:
+    if plot:
         plt.plot(distance, distance_count)
         plt.show()
 
@@ -151,16 +156,15 @@ def distance_histogram_between_hydronium_and_closest_oxygen(args):
         print("{:10.4f} {:10.4f}".format(d, c))
 
 
-def distance_histogram_between_hydronium_and_all_oxygens(args):
-    pbc = np.array(args.pbc)
+@argparse_compatible
+def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, dmax, bins, *,
+                                                         plot=False):
+    pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_trajectory_from_npz(args.trajectory, "O", "H")
+    oxygens, protons = xyz_parser.load_trajectory_from_npz(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
 
-    histogram = np.zeros(args.bins, dtype=int)
-
-    # distance_histogram = np.zeros(args.bins, dtype=int)
-    distances = []
+    histogram = np.zeros(bins, dtype=int)
 
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
         if i % 1000 == 0:
@@ -170,11 +174,11 @@ def distance_histogram_between_hydronium_and_all_oxygens(args):
         distances = atombox.length_all_to_all(oxygen_frame[[hydronium_index]], oxygen_frame[
             np.arange(oxygen_frame.shape[0]) != hydronium_index])
 
-        histo, edges = np.histogram(distances, bins=args.bins, range=(args.dmin, args.dmax))
+        histo, edges = np.histogram(distances, bins=bins, range=(dmin, dmax))
         histogram += histo
     distance = (edges[:-1] + edges[1:]) / 2
 
-    if args.plot:
+    if plot:
         plt.plot(distance, histogram)
         plt.show()
 
