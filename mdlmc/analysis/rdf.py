@@ -1,6 +1,5 @@
 import numpy as np
 import argparse
-import ipdb
 import warnings
 import matplotlib.pylab as plt
 import time
@@ -9,25 +8,18 @@ from typing import List
 from mdlmc.IO import xyz_parser
 import mdlmc.atoms.numpyatom as npa
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
-from mdlmc.misc.tools import timer
+from mdlmc.misc.tools import argparse_compatible
 
 
-def determine_histogram_one_atomtype(atomic_distances, **histo_kwargs):
-    return np.histogram(np.triu(atomic_distances, k=1), **histo_kwargs)
-
-
-def determine_histogram_two_atomtypes(atomic_distances, **histo_kwargs):
-    return np.histogram(atomic_distances, **histo_kwargs)
-
-
-def radial_distribution_function(atom_trajectories: List, atombox, histo_kwargs):
+def distance_histogram(atom_trajectories: List, atombox, histo_kwargs):
     histogram = np.zeros(histo_kwargs["bins"], dtype=int)
     if len(atom_trajectories) == 1:
-        histo_fct = determine_histogram_one_atomtype
         trajectory_1, trajectory_2 = atom_trajectories[0], atom_trajectories[0]
+        mask = np.ones((trajectory_1.shape[1], trajectory_1.shape[1]), dtype=bool)
+        np.fill_diagonal(mask, 0)
     else:
-        histo_fct = determine_histogram_two_atomtypes
         trajectory_1, trajectory_2 = atom_trajectories
+        mask = slice(None, None)
 
     start_time = time.time()
     for i, (frame_1, frame_2) in enumerate(zip(trajectory_1, trajectory_2)):
@@ -35,62 +27,142 @@ def radial_distribution_function(atom_trajectories: List, atombox, histo_kwargs)
         if i % 1000 == 0:
             print("{:6d} ({:8.2f} fps)".format(i, float(i) / (time.time() - start_time)), end="\r",
                   flush=True)
-            histo, edges = histo_fct(dists, **histo_kwargs)
-            histogram += histo
+        histo, edges = np.histogram(dists[mask], **histo_kwargs)
+        histogram += histo
     dists = (edges[:-1] + edges[1:]) / 2
 
     return histogram, dists, edges
 
 
+def calculate_rdf(atom_trajectories: List, atombox, histo_kwargs):
+    histo, dists, edges = distance_histogram(atom_trajectories, atombox, histo_kwargs)
+
+    if len(atom_trajectories) == 2:
+        n1, n2 = atom_trajectories[0].shape[1], atom_trajectories[1].shape[1]
+    else:
+        n1, n2 = atom_trajectories[0].shape[1], atom_trajectories[0].shape[1] - 1
+
+    volume = atombox.periodic_boundaries[0] * atombox.periodic_boundaries[1] * \
+        atombox.periodic_boundaries[2]
+    rho = n2 / volume
+    trajectory_length = atom_trajectories[0].shape[0]
+
+    histo_per_frame_and_particle = np.array(histo, dtype=float) / trajectory_length / n1
+    distance_distribution_ideal_gas = 4. / 3 * np.pi * rho * (edges[1:]**3 - edges[:-1]**3)
+
+    rdf = histo_per_frame_and_particle / distance_distribution_ideal_gas
+
+    return rdf, dists
+
+
+@argparse_compatible
+def radial_distribution_function(file, pbc, elements, dmin, dmax, bins, *, clip=None, plot=False,
+                                 acidic_protons=False, verbose=False):
+    histo_kwargs = {"range": (dmin, dmax),
+                    "bins": bins}
+
+    trajectory = xyz_parser.load_atoms(file, clip=clip)
+    pbc = np.array(pbc)
+    atombox = AtomBoxCubic(pbc)
+
+    if len(elements) > 2:
+        raise ValueError("Too many atom types specified")
+
+    selection = npa.select_atoms(trajectory, *elements)
+
+    if acidic_protons:
+        if "H" not in elements:
+            raise ValueError("You specified acidic protons, but did not specify protons in "
+                             "--elements")
+        acidic_proton_indices = npa.get_acidic_protons(trajectory[0], atombox, verbose=verbose)
+        acidic_protons = trajectory[:, acidic_proton_indices]
+        acidic_protons = np.array(acidic_protons["pos"], order="C")
+        selection[elements.index("H")] = acidic_protons
+
+    rdf, dists = calculate_rdf(selection, atombox, histo_kwargs)
+
+    if plot:
+        plt.plot(dists, rdf)
+        plt.show()
+
+    print("{:10} {:10} {:10}".format("Distance", "RDF"))
+    for d, r in zip(dists, rdf):
+        print("{:10.8f} {:10.8f}".format(d, r))
+
+
+@argparse_compatible
+def calculate_distance_histogram(file, pbc, elements, dmin, dmax, bins, *, clip=None, plot=False,
+                                 acidic_protons=False, normalized=False, verbose=False):
+    if len(elements) > 2:
+        raise ValueError("Too many atom types specified")
+
+    trajectory = xyz_parser.load_atoms(file, clip=clip)
+    pbc = np.array(pbc)
+    atombox = AtomBoxCubic(pbc)
+
+    if normalized:
+        maxlen = np.sqrt(((pbc / 2)**2).sum())
+        range_ = (0, maxlen)
+        max_bins = int(maxlen / (dmax - dmin) * bins)
+    else:
+        range_ = (dmin, dmax)
+
+    if len(elements) > 2:
+        raise ValueError("Too many elements specified")
+
+    selection = npa.select_atoms(trajectory, *elements)
+
+    if acidic_protons:
+        if "H" not in elements:
+            raise ValueError("You specified acidic protons, but did not specify protons in "
+                             "--elements")
+        acidic_proton_indices = npa.get_acidic_protons(trajectory[0], atombox, verbose=verbose)
+        acidic_protons = trajectory[:, acidic_proton_indices]
+        acidic_protons = np.array(acidic_protons["pos"], order="C")
+        selection[elements.index("H")] = acidic_protons
+
+    histo, dists, edges = distance_histogram(selection, atombox, {"bins": max_bins, "range": range_})
+
+    if normalized:
+        histo = np.array(histo, dtype=float) / histo.sum()
+
+    mask = np.logical_and(dmin <= dists, dists <= dmax)
+
+    if plot:
+        plt.plot(dists[mask], histo[mask])
+        plt.show()
+
+    print("{:12} {:12}".format("Distance", "Probability"))
+    for d, h in zip(dists[mask], histo[mask]):
+        print("{:12.8f} {:12.8f}".format(d, h))
+
+
 def main(*args):
-    parser = argparse.ArgumentParser(description="Calculates RDF")
+    parser = argparse.ArgumentParser(description="Calculates distance histograms and RDF")
     parser.add_argument("file", help="trajectory")
     parser.add_argument("pbc", nargs=3, type=float, help="Periodic boundaries")
-    parser.add_argument("--dmin", type=float, default=2.0, help="minimal value")
-    parser.add_argument("--dmax", type=float, default=3.0, help="maximal value")
-    parser.add_argument("--bins", type=int, default=50, help="number of bins")
+    parser.add_argument("--bins", type=int, default=50, help="Number of bins")
+    parser.add_argument("--dmin", type=float, default=2.0, help="Minimal value")
+    parser.add_argument("--dmax", type=float, default=3.0, help="Maximal value")
     parser.add_argument("--clip", type=int, help="Clip trajectory after frame")
     parser.add_argument("-e", "--elements", nargs="+", default=["O"], help="Elements")
     parser.add_argument("-a", "--acidic_protons", action="store_true",
-                        help="Only select acidic protons")
+                            help="Only select acidic protons")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument("--plot", action="store_true", help="Plot result")
+
+    subparsers = parser.add_subparsers()
+
+    parser_rdf = subparsers.add_parser("rdf", help="Determine radial distribution function")
+    parser_rdf.add_argument("--dmin", type=float, default=2.0, help="Minimal value")
+    parser_rdf.add_argument("--dmax", type=float, default=3.0, help="Maximal value")
+    parser_rdf.set_defaults(func=radial_distribution_function)
+
+    parser_histo = subparsers.add_parser("histo", help="Determine distance histogram")
+    parser_histo.add_argument("--normalized", "-n", action="store_true",
+                                 help="Normalize histogram")
+    parser_histo.set_defaults(func=calculate_distance_histogram)
+
     args = parser.parse_args()
 
-    histo_kwargs = {"range": (args.dmin, args.dmax),
-                    "bins": args.bins}
-
-    if len(args.elements) > 2:
-        warnings.warn("Received more than two elements. Will just skip elements after the first two")
-
-    trajectory = xyz_parser.load_atoms(args.file, clip=args.clip)
-    pbc = np.array(args.pbc)
-    atombox = AtomBoxCubic(pbc)
-
-    if len(args.elements) > 2:
-        raise ValueError("Too many elements specified")
-
-    selection = npa.select_atoms(trajectory, args.elements)
-
-    if args.acidic_protons:
-        if "H" not in args.elements:
-            raise ValueError("You specified acidic protons, but did not specify protons in "
-                             "--elements")
-        protons = selection[args.element.index("H")]
-        acidic_proton_indices = npa.get_acidic_protons(trajectory[0], atombox)
-        acidic_protons = protons[:, acidic_proton_indices]
-        selection[args.element.index("H")] = acidic_protons
-
-    histo, dists, edges = radial_distribution_function(selection, atombox, histo_kwargs)
-    N = selection[-1].shape[1]
-    V = pbc[0] * pbc[1] * pbc[2]
-    rho = N / V
-
-    print("# Number of particles:", N)
-    print("# Volume:", V)
-    print("# Rho = N / V =", rho)
-
-    histo_norm = np.asfarray(histo) / (4. / 3 * np.pi * rho * (edges[1:]**3 - edges[:-1]**3)) / \
-                 selection[-1].shape[1] / trajectory.shape[0]
-
-    print("  Distance  Histogram        RDF")
-    for d, h, hn in zip(dists, histo, histo_norm):
-        print("{:10.8f} {:10.8f} {:10.8f}".format(d, h, hn))
+    args.func(args)
