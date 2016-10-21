@@ -37,7 +37,7 @@ def main(*args):
         description="Determine the excess charge movement in a water box",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--visualize", action="store_true", help="Visualize excess charge position")
-    parser.add_argument("trajectory", help="Trajectory in npz format")
+    parser.add_argument("trajectory", help="Trajectory path")
     parser.add_argument("pbc", nargs=3, type=float, help="periodic boundary conditions")
 
     subparsers = parser.add_subparsers()
@@ -80,7 +80,7 @@ def main(*args):
 def track_collective_variable(trajectory, pbc, *, visualize=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_trajectory_from_npz(trajectory, "O", "H")
+    oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
     excess_charge_start_index = hydronium_helper.determine_hydronium_index(oxygens[0],
                                                                               protons[0],
@@ -106,7 +106,7 @@ def track_collective_variable(trajectory, pbc, *, visualize=False):
 def track_hydronium_ion(trajectory, pbc, *, visualize=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_trajectory_from_npz(trajectory, "O", "H")
+    oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
     if visualize:
         atoms = xyz_parser.load_atoms(trajectory)
     hydronium_helper = HydroniumHelper()
@@ -128,7 +128,7 @@ def distance_histogram_between_hydronium_and_closest_oxygen(trajectory, pbc, dmi
                                                             plot=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_trajectory_from_npz(trajectory, "O", "H")
+    oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
 
     # distance_histogram = np.zeros(args.bins, dtype=int)
@@ -161,7 +161,7 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
                                                          plot=False, normalized=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_trajectory_from_npz(trajectory, "O", "H")
+    oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
 
     if normalized:
