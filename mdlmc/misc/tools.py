@@ -28,7 +28,7 @@ def timer(f):
 def argparse_compatible(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if len(args) == 1 and type(args[0]) == argparse.Namespace:
+        if len(args) == 1:
             expected_args = inspect.signature(func).parameters.keys()
             args = {arg: getattr(args[0], arg) for arg in expected_args if hasattr(args[0], arg)}
             return func(**args)
