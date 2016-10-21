@@ -158,13 +158,20 @@ def distance_histogram_between_hydronium_and_closest_oxygen(trajectory, pbc, dmi
 
 @argparse_compatible
 def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, dmax, bins, *,
-                                                         plot=False):
+                                                         plot=False, normalized=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
     oxygens, protons = xyz_parser.load_trajectory_from_npz(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
 
-    histogram = np.zeros(bins, dtype=int)
+    if normalized:
+        maxlen = np.sqrt(((pbc / 2)**2).sum())
+        max_bins = int(maxlen / (dmax - dmin) * bins)
+        range_ = (0, maxlen)
+    else:
+        range_ = (dmin, dmax)
+
+    histogram = np.zeros(max_bins, dtype=int)
 
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
         if i % 1000 == 0:
@@ -174,13 +181,18 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
         distances = atombox.length_all_to_all(oxygen_frame[[hydronium_index]], oxygen_frame[
             np.arange(oxygen_frame.shape[0]) != hydronium_index])
 
-        histo, edges = np.histogram(distances, bins=bins, range=(dmin, dmax))
+        histo, edges = np.histogram(distances, bins=max_bins, range=range_)
         histogram += histo
     distance = (edges[:-1] + edges[1:]) / 2
 
+    if normalized:
+        histogram = np.array(histogram, dtype=float) / histogram.sum()
+
+    mask = np.logical_and(dmin <= distance, distance <= dmax)
+
     if plot:
-        plt.plot(distance, histogram)
+        plt.plot(distance[mask], histogram[mask])
         plt.show()
 
-    for d, c in zip(distance, histogram):
+    for d, c in zip(distance[mask], histogram[mask]):
         print(d, c)
