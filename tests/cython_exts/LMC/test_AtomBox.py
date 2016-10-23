@@ -134,3 +134,18 @@ class TestAtomBoxes(unittest.TestCase):
             self.assertTrue(np.isclose(dist_c, dist_m).all())
             self.assertAlmostEqual(len_c, len_m)
             self.assertAlmostEqual(angle_c, angle_m)
+
+    def test_length_all_to_all(self):
+        pbc = np.asfarray([10, 10, 10])
+        atombox = AtomBoxCubic(pbc)
+        atoms = np.asfarray([[0, 0, 0],
+                             [1, 1, 1],
+                             [5, 5, 5],
+                             [10, 10, 10]])
+        distances = atombox.length_all_to_all(atoms, atoms)
+        desired_result = np.asfarray([[0, np.sqrt(3), np.sqrt(3 * 5**2), 0],
+                                      [np.sqrt(3), 0, np.sqrt(3 * 4**2), np.sqrt(3)],
+                                      [np.sqrt(3 * 5**2), np.sqrt(3 * 4**2), 0, np.sqrt(3 * 5**2)],
+                                      [0, np.sqrt(3), np.sqrt(3 * 5**2), 0]
+                                     ])
+        np.testing.assert_allclose(distances, desired_result)
