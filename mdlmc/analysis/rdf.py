@@ -106,6 +106,7 @@ def calculate_distance_histogram(file, pbc, elements, dmin, dmax, bins, *, clip=
         max_bins = int(maxlen / (dmax - dmin) * bins)
     else:
         range_ = (dmin, dmax)
+        max_bins = bins
 
     if len(elements) > 2:
         raise ValueError("Too many elements specified")
@@ -124,7 +125,7 @@ def calculate_distance_histogram(file, pbc, elements, dmin, dmax, bins, *, clip=
     histo, dists, edges = distance_histogram(selection, atombox, {"bins": max_bins, "range": range_})
 
     if normalized:
-        histo = np.array(histo, dtype=float) / histo.sum()
+        histo = np.array(histo, dtype=float) / histo.sum() / (edges[1] - edges[0])
 
     mask = np.logical_and(dmin <= dists, dists <= dmax)
 
