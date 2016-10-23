@@ -70,6 +70,7 @@ def main(*args):
     parser_histo_all.add_argument("--bins", default=50, type=int,
                                       help="Number of bins in histogram")
     parser_histo_all.add_argument("--plot", action="store_true", help="Plot result")
+    parser_histo_all.add_argument("--normalized", action="store_true", help="Normalize histogram")
     parser_histo_all.set_defaults(func=distance_histogram_between_hydronium_and_all_oxygens)
 
     args = parser.parse_args()
@@ -170,6 +171,7 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
         range_ = (0, maxlen)
     else:
         range_ = (dmin, dmax)
+        max_bins = bins
 
     histogram = np.zeros(max_bins, dtype=int)
 
@@ -183,10 +185,12 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
 
         histo, edges = np.histogram(distances, bins=max_bins, range=range_)
         histogram += histo
+    print()
+
     distance = (edges[:-1] + edges[1:]) / 2
 
     if normalized:
-        histogram = np.array(histogram, dtype=float) / histogram.sum()
+        histogram = np.array(histogram, dtype=float) / histogram.sum() / (edges[1] - edges[0])
 
     mask = np.logical_and(dmin <= distance, distance <= dmax)
 
