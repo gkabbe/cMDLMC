@@ -5,6 +5,7 @@ import argparse
 import os
 import re
 from collections import Counter
+import ipdb
 
 import numpy as np
 
@@ -114,8 +115,7 @@ def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
     determined. Then, a distance histogram of the oxygen pairs between which a proton jump occurs at
     the next time step, is determined.
     Dividing the first with the latter results in a probability for a proton jump.
-    In the case of water, a proton jump can occur between an oxonium ion and a neutral water ion.
-    Therefore, """
+    In the case of water, a proton jump can occur between an oxonium ion and a neutral water ion."""
 
     if nonorthogonal_box:
         if verbose:
@@ -149,6 +149,7 @@ def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
             occupied_oxygen_indices = find_oxonium_ions(covalently_bonded_oxygens[frame])
         else:
             occupied_oxygen_indices = covalently_bonded_oxygens[frame]
+
         occ_mask = np.zeros(oxygen_trajectory.shape[1], bool)
         occ_mask[occupied_oxygen_indices] = 1
         all_to_all = atom_box.length_all_to_all(oxygen_trajectory[frame, occ_mask],
@@ -178,8 +179,8 @@ def main(*args):
     parser.add_argument("--dmin", type=float, default=2., help="Minimal value in Histogram")
     parser.add_argument("--dmax", type=float, default=3., help="Maximal value in Histogram")
     parser.add_argument("--bins", type=int, default=100, help="Maximal value in Histogram")
-    parser.add_argument("--verbose", "-v", action="store_true", default="False", help="Verbosity")
-    parser.add_argument("--water", "-w", action="store_true", default="False",
+    parser.add_argument("--verbose", "-v", action="store_true", default=False, help="Verbosity")
+    parser.add_argument("--water", "-w", action="store_true", default=False,
                         help="Set to true if you analyze a water trajectory")
     parser.add_argument("--mode", "-m", choices=["jumpprobs", "jumphisto"],
                         default="jumpprobs", help="Choose whether to calculate probability "
