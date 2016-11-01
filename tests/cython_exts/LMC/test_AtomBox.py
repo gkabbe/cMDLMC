@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic, AtomBoxWater
 
 np.random.seed(0)
 
@@ -149,3 +149,29 @@ class TestAtomBoxes(unittest.TestCase):
                                       [0, np.sqrt(3), np.sqrt(3 * 5**2), 0]
                                      ])
         np.testing.assert_allclose(distances, desired_result)
+
+
+class TestAtomBoxWater(unittest.TestCase):
+    def test_length(self):
+        def conversion(distance, a, b, c, d):
+            return a * distance + b / (distance + c) + d
+
+        pbc = np.asfarray([100, 100, 100])
+        parameters = [0.26223111, -0.17704908, -3.37329752, 1.50342535, 2.23270176, 3.0]
+        atoms1 = np.zeros((100, 3))
+        atoms2 = np.zeros((100, 3))
+        atoms2[:, 2] = np.random.uniform(2.3, 2.9, size=100)
+
+        atombox = AtomBoxWater(pbc, *parameters)
+
+        diffs = atombox.length(atoms1, atoms2)
+        print(diffs[diffs >= atoms2[:, 2]], atoms2[:, 2][diffs >= atoms2[:, 2]])
+
+        import matplotlib.pylab as plt
+        distance = np.linspace(2.3, 2.9, 100)
+        plt.plot(atoms2[:, 2], diffs, "^")
+        plt.plot(atoms2[:, 2], atoms2[:, 2])
+        plt.plot(distance, conversion(distance, *parameters[:4]))
+        plt.show()
+
+        self.assertTrue((diffs < atoms2[:, 2]).all())

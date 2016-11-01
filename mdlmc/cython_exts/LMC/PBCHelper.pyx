@@ -245,6 +245,46 @@ cdef class AtomBoxCubic(AtomBox):
                               &self.periodic_boundaries_extended[0])
 
 
+cdef class AtomBoxWater(AtomBoxCubic):
+    """Converts oxygen-oxygen distances to typical hydronium-oxygen distances"""
+
+    cdef:
+        double a, b, c, d
+        double left_bound, right_bound
+
+    def __cinit__(self, periodic_boundaries, *args, box_multiplier=(1, 1, 1), **kwargs):
+        # Parameters for the conversion function
+        self.a = args[0]
+        self.b = args[1]
+        self.c = args[2]
+        self.d = args[3]
+        self.left_bound = args[4]
+        self.right_bound = args[5]
+
+    cdef double convert_distance(self, double distance) nogil:
+        if self.left_bound < distance < self.right_bound:
+            return self.a * distance + self.b / (distance + self.c) + self.d
+        else:
+            return distance
+
+    cdef double length_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len,
+                                          int index_2, double * frame_2, int frame_2_len) nogil:
+
+        # Call the method of the super class
+        cdef double length = AtomBoxCubic.length_extended_box_ptr(self,
+                                                                  index_1, frame_1, frame_1_len,
+                                                                  index_2, frame_2, frame_2_len)
+        return self.convert_distance(length)
+
+    def length(self, arr1, arr2):
+        length = AtomBoxCubic.length(self, arr1, arr2)
+        cdef int i
+        for i in range(length.shape[0]):
+            length[i] = self.convert_distance(length[i])
+
+        return length
+
+
 cdef class AtomBoxMonoclinic(AtomBox):
     """Subclass of AtomBox for nonorthogonal periodic MD boxes"""
     # cdef:

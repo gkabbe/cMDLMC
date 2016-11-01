@@ -328,5 +328,19 @@ CONFIG_DICT = OrderedDict([
          "default": True,
          "help": "If True, use angle cutoff (set jump rates to zero, if angle between oxygen 1 "
                  "neighbor, oxygen 1 and oxygen 2 is below angle_threshold."
+     }),
+    ("rescale_parameters",
+     {
+         "parse_fct": parse_multifloat,
+         "default": None,
+         "help": "Parameters of the rescaling function for water, which transforms the O-O distance"
+                 "distribution of uncharged water molecules into the distance distribution between"
+                 "a hydronium ion and an uncharged water molecule."
+                 "Expects six parameters:"
+                 "The first four parameters are the parameters of the function"
+                 "f(d) = a * x + b / (x + c) + d"
+                 "The fifth and sixth parameter determine the distance range in which the conversion "
+                 "function is applied."
+
      })
 ])
