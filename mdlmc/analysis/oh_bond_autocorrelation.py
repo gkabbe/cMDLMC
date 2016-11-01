@@ -5,7 +5,7 @@ import re
 import os
 from math import ceil
 
-from mdlmc.analysis.proton_jump_statistics import determine_covalently_bonded_oxygens
+from mdlmc.analysis.proton_jump_statistics import determine_protonated_oxygens
 import numpy as np
 
 from mdlmc.IO import BinDump
@@ -34,8 +34,8 @@ def main(*args):
                                                   return_tuple=True, verbose=args.verbose)
         oxygens, hydrogens = np.array(oxygens["pos"], order="C"), np.array(
             hydrogens["pos"], order="C")
-        covevo = determine_covalently_bonded_oxygens(covevo_filename, oxygens, hydrogens, pbc,
-                                                     verbose=args.verbose)
+        covevo = determine_protonated_oxygens(covevo_filename, oxygens, hydrogens, pbc,
+                                              verbose=args.verbose)
         np.save(covevo_filename, covevo)
     if args.verbose:
         print("#Loading Covevo File...")

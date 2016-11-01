@@ -12,6 +12,7 @@ import numpy as np
 from mdlmc.IO import xyz_parser
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxMonoclinic, AtomBoxCubic
+from mdlmc.misc.tools import argparse_compatible
 
 
 def determine_phosphorus_oxygen_pairs(oxygen_frame, phosphorus_frame, atom_box):
@@ -31,8 +32,8 @@ def find_oxonium_ions(covalently_bonded_oxygen_frame):
     return np.array(oxonium_ions)
 
 
-def determine_covalently_bonded_oxygens(trajectory, pbc, *, nonorthorhombic_box=False,
-                                        verbose=False):
+def determine_protonated_oxygens(trajectory, pbc, *, nonorthorhombic_box=False,
+                                 verbose=False):
     """Saves for each proton the index of its closest oxygen neighbor for every time step"""
 
     if nonorthorhombic_box:
@@ -67,48 +68,8 @@ def determine_covalently_bonded_oxygens(trajectory, pbc, *, nonorthorhombic_box=
     return covalently_bonded_oxygens
 
 
-def oxygen_distance_at_proton_jump(dmin, dmax, bins, pbc, atoms, covalently_bonded_oxygens,
-                                   verbose=False, nonorthorhombic_box=False):
-    """Determines the histogram of oxygen distances at which proton jumps occur"""
-    start_time = time.time()
-
-    if nonorthorhombic_box:
-        atom_box = AtomBoxMonoclinic(pbc)
-    else:
-        atom_box = AtomBoxCubic(pbc)
-
-    jump_counter = np.zeros(bins, int)
-
-    oxygen_trajectory, = npa.select_atoms(atoms, "O")
-
-    for frame in range(oxygen_trajectory.shape[0] - 1):
-        oxygen_distances = []
-        if verbose and frame % 1000 == 0:
-            print("# Frame {}".format(frame), end="\r", flush=True)
-        # Detect jumps by checking, when the next oxygen neighbor of a proton changes
-        neighbor_change = covalently_bonded_oxygens[frame] != covalently_bonded_oxygens[frame + 1]
-        if neighbor_change.any():
-            jumping_protons, = neighbor_change.nonzero()
-            for proton_index in jumping_protons:
-                oxy_neighbor_before = covalently_bonded_oxygens[frame, proton_index]
-                oxy_neighbor_after = covalently_bonded_oxygens[frame + 1, proton_index]
-                oxygen_distance = atom_box.length(oxygen_trajectory[frame, oxy_neighbor_after],
-                                                  oxygen_trajectory[frame, oxy_neighbor_before])
-                oxygen_distances.append(np.sqrt(oxygen_distance**2))
-        histo, edges = np.histogram(oxygen_distances, bins=bins, range=(dmin, dmax))
-        jump_counter += histo
-
-    distances = (edges[1:] + edges[:-1]) / 2
-    print("")
-    print("# Proton jump histogram:")
-    for dist, count in zip(distances, jump_counter):
-        print(dist, count)
-
-    print("# Jumps total: {:}".format(jump_counter.sum()))
-
-
-def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
-                                               covalently_bonded_oxygens, *, verbose=False,
+@argparse_compatible
+def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, *, verbose=False,
                                                nonorthogonal_box=False, water=False):
     """Determine the probability of a proton jump for a given oxygen distance.
     For each frame a distance histogram of oxygen pairs with one oxygen bonded to a proton is
@@ -117,16 +78,37 @@ def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
     Dividing the first with the latter results in a probability for a proton jump.
     In the case of water, a proton jump can occur between an oxonium ion and a neutral water ion."""
 
-    if nonorthogonal_box:
-        if verbose:
-            print("# Using nonorthogonal AtomBox")
-        atom_box = AtomBoxMonoclinic(pbc)
-    else:
-        if verbose:
-            print("# Using cubic AtomBox")
+    pbc = np.array(pbc)
+    if len(pbc) == 3:
         atom_box = AtomBoxCubic(pbc)
+        nonorthorhombic_box = False
+    elif len(pbc) == 9:
+        if args.verbose:
+            print("# Got 9 PBC values. Assuming nonorthorhombic box")
+        atom_box = AtomBoxMonoclinic(pbc)
+        nonorthorhombic_box = True
+    else:
+        raise ValueError("Wrong number of PBC arguments")
+
+    if verbose:
+        print("# Periodic box lengths used:")
+        print("#", pbc)
+
+    atoms = xyz_parser.load_atoms(filename, verbose=verbose)
+
+    protonated_oxygens_filename = re.sub("\..{3}$", "", filename) + "_cbo.npy"
+    if not os.path.exists(protonated_oxygens_filename):
+        print("# Creating array of nearest oxygen neighbor over time for all protons")
+        protonated_oxygens = determine_protonated_oxygens(atoms, pbc,
+                                                          nonorthorhombic_box=nonorthorhombic_box,
+                                                          verbose=verbose)
+        np.save(protonated_oxygens_filename, protonated_oxygens)
+    else:
+        print("# Found array with nearest oxygen neighbor over time:", protonated_oxygens_filename)
+        protonated_oxygens = np.load(protonated_oxygens_filename)
 
     jump_probabilities = np.zeros(bins, float)
+    oxygen_distance_histo = np.zeros(bins, int)
     oxygen_trajectory, = npa.select_atoms(atoms, "O")
     counter = np.zeros(bins, int)
 
@@ -134,21 +116,20 @@ def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
         oxygen_distances_at_jump = []
         if verbose and frame % 1000 == 0:
             print("# Frame {}".format(frame), end="\r", flush=True)
-        neighbor_change = covalently_bonded_oxygens[frame] != covalently_bonded_oxygens[frame + 1]
+        neighbor_change = protonated_oxygens[frame] != protonated_oxygens[frame + 1]
         if neighbor_change.any():
             jumping_protons, = neighbor_change.nonzero()
             for proton_index in jumping_protons:
-                oxy_neighbor_before = covalently_bonded_oxygens[frame, proton_index]
-                oxy_neighbor_after = covalently_bonded_oxygens[frame + 1, proton_index]
+                oxy_neighbor_before = protonated_oxygens[frame, proton_index]
+                oxy_neighbor_after = protonated_oxygens[frame + 1, proton_index]
                 oxygen_distance = atom_box.length(oxygen_trajectory[frame, oxy_neighbor_after],
                                                   oxygen_trajectory[frame, oxy_neighbor_before])
                 oxygen_distances_at_jump.append(oxygen_distance[0])
         histo_jump, edges = np.histogram(oxygen_distances_at_jump, bins=bins, range=(dmin, dmax))
-        # Only consider oxygen pairs, with one oxygen bonded to a proton
         if water:
-            occupied_oxygen_indices = find_oxonium_ions(covalently_bonded_oxygens[frame])
+            occupied_oxygen_indices = find_oxonium_ions(protonated_oxygens[frame])
         else:
-            occupied_oxygen_indices = covalently_bonded_oxygens[frame]
+            occupied_oxygen_indices = protonated_oxygens[frame]
 
         occ_mask = np.zeros(oxygen_trajectory.shape[1], bool)
         occ_mask[occupied_oxygen_indices] = 1
@@ -158,72 +139,68 @@ def proton_jump_probability_at_oxygen_distance(dmin, dmax, bins, pbc, atoms,
         mask = histo_ox != 0
         counter += mask
         jump_probabilities[mask] += (np.asfarray(histo_jump[mask]) / histo_ox[mask])
+        oxygen_distance_histo += histo_jump
     jump_probabilities /= counter
 
     ox_dists = (edges[:-1] + edges[1:]) / 2
 
     print("")
     print("# Proton jump histogram:")
-    for ox_dist, jump_prob in zip(ox_dists, jump_probabilities):
-        print(ox_dist, jump_prob)
+    print("# Oxygen distance, jump probability, oxygen distance histogram")
+    print("#", 60 * "-")
+    for ox_dist, jump_prob, oxy_histo in zip(ox_dists, jump_probabilities, oxygen_distance_histo):
+        print("  {:>15.8f}  {:>16.8f}  {:>25}".format(ox_dist, jump_prob, oxy_histo))
+
+
+@argparse_compatible
+def oxygen_and_proton_motion_during_a_jump(trajectory_fname, pbc, time_window, *,
+                                           nonorthorhombic_box=False, water=False, verbose=False):
+    atoms = xyz_parser.load_atoms(trajectory_fname)
+
+    protonated_oxygens_filename = re.sub("\..{3}$", "", trajectory_fname) + "_cbo.npy"
+    if not os.path.exists(protonated_oxygens_filename):
+        print("# Creating array of nearest oxygen neighbor over time for all protons")
+        protonated_oxygens = determine_protonated_oxygens(atoms, pbc,
+                                                          nonorthorhombic_box=nonorthorhombic_box,
+                                                          verbose=verbose)
+        np.save(protonated_oxygens_filename, protonated_oxygens)
+    else:
+        print("# Found array with nearest oxygen neighbor over time:", protonated_oxygens_filename)
+        protonated_oxygens = np.load(protonated_oxygens_filename)
+
+    if nonorthorhombic_box:
+        atombox = AtomBoxMonoclinic(pbc)
+    else:
+        atombox = AtomBoxCubic(pbc)
+
+    oxygens = npa.select_atoms(atoms, "O")
+    proton_indices = npa.get_acidic_protons(atoms[0], atombox)
+    protons = atoms[:, proton_indices]
+
+    for oxygen_frame, proton_frame, prot_oxys in zip(oxygens, protons, protonated_oxygens):
+        pass
 
 
 def main(*args):
+
     parser = argparse.ArgumentParser(description="Proton jump statistics",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("filename", help="trajectory")
-    parser.add_argument("pbc", type=float, nargs="+",
-                        help="Periodic boundaries. If 3 values are given, an orthorhombic cell is "
-                             "assumed. If 9 values are given, the pbc vectors are constructed from "
-                             "them")
-    parser.add_argument("--dmin", type=float, default=2., help="Minimal value in Histogram")
-    parser.add_argument("--dmax", type=float, default=3., help="Maximal value in Histogram")
-    parser.add_argument("--bins", type=int, default=100, help="Maximal value in Histogram")
-    parser.add_argument("--verbose", "-v", action="store_true", default=False, help="Verbosity")
-    parser.add_argument("--water", "-w", action="store_true", default=False,
-                        help="Set to true if you analyze a water trajectory")
-    parser.add_argument("--mode", "-m", choices=["jumpprobs", "jumphisto"],
-                        default="jumpprobs", help="Choose whether to calculate probability "
-                                                  "histogram or the histogram of proton jumps for "
-                                                  "different oxygen distances")
+    subparsers = parser.add_subparsers(dest="subparser_name")
+    parser_jumpprob = subparsers.add_parser("jumpprobs")
+    parser_jumpprob.add_argument("filename", help="trajectory")
+    parser_jumpprob.add_argument("pbc", type=float, nargs="+",
+                                 help="Periodic boundaries. If 3 values are given, an orthorhombic cell is "
+                                 "assumed. If 9 values are given, the pbc vectors are constructed from "
+                                 "them")
+    parser_jumpprob.add_argument("--dmin", type=float, default=2., help="Minimal value in Histogram")
+    parser_jumpprob.add_argument("--dmax", type=float, default=3., help="Maximal value in Histogram")
+    parser_jumpprob.add_argument("--bins", type=int, default=100, help="Maximal value in Histogram")
+    parser_jumpprob.add_argument("--verbose", "-v", action="store_true", default=False, help="Verbosity")
+    parser_jumpprob.add_argument("--water", "-w", action="store_true", default=False,
+                                 help="Set to true if you analyze a water trajectory")
+    parser_jumpprob.set_defaults(func=proton_jump_probability_at_oxygen_distance)
     args = parser.parse_args()
-
-    if len(args.pbc) == 3:
-        nonorthorhombic_box = False
-    elif len(args.pbc) == 9:
-        if args.verbose:
-            print("# Got 9 PBC values. Assuming nonorthorhombic box")
-        nonorthorhombic_box = True
-    else:
-        raise ValueError("Wrong number of PBC arguments")
-    pbc = np.array(args.pbc)
-
-    if args.verbose:
-        print("# Periodic box lengths used:")
-        print("#", pbc)
-
-    atoms = xyz_parser.load_atoms(args.filename, verbose=args.verbose)
-
-    covalent_neighbors_filename = re.sub("\..{3}$", "", args.filename) + "_cbo.npy"
-    if not os.path.exists(covalent_neighbors_filename):
-        print("# Creating array of nearest oxygen neighbor over time for all protons")
-        covalent_neighbors = determine_covalently_bonded_oxygens(atoms, pbc,
-                                                                 nonorthorhombic_box=nonorthorhombic_box,
-                                                                 verbose=args.verbose)
-        np.save(covalent_neighbors_filename, covalent_neighbors)
-    else:
-        print("# Found array with nearest oxygen neighbor over time:", covalent_neighbors_filename)
-        covalent_neighbors = np.load(covalent_neighbors_filename)
-
-    if args.mode == "jumpprobs":
-        proton_jump_probability_at_oxygen_distance(args.dmin, args.dmax, args.bins, pbc, atoms,
-                                                   covalent_neighbors, verbose=True,
-                                                   nonorthogonal_box=nonorthorhombic_box,
-                                                   water=args.water)
-    else:
-        oxygen_distance_at_proton_jump(args.dmin, args.dmax, args.bins, pbc, atoms,
-                                       covalent_neighbors, verbose=True,
-                                       nonorthorhombic_box=nonorthorhombic_box)
+    args.func(args)
 
 
 if __name__ == "__main__":
