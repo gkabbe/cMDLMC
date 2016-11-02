@@ -83,7 +83,7 @@ cdef class AtomBox:
         for i in range(arr1_view.shape[0]):
             result[i] = self.length_(arr1_view[i], arr2_view[i])
 
-        return result
+        return result.reshape(arr1.shape[:-1])
 
     @cython.boundscheck(True)
     def length_all_to_all(self, arr1, arr2):
