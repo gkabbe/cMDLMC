@@ -17,7 +17,7 @@ atom_masses = {'C': 12.001,
                'Se': 78.971}
 
 
-def get_acidic_protons(frame, atom_box, verbose=False):
+def get_acidic_proton_indices(frame, atom_box, verbose=False):
     """Returns the indices of all protons whose closest neighbor is an oxygen atom"""
     if len(frame.shape) > 1:
         raise ValueError("Argument frame should be a one dimensional numpy array of type dtype_xyz")
@@ -34,6 +34,12 @@ def get_acidic_protons(frame, atom_box, verbose=False):
         print("# Acidic indices: ", acidic_indices)
         print("# Number of acidic protons: ", len(acidic_indices))
     return acidic_indices
+
+
+def get_acidic_protons(atoms, atom_box, verbose=False):
+    proton_indices = get_acidic_proton_indices(atoms[0], atom_box, verbose=verbose)
+    protons = np.array(atoms[:, proton_indices]["pos"], order="C")
+    return protons
 
 
 def select_atoms(xyzatom_traj, *atomnames):

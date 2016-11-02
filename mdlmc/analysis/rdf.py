@@ -74,7 +74,7 @@ def radial_distribution_function(file, pbc, elements, dmin, dmax, bins, *, clip=
         if "H" not in elements:
             raise ValueError("You specified acidic protons, but did not specify protons in "
                              "--elements")
-        acidic_proton_indices = npa.get_acidic_protons(trajectory[0], atombox, verbose=verbose)
+        acidic_proton_indices = npa.get_acidic_proton_indices(trajectory[0], atombox, verbose=verbose)
         acidic_protons = trajectory[:, acidic_proton_indices]
         acidic_protons = np.array(acidic_protons["pos"], order="C")
         selection[elements.index("H")] = acidic_protons
@@ -117,7 +117,7 @@ def calculate_distance_histogram(file, pbc, elements, dmin, dmax, bins, *, clip=
         if "H" not in elements:
             raise ValueError("You specified acidic protons, but did not specify protons in "
                              "--elements")
-        acidic_proton_indices = npa.get_acidic_protons(trajectory[0], atombox, verbose=verbose)
+        acidic_proton_indices = npa.get_acidic_proton_indices(trajectory[0], atombox, verbose=verbose)
         acidic_protons = trajectory[:, acidic_proton_indices]
         acidic_protons = np.array(acidic_protons["pos"], order="C")
         selection[elements.index("H")] = acidic_protons
