@@ -8,6 +8,7 @@ from collections import Counter
 import ipdb
 
 import numpy as np
+import matplotlib.pylab as plt
 
 from mdlmc.IO import xyz_parser
 from mdlmc.atoms import numpyatom as npa
@@ -46,7 +47,7 @@ def determine_protonated_oxygens(trajectory, pbc, *, nonorthorhombic_box=False,
         atom_box = AtomBoxCubic(pbc)
 
     print("# Determining acidic protons...")
-    proton_indices = npa.get_acidic_protons(trajectory[0], atom_box, verbose=verbose)
+    proton_indices = npa.get_acidic_proton_indices(trajectory[0], atom_box, verbose=verbose)
 
     proton_trajectory = np.array(trajectory["pos"][:, proton_indices])
     oxygen_trajectory, = npa.select_atoms(trajectory, "O")
@@ -153,11 +154,12 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
 
 
 @argparse_compatible
-def oxygen_and_proton_motion_during_a_jump(trajectory_fname, pbc, time_window, *,
-                                           nonorthorhombic_box=False, water=False, verbose=False):
-    atoms = xyz_parser.load_atoms(trajectory_fname)
+def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
+                                           nonorthorhombic_box=False, water=False, plot=False,
+                                           verbose=False):
+    atoms = xyz_parser.load_atoms(filename)
 
-    protonated_oxygens_filename = re.sub("\..{3}$", "", trajectory_fname) + "_cbo.npy"
+    protonated_oxygens_filename = re.sub("\..{3}$", "", filename) + "_cbo.npy"
     if not os.path.exists(protonated_oxygens_filename):
         print("# Creating array of nearest oxygen neighbor over time for all protons")
         protonated_oxygens = determine_protonated_oxygens(atoms, pbc,
@@ -168,37 +170,112 @@ def oxygen_and_proton_motion_during_a_jump(trajectory_fname, pbc, time_window, *
         print("# Found array with nearest oxygen neighbor over time:", protonated_oxygens_filename)
         protonated_oxygens = np.load(protonated_oxygens_filename)
 
+    oxygen_distances = []
+    proton_acceptor_distances = []
+    donor_proton_distances = []
+
     if nonorthorhombic_box:
         atombox = AtomBoxMonoclinic(pbc)
     else:
         atombox = AtomBoxCubic(pbc)
 
-    oxygens = npa.select_atoms(atoms, "O")
-    proton_indices = npa.get_acidic_protons(atoms[0], atombox)
-    protons = atoms[:, proton_indices]
+    oxygens, = npa.select_atoms(atoms, "O")
+    protons = npa.get_acidic_protons(atoms, atombox)
 
-    for oxygen_frame, proton_frame, prot_oxys in zip(oxygens, protons, protonated_oxygens):
-        pass
+    for frame, (protonated_oxygens_before, protonated_oxygens_after) in enumerate(
+        zip(protonated_oxygens[time_window // 2 - 1: -time_window // 2 - 1],
+            protonated_oxygens[time_window // 2: -time_window // 2]), start=time_window // 2):
+        protonation_change = protonated_oxygens_before != protonated_oxygens_after
+        if protonation_change.any():
+            proton_indices, = np.where(protonation_change)
+            donor_indices = protonated_oxygens_before[proton_indices]
+            acceptor_indices = protonated_oxygens_after[proton_indices]
+            oxygen_dists = atombox.length(
+                oxygens[frame - time_window // 2: frame + time_window // 2, donor_indices],
+                oxygens[frame - time_window // 2: frame + time_window // 2, acceptor_indices])
+            donor_proton_dists = atombox.length(
+                oxygens[frame - time_window // 2: frame + time_window // 2, donor_indices],
+                protons[frame - time_window // 2: frame + time_window // 2, proton_indices])
+            proton_acceptor_dists = atombox.length(
+                protons[frame - time_window // 2: frame + time_window // 2, proton_indices],
+                oxygens[frame - time_window // 2: frame + time_window // 2, acceptor_indices])
+
+            for dists in oxygen_dists.T:
+                oxygen_distances.append(dists)
+            for dists in donor_proton_dists.T:
+                donor_proton_distances.append(dists)
+            for dists in proton_acceptor_dists.T:
+                proton_acceptor_distances.append(dists)
+
+        if frame % 1000 == 0:
+            print(frame, end="\r")
+
+    proton_acceptor_distances = np.array(proton_acceptor_distances).mean(axis=0)
+    proton_acceptor_distances_var = np.array(proton_acceptor_distances).var(axis=0)
+    donor_proton_distances = np.array(donor_proton_distances).mean(axis=0)
+    donor_proton_distances_var = np.array(donor_proton_distances).var(axis=0)
+    oxygen_distances = np.array(oxygen_distances).mean(axis=0)
+    oxygen_distances_var = np.array(oxygen_distances).var(axis=0)
+
+    if plot:
+        plt.plot(proton_acceptor_distances)
+        plt.fill_between(np.arange(proton_acceptor_distances.size),
+                         proton_acceptor_distances - np.sqrt(proton_acceptor_distances_var),
+                         proton_acceptor_distances + np.sqrt(proton_acceptor_distances_var),
+                         alpha=0.5)
+        plt.title("Proton - Acceptor Distances")
+        plt.show()
+
+        plt.plot(donor_proton_distances)
+        plt.fill_between(np.arange(donor_proton_distances.size),
+                         donor_proton_distances - np.sqrt(donor_proton_distances_var),
+                         donor_proton_distances + np.sqrt(donor_proton_distances_var),
+                         alpha=0.5)
+        plt.title("Proton - Donor Distances")
+        plt.show()
+
+        plt.plot(oxygen_distances)
+        plt.fill_between(np.arange(oxygen_distances.size),
+                         oxygen_distances - np.sqrt(oxygen_distances_var),
+                         oxygen_distances + np.sqrt(oxygen_distances_var),
+                         alpha=0.5)
+        plt.title("Proton - Acceptor Distances")
+        plt.show()
 
 
 def main(*args):
 
     parser = argparse.ArgumentParser(description="Proton jump statistics",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--verbose", "-v", action="store_true", default=False, help="Verbosity")
+    parser.add_argument("--water", "-w", action="store_true", default=False,
+                        help="Set to true if you analyze a water trajectory")
+
     subparsers = parser.add_subparsers(dest="subparser_name")
+
     parser_jumpprob = subparsers.add_parser("jumpprobs")
     parser_jumpprob.add_argument("filename", help="trajectory")
     parser_jumpprob.add_argument("pbc", type=float, nargs="+",
-                                 help="Periodic boundaries. If 3 values are given, an orthorhombic cell is "
-                                 "assumed. If 9 values are given, the pbc vectors are constructed from "
-                                 "them")
+                                 help="Periodic boundaries. If 3 values are given, an orthorhombic "
+                                      "cell is assumed. If 9 values are given, the pbc vectors are "
+                                      "constructed from them")
     parser_jumpprob.add_argument("--dmin", type=float, default=2., help="Minimal value in Histogram")
     parser_jumpprob.add_argument("--dmax", type=float, default=3., help="Maximal value in Histogram")
     parser_jumpprob.add_argument("--bins", type=int, default=100, help="Maximal value in Histogram")
-    parser_jumpprob.add_argument("--verbose", "-v", action="store_true", default=False, help="Verbosity")
-    parser_jumpprob.add_argument("--water", "-w", action="store_true", default=False,
-                                 help="Set to true if you analyze a water trajectory")
     parser_jumpprob.set_defaults(func=proton_jump_probability_at_oxygen_distance)
+
+    parser_jumpmotion = subparsers.add_parser("jumpmotion")
+    parser_jumpmotion.add_argument("filename", help="trajectory")
+    parser_jumpmotion.add_argument("pbc", type=float, nargs="+",
+                                   help="Periodic boundaries. If 3 values are given, an orthorhombic"
+                                        " cell is assumed. If 9 values are given, the pbc vectors "
+                                        "are constructed from them")
+    parser_jumpmotion.add_argument("--time_window", "-t", type=int, default=200,
+                                   help="Length of the time window over which the proton and oxygen "
+                                                                   "motion are averaged")
+    parser_jumpmotion.add_argument("--plot", action="store_true", help="Plot result")
+    parser_jumpmotion.set_defaults(func=oxygen_and_proton_motion_during_a_jump)
+
     args = parser.parse_args()
     args.func(args)
 
