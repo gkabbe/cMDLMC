@@ -244,11 +244,17 @@ def prepare_lmc(settings):
     print_settings(settings)
 
     if settings.rescale_parameters:
+        if verbose:
+            print("# Found rescale parameters. Will use AtomBoxWater")
         atom_box = PBCHelper.AtomBoxWater(settings.pbc, *settings.rescale_parameters)
     else:
         if settings.nonortho:
+            if verbose:
+                print("# Will use nonorthorhombic box")
             atom_box = PBCHelper.AtomBoxMonoclinic(settings.pbc, settings.box_multiplier)
         else:
+            if verbose:
+                print("# Will use orthorhombic box")
             atom_box = PBCHelper.AtomBoxCubic(settings.pbc, settings.box_multiplier)
 
     oxygen_lattice = initialize_oxygen_lattice(settings.oxygen_number_extended,
