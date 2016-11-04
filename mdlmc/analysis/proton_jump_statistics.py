@@ -79,14 +79,17 @@ def determine_protonated_oxygens(trajectory, pbc, *, nonorthorhombic_box=False,
 
 
 @argparse_compatible
-def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, *, verbose=False,
-                                               nonorthogonal_box=False, water=False):
+def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, time_delay=0, *,
+                                               verbose=False, nonorthogonal_box=False, water=False):
     """Determine the probability of a proton jump for a given oxygen distance.
     For each frame a distance histogram of oxygen pairs with one oxygen bonded to a proton is
     determined. Then, a distance histogram of the oxygen pairs between which a proton jump occurs at
     the next time step, is determined.
     Dividing the first with the latter results in a probability for a proton jump.
-    In the case of water, a proton jump can occur between an oxonium ion and a neutral water ion."""
+    In the case of water, a proton jump can occur between an oxonium ion and a neutral water ion.
+
+    If the parameter time_delay is set, the oxygen distance is not measured at the frame, at which
+    the proton jump occurs, but instead at frame - time_delay"""
 
     pbc = np.array(pbc)
     if len(pbc) == 3:
@@ -98,7 +101,7 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
         atom_box = AtomBoxMonoclinic(pbc)
         nonorthorhombic_box = True
     else:
-        raise ValueError("Wrong number of PBC arguments")
+        raise ValueError("Wrong number of PBC arguments (length: {})".format(pbc.size))
 
     if verbose:
         print("# Periodic box lengths used:")
@@ -122,7 +125,7 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
     oxygen_trajectory, = npa.select_atoms(atoms, "O")
     counter = np.zeros(bins, int)
 
-    for frame in range(oxygen_trajectory.shape[0] - 1):
+    for frame in range(time_delay, oxygen_trajectory.shape[0] - 1):
         oxygen_distances_at_jump = []
         if verbose and frame % 1000 == 0:
             print("# Frame {}".format(frame), end="\r", flush=True)
@@ -132,19 +135,20 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
             for proton_index in jumping_protons:
                 oxy_neighbor_before = protonated_oxygens[frame, proton_index]
                 oxy_neighbor_after = protonated_oxygens[frame + 1, proton_index]
-                oxygen_distance = atom_box.length(oxygen_trajectory[frame, oxy_neighbor_after],
-                                                  oxygen_trajectory[frame, oxy_neighbor_before])
-                oxygen_distances_at_jump.append(oxygen_distance[0])
+                oxygen_distance = atom_box.length(
+                    oxygen_trajectory[frame - time_delay, oxy_neighbor_after],
+                    oxygen_trajectory[frame - time_delay, oxy_neighbor_before])
+                oxygen_distances_at_jump.append(oxygen_distance)
         histo_jump, edges = np.histogram(oxygen_distances_at_jump, bins=bins, range=(dmin, dmax))
         if water:
-            occupied_oxygen_indices = find_oxonium_ions(protonated_oxygens[frame])
+            protonated_oxygen_indices = find_oxonium_ions(protonated_oxygens[frame])
         else:
-            occupied_oxygen_indices = protonated_oxygens[frame]
+            protonated_oxygen_indices = protonated_oxygens[frame]
 
         occ_mask = np.zeros(oxygen_trajectory.shape[1], bool)
-        occ_mask[occupied_oxygen_indices] = 1
-        all_to_all = atom_box.length_all_to_all(oxygen_trajectory[frame, occ_mask],
-                                                oxygen_trajectory[frame, ~occ_mask])
+        occ_mask[protonated_oxygen_indices] = 1
+        all_to_all = atom_box.length_all_to_all(oxygen_trajectory[frame - time_delay, occ_mask],
+                                                oxygen_trajectory[frame - time_delay, ~occ_mask])
         histo_ox, edges = np.histogram(all_to_all, bins=bins, range=(dmin, dmax))
         mask = histo_ox != 0
         counter += mask
@@ -298,6 +302,8 @@ def main(*args):
     parser_jumpprob.add_argument("--dmin", type=float, default=2., help="Minimal value in Histogram")
     parser_jumpprob.add_argument("--dmax", type=float, default=3., help="Maximal value in Histogram")
     parser_jumpprob.add_argument("--bins", type=int, default=100, help="Maximal value in Histogram")
+    parser_jumpprob.add_argument("--time_delay", "-t", type=int, default=0,
+                                 help="Take time delay into account when measuring oxygen distances")
     parser_jumpprob.set_defaults(func=proton_jump_probability_at_oxygen_distance)
 
     parser_jumpmotion = subparsers.add_parser("jumpmotion")
