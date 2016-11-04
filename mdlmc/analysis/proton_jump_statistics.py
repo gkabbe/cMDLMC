@@ -27,10 +27,19 @@ def determine_phosphorus_oxygen_pairs(oxygen_frame, phosphorus_frame, atom_box):
 def find_oxonium_ions(covalently_bonded_oxygen_frame):
     oxonium_ions = []
     counter = Counter(covalently_bonded_oxygen_frame)
-    for k, v in counter.items():
-        if v == 3:
-            oxonium_ions.append(k)
+    for oxygen_index, attached_protons in counter.items():
+        if attached_protons == 3:
+            oxonium_ions.append(oxygen_index)
     return np.array(oxonium_ions)
+
+
+def find_hydroxyde_ions(covalently_bonded_oxygen_frame):
+    hydroxyde_ions = []
+    counter = Counter(covalently_bonded_oxygen_frame)
+    for k, v in counter.items():
+        if v == 1:
+            hydroxyde_ions.append(k)
+    return np.array(hydroxyde_ions)
 
 
 def determine_protonated_oxygens(trajectory, pbc, *, nonorthorhombic_box=False,
@@ -156,7 +165,8 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
 @argparse_compatible
 def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
                                            nonorthorhombic_box=False, water=False, plot=False,
-                                           verbose=False):
+                                           no_shuttling=False, verbose=False):
+
     atoms = xyz_parser.load_atoms(filename)
 
     protonated_oxygens_filename = re.sub("\..{3}$", "", filename) + "_cbo.npy"
@@ -188,59 +198,85 @@ def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
         protonation_change = protonated_oxygens_before != protonated_oxygens_after
         if protonation_change.any():
             proton_indices, = np.where(protonation_change)
-            donor_indices = protonated_oxygens_before[proton_indices]
-            acceptor_indices = protonated_oxygens_after[proton_indices]
+            if water:
+                donor_indices = find_oxonium_ions(protonated_oxygens_before)
+                acceptor_indices = find_oxonium_ions(protonated_oxygens_after)
+                if donor_indices.size != acceptor_indices.size:
+                    # If accidentally a neutral hydrogen dissociates, ignore this frame altogether
+                    continue
+            else:
+                donor_indices = protonated_oxygens_before[proton_indices]
+                acceptor_indices = protonated_oxygens_after[proton_indices]
             oxygen_dists = atombox.length(
-                oxygens[frame - time_window // 2: frame + time_window // 2, donor_indices],
-                oxygens[frame - time_window // 2: frame + time_window // 2, acceptor_indices])
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), donor_indices],
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), acceptor_indices])
             donor_proton_dists = atombox.length(
-                oxygens[frame - time_window // 2: frame + time_window // 2, donor_indices],
-                protons[frame - time_window // 2: frame + time_window // 2, proton_indices])
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), donor_indices],
+                protons[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), proton_indices])
             proton_acceptor_dists = atombox.length(
-                protons[frame - time_window // 2: frame + time_window // 2, proton_indices],
-                oxygens[frame - time_window // 2: frame + time_window // 2, acceptor_indices])
+                protons[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), proton_indices],
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), acceptor_indices])
 
-            for dists in oxygen_dists.T:
-                oxygen_distances.append(dists)
-            for dists in donor_proton_dists.T:
-                donor_proton_distances.append(dists)
-            for dists in proton_acceptor_dists.T:
-                proton_acceptor_distances.append(dists)
+            if not no_shuttling or (proton_acceptor_dists[time_window // 2:] < donor_proton_dists[
+                    time_window // 2:]).all():
+                for dists in oxygen_dists.T:
+                    oxygen_distances.append(dists)
+                for dists in donor_proton_dists.T:
+                    donor_proton_distances.append(dists)
+                for dists in proton_acceptor_dists.T:
+                    proton_acceptor_distances.append(dists)
 
         if frame % 1000 == 0:
             print(frame, end="\r")
 
-    proton_acceptor_distances = np.array(proton_acceptor_distances).mean(axis=0)
-    proton_acceptor_distances_var = np.array(proton_acceptor_distances).var(axis=0)
-    donor_proton_distances = np.array(donor_proton_distances).mean(axis=0)
-    donor_proton_distances_var = np.array(donor_proton_distances).var(axis=0)
-    oxygen_distances = np.array(oxygen_distances).mean(axis=0)
-    oxygen_distances_var = np.array(oxygen_distances).var(axis=0)
+    proton_acceptor_distances_mean = np.array(proton_acceptor_distances).mean(axis=0)
+    proton_acceptor_distances_sigma = np.sqrt(np.array(proton_acceptor_distances).var(axis=0))
+    donor_proton_distances_mean = np.array(donor_proton_distances).mean(axis=0)
+    donor_proton_distances_sigma = np.sqrt(np.array(donor_proton_distances).var(axis=0))
+    oxygen_distances_mean = np.array(oxygen_distances).mean(axis=0)
+    oxygen_distances_sigma = np.sqrt(np.array(oxygen_distances).var(axis=0))
+
+    time = np.arange(int(np.ceil(-time_window / 2)), int(np.ceil(time_window / 2)))
 
     if plot:
-        plt.plot(proton_acceptor_distances)
-        plt.fill_between(np.arange(proton_acceptor_distances.size),
-                         proton_acceptor_distances - np.sqrt(proton_acceptor_distances_var),
-                         proton_acceptor_distances + np.sqrt(proton_acceptor_distances_var),
+
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+
+        ax1.plot(time, proton_acceptor_distances_mean)
+        ax1.fill_between(time,
+                         proton_acceptor_distances_mean - proton_acceptor_distances_sigma,
+                         proton_acceptor_distances_mean + proton_acceptor_distances_sigma,
                          alpha=0.5)
-        plt.title("Proton - Acceptor Distances")
+        ax1.set_title("Proton - Acceptor Distances")
+        ax1.set_ylabel("Distance / \AA")
+        ax2.plot(time, donor_proton_distances_mean)
+        ax2.fill_between(time,
+                         donor_proton_distances_mean - donor_proton_distances_sigma,
+                         donor_proton_distances_mean + donor_proton_distances_sigma,
+                         alpha=0.5)
+        ax2.set_title("Proton - Donor Distances")
+        ax2.set_ylabel("Distance / \AA")
+
+        ax3.plot(time, oxygen_distances_mean)
+        ax3.fill_between(time,
+                         oxygen_distances_mean - oxygen_distances_sigma,
+                         oxygen_distances_mean + oxygen_distances_sigma,
+                         alpha=0.5)
+        ax3.set_title("Donor - Acceptor Distances")
+        ax3.set_ylabel("Distance / \AA")
+        plt.xlabel("Frames")
         plt.show()
 
-        plt.plot(donor_proton_distances)
-        plt.fill_between(np.arange(donor_proton_distances.size),
-                         donor_proton_distances - np.sqrt(donor_proton_distances_var),
-                         donor_proton_distances + np.sqrt(donor_proton_distances_var),
-                         alpha=0.5)
-        plt.title("Proton - Donor Distances")
-        plt.show()
+    else:
+        print(
+            "#",
+            (" ".join(7 * ["{:>12}"])).format("Time", "d_OH", "d_OH sigma", "d_HO", "d_HO sigma",
+                                              "d_OO", "d_OO sigma"))
 
-        plt.plot(oxygen_distances)
-        plt.fill_between(np.arange(oxygen_distances.size),
-                         oxygen_distances - np.sqrt(oxygen_distances_var),
-                         oxygen_distances + np.sqrt(oxygen_distances_var),
-                         alpha=0.5)
-        plt.title("Proton - Acceptor Distances")
-        plt.show()
+        for values in zip(time, donor_proton_distances_mean, donor_proton_distances_sigma,
+                          proton_acceptor_distances_mean, proton_acceptor_distances_sigma,
+                          oxygen_distances_mean, oxygen_distances_sigma):
+            print(" ", ("{:12d} " + " ".join(6 * ["{:>12.8f}"])).format(*values))
 
 
 def main(*args):
@@ -274,6 +310,7 @@ def main(*args):
                                    help="Length of the time window over which the proton and oxygen "
                                                                    "motion are averaged")
     parser_jumpmotion.add_argument("--plot", action="store_true", help="Plot result")
+    parser_jumpmotion.add_argument("--no_shuttling", action="store_true", help="Plot result")
     parser_jumpmotion.set_defaults(func=oxygen_and_proton_motion_during_a_jump)
 
     args = parser.parse_args()
