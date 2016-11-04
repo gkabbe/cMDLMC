@@ -2,6 +2,8 @@ from functools import wraps
 import time
 import argparse
 import inspect
+import pickle
+import os
 
 
 def chunk(iterable, step):
@@ -34,3 +36,27 @@ def argparse_compatible(func):
             return func(*args, **kwargs)
 
     return wrapper
+
+
+def remember_results(overwrite=False):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            save_fname = func.__name__ + "_result.pickle"
+            key = tuple(args) + tuple(sorted(kwargs.items()))
+            if os.path.exists(save_fname):
+                with open(save_fname, "rb") as f:
+                    results_dict = pickle.load(f)
+                results = results_dict[key]
+            else:
+                results_dict = dict()
+            if overwrite or key not in results_dict:
+                results = func(*args, **kwargs)
+                results_dict[key] = results
+
+            with open(save_fname, "wb") as f:
+                pickle.dump(results_dict, f)
+
+            return results
+        return wrapper
+    return decorator
