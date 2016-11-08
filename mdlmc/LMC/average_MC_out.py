@@ -3,8 +3,8 @@
 
 import argparse
 
-import ipdb
 import matplotlib.pylab as plt
+from numba import jit
 import numpy as np
 import pint
 from scipy.optimize import curve_fit
@@ -244,6 +244,31 @@ def average_kmc(args):
             else:
                 print((format_string.format(t=time[i], msd=average[i, :3], autocorr=average[i, 3],
                                             jumps=average[i, 4])))
+
+
+@jit(nopython=True)
+def average_excess_proton_msd(kmc_data, interval_length, interval_delta, pbc, periodic=True):
+    if kmc_data.shape[0] == interval_length:
+        interval_number = 1
+    else:
+        interval_number = (kmc_data.shape[0] - interval_length) // interval_delta
+    msds = np.zeros((interval_number, interval_length, 3))
+
+    print("Averaging over", interval_number, "intervals")
+    for i in range(interval_number):
+        distance = np.zeros(3)
+        for j in range(1, interval_length):
+            diff = kmc_data[i * interval_delta + j] - kmc_data[i * interval_delta + j - 1]
+            if periodic:
+                for k in range(3):
+                    while diff[k] > pbc[k] / 2:
+                        diff[k] -= pbc[k]
+                    while diff[k] < -pbc[k] / 2:
+                        diff[k] += pbc[k]
+            distance += diff
+            msds[i, j] = distance**2
+
+    return msds
 
 
 def main(*args):
