@@ -151,8 +151,6 @@ cdef class LMCRoutine:
         self.cutoff_radius = cutoff_radius
         self.neighbor_search_radius = neighbor_search_radius
         self.saved_frame_counter = 0
-        self.calculate_jumpmatrix = calculate_jumpmatrix
-        self.jumpmatrix = np.zeros((self.oxygen_number, self.oxygen_number))
         self.atom_box = atom_box
         self.oxygen_trajectory = oxygen_trajectory
         self.phosphorus_trajectory = phosphorus_trajectory
@@ -160,6 +158,9 @@ cdef class LMCRoutine:
                              self.atom_box.box_multiplier[1] * self.atom_box.box_multiplier[2]
         self.phosphorus_number = self.phosphorus_trajectory.shape[1] * self.atom_box.box_multiplier[0] * \
                                  self.atom_box.box_multiplier[1] * self.atom_box.box_multiplier[2]
+        self.calculate_jumpmatrix = calculate_jumpmatrix
+        self.jumpmatrix = np.zeros((self.oxygen_number, self.oxygen_number))
+
         if type(seed) != int:
             seed = time.time()
         gsl_rng_set(self.r, seed)
@@ -311,11 +312,9 @@ cdef class LMCRoutine:
             int step, i, index_origin, index_destination
             int trajectory_length
             int steps
-        trajectory_length = self.atom_box.oxygen_trajectory.shape[0]
-        while self.saved_frame_counter < trajectory_length and self.saved_frame_counter < frame + 1:
-            self.calculate_transitions(
-                self.saved_frame_counter, self.cutoff_radius)
+
         steps = self.start_indices[frame].size()
+
         for step in range(steps):
             i = gsl_rng_uniform_int(self.r, steps)
             index_origin = self.start_indices[frame][i]
