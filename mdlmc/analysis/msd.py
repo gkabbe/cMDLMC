@@ -1,18 +1,37 @@
 #!/usr/bin/env python3 -u
 # -*- coding: utf-8
 
-import numpy as np
 import argparse
+import os
 from math import ceil
+
 import matplotlib.pylab as plt
-from scipy.optimize import curve_fit
+import numpy as np
 import pint
+from numba import jit
 
+from mdlmc.IO import xyz_parser
 from mdlmc.atoms import numpyatom as npa
-from mdlmc.IO import BinDump
-
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
+from scipy.optimize import curve_fit
 
 ureg = pint.UnitRegistry()
+
+
+@jit
+def squared_distance(a1_pos, a2_pos, pbc, axis_wise=False):
+    """Calculate squared distance using numpy vector operations"""
+    dist = a1_pos - a2_pos
+    while (dist > pbc / 2).any():
+        indices = np.where(dist > pbc / 2)
+        dist[indices] -= pbc[indices[-1]]
+    while (dist < -pbc / 2).any():
+        indices = np.where(dist < -pbc / 2)
+        dist[indices] += pbc[indices[-1]]
+    if axis_wise:
+        return dist * dist
+    else:
+        return (dist * dist).sum(axis=1)
 
 
 def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False):
@@ -35,12 +54,14 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False)
         print("# Interval distance:", startdist)
 
     for i in range(intervalnumber):
-        sqdist = npa.squared_distance(atom_traj[i * startdist:i * startdist + intervallength, :, :],
-                               atom_traj[i * startdist, :, :], pbc, axis_wise=True)
+        print("{: 8d} / {: 8d}".format(i, intervalnumber), end="\r")
+        sqdist = squared_distance(atom_traj[i * startdist:i * startdist + intervallength, :, :],
+                                  atom_traj[i * startdist, :, :], pbc, axis_wise=True)
         sqdist = sqdist.mean(axis=1)  # average over atom number
         delta = sqdist - msd_mean
         msd_mean += delta / (i + 1)
         msd_var += delta * (sqdist - msd_mean)
+    print()
     # average over particle number and number of intervals
     msd_var /= (intervalnumber - 1)
 
@@ -78,6 +99,7 @@ def main(*args):
     parser.add_argument("filename", help="Trajectory filename")
     parser.add_argument("pbc", nargs=3, type=float, help="Periodic boundaries")
     parser.add_argument("timestep", type=ureg.parse_expression, help="MD timestep (e.g. 0.5fs)")
+    parser.add_argument("atom", type=str, help="Atom name")
     parser.add_argument("--length_unit", type=ureg.parse_expression, default="angstrom",
                         help="Length unit of atom coordinates")
     parser.add_argument("--trajectory_cut", type=int,
@@ -98,16 +120,28 @@ def main(*args):
     args = parser.parse_args()
 
     pbc = np.array(args.pbc)
-    trajectory = BinDump.npload_atoms(args.filename, create_if_not_existing=True, remove_com=True,
-                                      verbose=args.verbose)
-    if args.trajectory_cut:
-        if args.verbose:
-            print("# Trajectory length: {} frames".format(trajectory.shape[0]))
-            print("# Trajectory will be cut from frame 0 to frame {}".format(args.trajectory_cut))
-        trajectory = trajectory[:args.trajectory_cut]
 
-    BinDump.mark_acidic_protons(trajectory, pbc, verbose=args.verbose)
-    proton_traj, = npa.select_atoms(trajectory, "AH")
+    if type(args.timestep) != ureg.Quantity:
+        raise ValueError("You forgot to assign a unit to timestep!")
+
+    if os.path.splitext(args.filename)[1] == "npz":
+        if args.atom == "AH":
+            trajectory = xyz_parser.load_trajectory_from_npz(args.filename, verbose=args.verbose)
+        else:
+            trajectory, = xyz_parser.load_trajectory_from_npz(args.filename, args.atom,
+                                                              verbose=args.verbose)
+    else:
+        if args.atom == "AH":
+            trajectory = xyz_parser.load_atoms(args.filename, verbose=args.verbose,
+                                                clip=args.trajectory_cut)
+        else:
+            trajectory, = xyz_parser.load_atoms(args.filename, args.atom, verbose=args.verbose,
+                                                clip=args.trajectory_cut)
+
+    atom_box = AtomBoxCubic(pbc)
+
+    if args.atom == "AH":
+        trajectory = npa.get_acidic_protons(trajectory, atom_box, verbose=args.verbose)
 
     if args.subparser_name == "multi":
         # -------------------------------------
@@ -115,7 +149,7 @@ def main(*args):
         subinterval_delay = 20
         resolution = 100
         # -------------------------------------
-        msd_mean, msd_var = calculate_msd_multi_interval(proton_traj[::resolution], pbc,
+        msd_mean, msd_var = calculate_msd_multi_interval(trajectory[::resolution], pbc,
                                                          subinterval_delay)
         # use only first 60% of the calculated interval because of statistic
         msd_mean, msd_var = msd_mean[:int(msd_mean.shape[0] * 0.6)], \
@@ -124,16 +158,13 @@ def main(*args):
     else:
         intervalnumber = args.intervalnumber
         intervallength = args.intervallength
-        msd_mean, msd_var = calculate_msd(proton_traj, pbc, intervalnumber, intervallength)
+        msd_mean, msd_var = calculate_msd(trajectory, pbc, intervalnumber, intervallength)
 
     # sum over the three spatial coordinate axes
     msd_mean, msd_var = msd_mean.sum(axis=1), msd_var.sum(axis=1)
 
-    for mm, mv in zip():
-        print(mm, mv)
-
     if msd_mean.shape[0] > 50:
-        step = msd_mean.shape[0] / 50
+        step = msd_mean.shape[0] // 50
     else:
         step = 1
 
