@@ -100,7 +100,11 @@ def track_collective_variable(trajectory, pbc, *, visualize=False):
             print()
             for atom in atoms[i]:
                 print(atom["name"], " ".join(map(str, atom["pos"])))
-        print("S", " ".join(map(str, excess_charge_colvar)), flush=True)
+            print("S", " ".join(map(str, excess_charge_colvar)), flush=True)
+        else:
+            print("1")
+            print()
+            print("S", " ".join(map(str, excess_charge_colvar)), flush=True)
 
 
 @argparse_compatible
