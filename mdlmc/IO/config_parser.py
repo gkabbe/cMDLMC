@@ -63,6 +63,8 @@ def load_configfile(config_filename, verbose=False):
     parser_dict = CONFIG_DICT
     config_dict = dict()
     with open(config_filename, "r") as f:
+        if verbose:
+            print("# Reading config file", config_filename)
         for line in f:
             if line[0] != "#":
                 if len(line.split()) > 1:
