@@ -209,8 +209,6 @@ def prepare_lmc(settings):
 
     check_settings(settings)
     verbose = settings.verbose
-    if verbose:
-        print("# Config file specified. Loading settings from there.")
 
     if settings.o_neighbor:
         atoms_to_load = ("O", settings.o_neighbor)
@@ -347,11 +345,8 @@ def main(*args):
     elif args.subparser_name == "config_help":
         print_confighelp()
     else:
-
         settings = load_configfile(args.config_file, verbose=True)
-
         oxygen_trajectory, oxygen_lattice, helper, observable_manager = prepare_lmc(settings)
-
         args.func(oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings)
 
 
