@@ -96,6 +96,7 @@ setup(name='mdlmc',
                               'free-energy=mdlmc.analysis.free_energy:main',
                               'topo=mdlmc.misc.topology:main',
                               'print_npz=mdlmc.atoms.numpyatom:print_npz',
+                              'trajzip=mdlmc.misc.trajzip:main'
                               ],
       },
       include_package_data=True,
