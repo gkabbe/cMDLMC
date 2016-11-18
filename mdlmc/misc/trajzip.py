@@ -17,13 +17,17 @@ def main(*args):
     file1 = open(filename1, "r")
     file2 = open(filename2, "r")
 
-    n1, traj1 = read_frame(file1)
-    n2, traj2 = read_frame(file2)
-
-    print(n1 + n2)
-    print()
-    print(traj1)
-    print(traj2)
+    while True:
+        try:
+            n1, traj1 = read_frame(file1)
+            n2, traj2 = read_frame(file2)
+        except:
+            break
+        else:
+            print(n1 + n2)
+            print()
+            print(traj1)
+            print(traj2)
 
 
 if __name__ == "__main__":
