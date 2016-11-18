@@ -96,9 +96,9 @@ setup(name='mdlmc',
                               'free-energy=mdlmc.analysis.free_energy:main',
                               'topo=mdlmc.misc.topology:main',
                               'print_npz=mdlmc.atoms.numpyatom:print_npz',
+                              'excess_charge_pos=mdlmc.analysis.excess_charge_analyzer:main',
                               'trajzip=mdlmc.misc.trajzip:main',
-                              'trajread=mdlmc.misc.trajread:main',
-                              'excess_charge_pos=mdlmc.analysis.excess_charge_analyzer:main'
+                              'trajread=mdlmc.misc.trajread:main'
                               ],
       },
       include_package_data=True,
