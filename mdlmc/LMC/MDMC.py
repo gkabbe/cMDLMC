@@ -244,10 +244,16 @@ def prepare_lmc(settings):
     else:
         settings.nonortho = True
     print_settings(settings)
+
     if settings.nonortho:
+        if verbose:
+            print("# Will use nonorthorhombic box")
         atom_box = PBCHelper.AtomBoxMonoclinic(settings.pbc, settings.box_multiplier)
     else:
+        if verbose:
+            print("# Will use orthorhombic box")
         atom_box = PBCHelper.AtomBoxCubic(settings.pbc, settings.box_multiplier)
+
     oxygen_lattice = initialize_oxygen_lattice(settings.oxygen_number_extended,
                                                settings.proton_number)
     msd_mode = "higher_msd" if settings.higher_msd else "standard_msd"
