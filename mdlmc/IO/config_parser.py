@@ -33,6 +33,10 @@ def parse_float(line):
     return float(line.split()[1])
 
 
+def parse_multifloat(line):
+    return [float(x) for x in line.split()[1:]]
+
+
 def parse_string(line):
     return line.split()[1]
 
@@ -297,10 +301,10 @@ CONFIG_DICT = OrderedDict([
                  "E(d) = a * (d - d0) / sqrt(b + 1 / (d - d0)**2), whereas A and T are parameters "
                  "of the Arrhenius equation , which converts the "
                  "activation energy to a jump rate: "
-                 "ω(d) = A * exp(-E(d)/(k_B * T))"
+                 "ω(d) = A * exp(-E(d) / (k_B * T))"
                  ""
                  "If jumprate_type is set to \"Exponential_rates\", the jump rate function is "
-                 "defined asω(d) = a * exp(b * x) with parameters a, b"
+                 "defined as ω(d) = a * exp(b * x) with parameters a, b"
      }),
     ("higher_msd",
      {
