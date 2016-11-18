@@ -29,7 +29,7 @@ cdef class AtomBox:
     #     int oxygen_number_extended
     #     int phosphorus_number_extended
 
-    def __cinit__(self, periodic_boundaries, box_multiplier=(1, 1, 1)):
+    def __cinit__(self, periodic_boundaries, *args, box_multiplier=(1, 1, 1), **kwargs):
         self.periodic_boundaries = np.array(periodic_boundaries, dtype=float)
         self.box_multiplier = np.array(box_multiplier, dtype=np.int32)
 
@@ -219,7 +219,7 @@ cdef class AtomBox:
 cdef class AtomBoxCubic(AtomBox):
     """Subclass of AtomBox for orthogonal periodic MD boxes"""
 
-    def __cinit__(self, periodic_boundaries, box_multiplier=(1, 1, 1)):
+    def __cinit__(self, periodic_boundaries, *args, box_multiplier=(1, 1, 1), **kwargs):
         cdef int i
 
         self.pbc_matrix = np.zeros((3, 3))
@@ -251,7 +251,7 @@ cdef class AtomBoxMonoclinic(AtomBox):
     #     public double[:, ::1] h
     #     public double[:, ::1] h_inv
 
-    def __cinit__(self, periodic_boundaries, box_multiplier=(1, 1, 1)):
+    def __cinit__(self, periodic_boundaries, *args, box_multiplier=(1, 1, 1), **kwargs):
 
         self.periodic_boundaries_extended = np.array(periodic_boundaries, dtype=float)
         for i in range(0, 3):
