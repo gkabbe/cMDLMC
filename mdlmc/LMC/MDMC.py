@@ -21,6 +21,7 @@ class ObservableManager:
     def __init__(self, lmc_helper, oxygen_trajectory, atom_box, oxygen_lattice, proton_number,
                  md_timestep, sweeps, *, msd_mode=None, variance_per_proton=False,
                  output=sys.stdout):
+
         self.lmc_helper = lmc_helper
         self.oxygen_trajectory = oxygen_trajectory
         self.atom_box = atom_box
@@ -60,8 +61,7 @@ class ObservableManager:
                 proton_pos_new[proton_index - 1] = \
                     self.atom_box.position_extended_box(oxygen_index,
                                                         self.oxygen_trajectory[frame])
-        self.displacement += self.atom_box.distance(proton_pos_new,
-                                                    self.proton_pos_snapshot)
+        self.displacement += self.atom_box.distance(self.proton_pos_snapshot, proton_pos_new)
         self.proton_pos_snapshot[:] = proton_pos_new
 
     def calculate_msd_standard(self):
