@@ -38,11 +38,12 @@ def argparse_compatible(func):
     return wrapper
 
 
-def remember_results(overwrite=False):
+def remember_results(overwrite=False, nobackup=False):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            save_fname = func.__name__ + "_result.pickle"
+            nobackup_str = "_nobackup" if nobackup else ""
+            save_fname = func.__name__ + nobackup_str + "_result.pickle"
             key = tuple(args) + tuple(sorted(kwargs.items()))
             if os.path.exists(save_fname):
                 with open(save_fname, "rb") as f:
