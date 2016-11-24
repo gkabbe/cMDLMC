@@ -355,6 +355,8 @@ def kmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, setti
     if xyz_output:
         proton_trajectory, = load_atoms(settings.filename, "H")
 
+    output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}"
+
     while sweep < total_sweeps:
         proton_position = np.where(oxygen_lattice)[0][0]
         time_selector = -np.log(np.random.random())
@@ -367,10 +369,8 @@ def kmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, setti
                 kmc_state_to_xyz(oxygen_trajectory[frame], proton_trajectory[frame],
                                  oxygen_lattice)
             else:
-                print("{:18d} {:18.2f} {:15.8f}"
-                      " {:15.8f} {:15.8f} {:10d}".format(sweep, t,
-                                                         *oxygen_trajectory[frame, proton_position],
-                                                         jumps), flush=True, file=settings.output)
+                print(output_format.format(sweep, t, *oxygen_trajectory[frame, proton_position],
+                                           jumps), flush=True, file=settings.output)
             sweep, t = sweep + 1, t + dt
             frame = sweep % trajectory_length
             start, destination, probabilities = helper.return_transitions(frame)
@@ -388,10 +388,8 @@ def kmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, setti
             kmc_state_to_xyz(oxygen_trajectory[frame], proton_trajectory[frame],
                              oxygen_lattice)
         else:
-            print("{:18d} {:18.2f} {:15.8f}"
-                  " {:15.8f} {:15.8f} {:10d}".format(sweep, t,
-                                                     *oxygen_trajectory[frame, proton_position],
-                                                     jumps), flush=True, file=settings.output)
+            print(output_format.format(sweep, t, *oxygen_trajectory[frame, proton_position],
+                                       jumps), flush=True, file=settings.output)
 
 
 def main(*args):
