@@ -5,6 +5,8 @@ import inspect
 import pickle
 import os
 
+import numpy as np
+
 
 def chunk(iterable, step):
     starts = range(0, len(iterable) - 1, step)
@@ -61,3 +63,43 @@ def remember_results(overwrite=False, nobackup=False):
             return results
         return wrapper
     return decorator
+
+
+def read_file(file, *, usecols=None, dtype=float):
+    arr_length = 0
+    for line in file:
+        if not line.lstrip().startswith("#"):
+            arr_length += 1
+    file.seek(0)
+    print("File length:", arr_length)
+
+    if usecols:
+        arr_width = len(usecols)
+        usecols = list(usecols)
+    else:
+        line = file.readline().lstrip()
+        while line.startswith("#"):
+            line = file.readline().lstrip()
+        arr_width = len(line.split())
+        usecols = list(range(arr_width))
+
+    print("Using columns", usecols)
+    print("Creating array of shape", (arr_length, arr_width))
+
+    array = np.zeros((arr_length, arr_width), dtype=dtype)
+
+    file.seek(0)
+
+    i = 0
+    for line in file:
+        if not line.lstrip().startswith("#"):
+            try:
+                linecontent = np.fromstring(line, sep=" ")
+                array[i] = linecontent[usecols]
+            except:
+                print("error")
+                print(linecontent)
+                break
+            i += 1
+
+    return array
