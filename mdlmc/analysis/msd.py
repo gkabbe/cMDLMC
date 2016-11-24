@@ -18,20 +18,42 @@ from scipy.optimize import curve_fit
 ureg = pint.UnitRegistry()
 
 
-@jit
-def squared_distance(a1_pos, a2_pos, pbc, axis_wise=False):
-    """Calculate squared distance using numpy vector operations"""
-    dist = a1_pos - a2_pos
+@jit(nopython=True)
+def pbc_dist(dist, pbc):
     while (dist > pbc / 2).any():
         indices = np.where(dist > pbc / 2)
         dist[indices] -= pbc[indices[-1]]
     while (dist < -pbc / 2).any():
         indices = np.where(dist < -pbc / 2)
         dist[indices] += pbc[indices[-1]]
+    return dist
+
+
+def squared_distance(a1_pos, a2_pos, pbc, axis_wise=False):
+    """Calculate squared distance using numpy vector operations"""
+    dist = a1_pos - a2_pos
+    dist = pbc_dist(dist, pbc)
+
     if axis_wise:
         return dist * dist
     else:
         return (dist * dist).sum(axis=1)
+
+
+@jit(nopython=True)
+def displacement(positions, pbc):
+    displ = np.zeros(positions.shape)
+    total_diff = np.zeros(3)
+    # total_diff = np.zeros(positions.shape[1:])
+
+    for i in range(1, positions.shape[0]):
+        for j in range(positions.shape[1]):
+            diff = positions[i, j] - positions[i - 1, j]
+            diff = pbc_dist(diff, pbc)
+            total_diff += diff
+            displ[i, j] = total_diff
+
+    return displ
 
 
 def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False):
@@ -54,10 +76,9 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False)
         print("# Interval distance:", startdist)
 
     for i in range(intervalnumber):
-        print("{: 8d} / {: 8d}".format(i, intervalnumber), end="\r")
-        sqdist = squared_distance(atom_traj[i * startdist:i * startdist + intervallength, :, :],
-                                  atom_traj[i * startdist, :, :], pbc, axis_wise=True)
-        sqdist = sqdist.mean(axis=1)  # average over atom number
+        print("{: 8d} / {: 8d}".format(i, intervalnumber), end="\r", flush=True)
+        displ = displacement(atom_traj[i * startdist:i * startdist + intervallength, :, :], pbc)
+        sqdist = (displ * displ).mean(axis=1)  # average over atom number
         delta = sqdist - msd_mean
         msd_mean += delta / (i + 1)
         msd_var += delta * (sqdist - msd_mean)
