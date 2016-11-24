@@ -1,7 +1,8 @@
 import unittest
 import numpy as np
 
-from mdlmc.analysis.excess_charge_analyzer import  excess_charge_collective_variable
+from mdlmc.analysis.excess_charge_analyzer import excess_charge_collective_variable
+
 
 class TestExcessChargeAnalyzer(unittest.TestCase):
     def test_collective_variable_invariance(self):
@@ -21,7 +22,8 @@ class TestExcessChargeAnalyzer(unittest.TestCase):
             self.assertTrue(np.allclose(a, b))
 
     def test_collective_variable_correlates_with_excess_charge(self):
-        """Assert that the collective variable actually tracks the excess charge movement"""
+        """Assert that the collective variable actually tracks the excess charge movement
+        (Move excess charge around, but keep oxygens fixed)"""
         h2o_angle = np.radians(104.45)
         h2o = np.array([[0, 0, 0],
                         [0.96, 0, 0],
@@ -43,4 +45,3 @@ class TestExcessChargeAnalyzer(unittest.TestCase):
             cv_diff = cv - colvars[0]
             ec_diff = ec - excess_charge_positions[0]
             np.testing.assert_allclose(cv_diff, ec_diff)
-
