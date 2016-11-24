@@ -5,7 +5,6 @@ import argparse
 import os
 import re
 from collections import Counter
-import ipdb
 
 import numpy as np
 import matplotlib.pylab as plt

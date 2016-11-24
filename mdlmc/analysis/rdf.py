@@ -1,6 +1,5 @@
 import numpy as np
 import argparse
-import warnings
 import matplotlib.pylab as plt
 import time
 from typing import List
