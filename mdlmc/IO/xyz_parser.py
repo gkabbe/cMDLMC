@@ -46,6 +46,8 @@ def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, p
             selections = dict(H=acidic_proton_selection)
         else:
             selections = dict()
+        if not atom_names:
+            atom_names = set(first_frame["name"])
         for atom_name in atom_names:
             atom_selection = np.where(first_frame["name"] == atom_name)[0]
             selections[atom_name] = atom_selection
@@ -64,12 +66,11 @@ def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, p
             counter = 0
             start_time = time.time()
             while True:
-                frames = parse_xyz(f, frame_len, no_of_frames=chunk)
+                frames = parse_xyz(f, frame_len, selection=atom_names, no_of_frames=chunk)
                 if frames.shape[0] == 0:
                     break
                 if remove_com_movement:
-                    for frame in frames:
-                        npa.remove_com_movement_frame(frame)
+                    npa.remove_center_of_mass_movement(frames)
                 for atom_name, indices in selections.items():
                     hdf5.get_node("/trajectories", atom_name).append(
                         frames[:, frames[0]["name"] == atom_name]["pos"])
@@ -86,7 +87,7 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False)
     return trajectories
 
 
-def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
+def save_trajectory_to_npz(xyz_fname, *atom_names, npz_fname=None, remove_com_movement=False,
                            verbose=False):
     with open(xyz_fname, "rb") as f:
         frame_length = int(f.readline()) + 2
@@ -102,7 +103,7 @@ def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
             fps = counter / (time.time() - start_time)
             print("# {:6d} ({:.2f} fps)".format(counter, fps), end="\r", flush=True)
             trajectory.append(data)
-            data = parse_xyz(f, frame_length, no_of_frames=chunk_size)
+            data = parse_xyz(f, frame_length, selection=atom_names, no_of_frames=chunk_size)
         print("")
         trajectory = np.vstack(trajectory)
 
@@ -141,31 +142,40 @@ def load_trajectory_from_npz(npz_fname, *atom_names, clip=None, verbose=False):
         return trajectory
 
 
-def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=None):
+def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=None, hdf5=False):
+
     if auxiliary_file:
+        # User explicitly specified auxiliary file
         if verbose:
             print("# Both xyz file and auxiliary npz/npy file specified.")
             print("# Will try to load from auxiliary file", auxiliary_file)
-        if not os.path.exists(auxiliary_file):
-            if verbose:
-                print("# Specified auxiliary file does not exist.")
-                print("# Creating it now...")
-            save_trajectory_to_npz(filename, npz_fname=auxiliary_file, remove_com_movement=True,
-                                   verbose=verbose)
-        return load_trajectory_from_npz(auxiliary_file, *atom_names, clip=clip, verbose=verbose)
     else:
-        aux_fname = os.path.splitext(filename)[0] + ".npz"
-        if verbose:
-            print("# Looking for auxiliary file", aux_fname, "...")
-        if os.path.exists(aux_fname):
-            if verbose:
-                print("# Found it!")
-            return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip, verbose=verbose)
+        # Look for auxiliary file with same name as xyz file, but different extension
+        if hdf5:
+            auxiliary_file = os.path.splitext(filename)[0] + ".hdf5"
         else:
-            if verbose:
-                print("# No auxiliary file found.")
-                print("# Will create it now...")
-            save_trajectory_to_npz(filename, npz_fname=aux_fname, remove_com_movement=True,
-                                   verbose=verbose)
-            return load_trajectory_from_npz(aux_fname, *atom_names, clip=clip,
-                                                verbose=verbose)
+            auxiliary_file = os.path.splitext(filename)[0] + ".npz"
+
+    if verbose:
+        print("# Looking for auxiliary file", auxiliary_file, "...")
+
+    if os.path.exists(auxiliary_file):
+        if verbose:
+            print("# Found it!")
+
+    else:
+
+        if verbose:
+            print("# No auxiliary file found.")
+            print("# Will create it now...")
+        if hdf5:
+            save_trajectory_to_hdf5(filename, *atom_names, hdf5_fname=auxiliary_file,
+                                    remove_com_movement=True, verbose=verbose)
+        else:
+            save_trajectory_to_npz(filename, *atom_names, npz_fname=auxiliary_file,
+                                   remove_com_movement=True, verbose=verbose)
+
+    if hdf5:
+        return load_trajectory_from_hdf5(auxiliary_file, *atom_names, clip=clip, verbose=verbose)
+    else:
+        return load_trajectory_from_npz(auxiliary_file, *atom_names, clip=clip, verbose=verbose)

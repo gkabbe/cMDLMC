@@ -342,5 +342,11 @@ CONFIG_DICT = OrderedDict([
                  "The fifth and sixth parameter determine the distance range in which the conversion "
                  "function is applied."
 
+     }),
+    ("hdf5",
+     {
+         "parse_fct": parse_bool,
+         "default": False,
+         "help": "Save trajectory as hdf5 file. Recommended for large trajectories."
      })
 ])

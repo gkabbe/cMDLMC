@@ -222,7 +222,7 @@ def prepare_lmc(settings):
     oxygen_trajectory, phosphorus_trajectory = load_atoms(settings.filename, *atoms_to_load,
                                                           auxiliary_file=settings.auxiliary_file,
                                                           clip=settings.clip_trajectory,
-                                                          verbose=verbose)
+                                                          verbose=verbose, hdf5=settings.hdf5)
     if settings.seed is None:
         settings.seed = np.random.randint(2**32)
     np.random.seed(settings.seed)
