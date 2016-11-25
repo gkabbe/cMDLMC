@@ -33,24 +33,13 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
     return data.reshape(output_shape)
 
 
-def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, pbc=None,
-                            hdf5_fname=None, chunk=1000,
-                            remove_com_movement=False, verbose=False):
-    import tables
+def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, remove_com_movement=False,
+                            verbose=False):
+    import h5py
     with open(xyz_fname, "rb") as f:
         frame_len = int(f.readline()) + 2
         f.seek(0)
         first_frame, = parse_xyz(f, frame_len, no_of_frames=1)
-        if "H" in atom_names and only_acidic_protons and pbc is not None:
-            acidic_proton_selection = np.array(npa.get_acidic_proton_indices(first_frame, pbc))
-            selections = dict(H=acidic_proton_selection)
-        else:
-            selections = dict()
-        if not atom_names:
-            atom_names = set(first_frame["name"])
-        for atom_name in atom_names:
-            atom_selection = np.where(first_frame["name"] == atom_name)[0]
-            selections[atom_name] = atom_selection
 
     a = tables.Atom.from_dtype(np.dtype("float"))
     filters = tables.Filters(complevel=5, complib="blosc")
@@ -66,7 +55,7 @@ def save_trajectory_to_hdf5(xyz_fname, *atom_names, only_acidic_protons=False, p
             counter = 0
             start_time = time.time()
             while True:
-                frames = parse_xyz(f, frame_len, selection=atom_names, no_of_frames=chunk)
+                frames = parse_xyz(f, frame_len, no_of_frames=chunk)
                 if frames.shape[0] == 0:
                     break
                 if remove_com_movement:
@@ -87,7 +76,7 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False)
     return trajectories
 
 
-def save_trajectory_to_npz(xyz_fname, *atom_names, npz_fname=None, remove_com_movement=False,
+def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
                            verbose=False):
     with open(xyz_fname, "rb") as f:
         frame_length = int(f.readline()) + 2
@@ -103,7 +92,7 @@ def save_trajectory_to_npz(xyz_fname, *atom_names, npz_fname=None, remove_com_mo
             fps = counter / (time.time() - start_time)
             print("# {:6d} ({:.2f} fps)".format(counter, fps), end="\r", flush=True)
             trajectory.append(data)
-            data = parse_xyz(f, frame_length, selection=atom_names, no_of_frames=chunk_size)
+            data = parse_xyz(f, frame_length, no_of_frames=chunk_size)
         print("")
         trajectory = np.vstack(trajectory)
 
