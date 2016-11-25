@@ -1,9 +1,6 @@
-#!/usr/bin/env python3
-
 import sys
 import numpy as np
 
-from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
 
 dtype_xyz = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
 
