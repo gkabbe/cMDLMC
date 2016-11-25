@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from mdlmc.atoms import numpyatom as npa
-from mdlmc.atoms.numpyatom import dtype_xyz
+from mdlmc.atoms.numpyatom import dtype_xyz, dtype_xyz_bytes
 
 
 def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
@@ -29,27 +29,27 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
         filter_ = filter_lines(f, frame_len)
         output_shape = (-1, frame_len - 2)
 
-    data = np.genfromtxt(filter_, dtype=dtype_xyz)
+    data = np.genfromtxt(filter_, dtype=dtype_xyz_bytes)
     return data.reshape(output_shape)
 
 
-def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, remove_com_movement=False,
+def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movement=False,
                             verbose=False):
+    import tables
     import h5py
     with open(xyz_fname, "rb") as f:
         frame_len = int(f.readline()) + 2
         f.seek(0)
         first_frame, = parse_xyz(f, frame_len, no_of_frames=1)
 
-    a = tables.Atom.from_dtype(np.dtype("float"))
-    filters = tables.Filters(complevel=5, complib="blosc")
     if not hdf5_fname:
         hdf5_fname = os.path.splitext(xyz_fname)[0] + ".hdf5"
 
-    with tables.open_file(hdf5_fname, "a", filters=filters) as hdf5:
-        hdf5.create_group("/", "trajectories")
-        for atom_name, indices in selections.items():
-            hdf5.create_earray("/trajectories", atom_name, atom=a, shape=(0, len(indices), 3))
+    with h5py.File(hdf5_fname, "w") as hdf5_file:
+        # Use blosc compression (needs tables import and code 32001)
+        traj = hdf5_file.create_dataset("trajectory", shape=first_frame.shape,
+                                        dtype=dtype_xyz_bytes,
+                                        maxshape=(None, *first_frame.shape[1:]), compression=32001)
 
         with open(xyz_fname, "rb") as f:
             counter = 0
@@ -60,9 +60,9 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, remove_com_m
                     break
                 if remove_com_movement:
                     npa.remove_center_of_mass_movement(frames)
-                for atom_name, indices in selections.items():
-                    hdf5.get_node("/trajectories", atom_name).append(
-                        frames[:, frames[0]["name"] == atom_name]["pos"])
+                # import ipdb
+                # ipdb.set_trace()
+                traj[counter:counter + chunk] = frames
                 counter += chunk
                 print("# Parsed frames: {:06d}. {:.2f} fps".format(
                     counter, counter / (time.time() - start_time)), end="\r")
@@ -158,10 +158,10 @@ def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=N
             print("# No auxiliary file found.")
             print("# Will create it now...")
         if hdf5:
-            save_trajectory_to_hdf5(filename, *atom_names, hdf5_fname=auxiliary_file,
+            save_trajectory_to_hdf5(filename, hdf5_fname=auxiliary_file,
                                     remove_com_movement=True, verbose=verbose)
         else:
-            save_trajectory_to_npz(filename, *atom_names, npz_fname=auxiliary_file,
+            save_trajectory_to_npz(filename, npz_fname=auxiliary_file,
                                    remove_com_movement=True, verbose=verbose)
 
     if hdf5:

@@ -3,6 +3,7 @@ import numpy as np
 
 
 dtype_xyz = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
+dtype_xyz_bytes = np.dtype([("name", np.string_, 2), ("pos", np.float64, (3,))])
 
 atom_masses = {'C': 12.001,
                'Cl': 35.45,
