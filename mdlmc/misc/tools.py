@@ -4,6 +4,7 @@ import argparse
 import inspect
 import pickle
 import os
+from itertools import islice
 
 import numpy as np
 
@@ -69,7 +70,7 @@ def remember_results(overwrite=False, nobackup=False):
     return decorator
 
 
-def read_file(file, *, usecols=None, dtype=float):
+def read_file(file, *, usecols=None, dtype=float, memmap_file=None, chunks=1):
     arr_length = 0
     for line in file:
         if not line.lstrip().startswith("#"):
@@ -88,22 +89,28 @@ def read_file(file, *, usecols=None, dtype=float):
         usecols = list(range(arr_width))
 
     print("Using columns", usecols)
-    print("Creating array of shape", (arr_length, arr_width))
+    print("Creating array of shape", (arr_length, arr_width), flush=True)
 
-    array = np.zeros((arr_length, arr_width), dtype=dtype)
+    if memmap_file:
+        array = np.memmap(memmap_file, dtype=float, shape=(arr_length, arr_width), mode="w+")
+    else:
+        array = np.zeros((arr_length, arr_width), dtype=dtype)
 
     file.seek(0)
 
-    i = 0
-    for line in file:
-        if not line.lstrip().startswith("#"):
-            try:
-                linecontent = np.fromstring(line, sep=" ")
-                array[i] = linecontent[usecols]
-            except:
-                print("error")
-                print(linecontent)
-                break
-            i += 1
+    for start, stop, chunk_of_lines in chunk(file, chunks, length=arr_length):
+        tmp_array = np.zeros((chunks, arr_width))
+        for i, line in enumerate(chunk_of_lines):
+            if not line.lstrip().startswith("#"):
+                try:
+                    tmp_array[i] = np.fromstring(line, sep=" ")
+                except:
+                    print("error")
+                    print(tmp_array[i])
+                    break
+        array[start: stop] = tmp_array
+
+    if memmap_file:
+        array.flush()
 
     return array
