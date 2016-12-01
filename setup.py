@@ -98,7 +98,8 @@ setup(name='mdlmc',
                               'print_npz=mdlmc.atoms.numpyatom:print_npz',
                               'excess_charge_pos=mdlmc.analysis.excess_charge_analyzer:main',
                               'trajzip=mdlmc.misc.trajzip:main',
-                              'trajread=mdlmc.misc.trajread:main'
+                              'trajread=mdlmc.misc.trajread:main',
+                              'save_hdf5=mdlmc.IO.xyz_parser:save_to_hdf5_cmd'
                               ],
       },
       include_package_data=True,

@@ -4,9 +4,11 @@ import os
 import time
 
 import numpy as np
+import argparse
 
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.atoms.numpyatom import dtype_xyz, dtype_xyz_bytes
+from mdlmc.misc.tools import argparse_compatible
 
 
 def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
@@ -33,6 +35,7 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
     return data.reshape(output_shape)
 
 
+@argparse_compatible
 def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movement=False,
                             verbose=False):
     import tables
@@ -47,9 +50,9 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
 
     with h5py.File(hdf5_fname, "w") as hdf5_file:
         # Use blosc compression (needs tables import and code 32001)
-        traj = hdf5_file.create_dataset("trajectory", shape=first_frame.shape,
+        traj = hdf5_file.create_dataset("trajectory", shape=(10 * chunk, *first_frame.shape),
                                         dtype=dtype_xyz_bytes,
-                                        maxshape=(None, *first_frame.shape[1:]), compression=32001)
+                                        maxshape=(None, *first_frame.shape), compression=32001)
 
         with open(xyz_fname, "rb") as f:
             counter = 0
@@ -60,12 +63,10 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
                     break
                 if remove_com_movement:
                     npa.remove_center_of_mass_movement(frames)
-                # import ipdb
-                # ipdb.set_trace()
-                traj[counter:counter + chunk] = frames
-                counter += chunk
-                print("# Parsed frames: {:06d}. {:.2f} fps".format(
-                    counter, counter / (time.time() - start_time)), end="\r")
+                traj[counter:counter + frames.shape[0]] = frames
+                counter += frames.shape[0]
+                print("# Parsed frames: {: 6d}. {:.2f} fps".format(
+                    counter, counter / (time.time() - start_time)), end="\r", flush=True)
 
 
 def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False):
@@ -168,3 +169,16 @@ def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=N
         return load_trajectory_from_hdf5(auxiliary_file, *atom_names, clip=clip, verbose=verbose)
     else:
         return load_trajectory_from_npz(auxiliary_file, *atom_names, clip=clip, verbose=verbose)
+
+
+def save_to_hdf5_cmd(*args):
+    parser = argparse.ArgumentParser(
+        description="Save trajectory to HDF5", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("xyz_fname", help="XYZ trajectory file name")
+    parser.add_argument("--hdf5_fname", help="HDF5 file name")
+    parser.add_argument("--chunk", "-c", type=int, default=1000, help="Chunk size")
+    parser.add_argument("--remove_com", "-r", action="store_true", help="Remove center of mass movement")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbosity")
+    parser.set_defaults(func=save_trajectory_to_hdf5)
+    args = parser.parse_args()
+    args.func(args)
