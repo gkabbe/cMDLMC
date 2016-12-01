@@ -166,11 +166,15 @@ cdef class LMCRoutine:
         gsl_rng_set(self.r, seed)
         if verbose:
             print("# Using seed", seed)
+
+        # Jump rates determined via jumpstat
         if jumprate_type == "MD_rates":
             a = jumprate_parameter_dict["a"]
             b = jumprate_parameter_dict["b"]
             c = jumprate_parameter_dict["c"]
             self.jumprate_fct = FermiFunction(a, b, c)
+
+        # Jump rates determined via energy surface scans
         elif jumprate_type == "AE_rates":
             A = jumprate_parameter_dict["A"]
             a = jumprate_parameter_dict["a"]
@@ -178,13 +182,16 @@ cdef class LMCRoutine:
             d0 = jumprate_parameter_dict["d0"]
             T = jumprate_parameter_dict["T"]
             self.jumprate_fct = ActivationEnergyFunction(A, a, b, d0, T)
+
         elif jumprate_type == "Exponential_rates":
             a = jumprate_parameter_dict["a"]
             b = jumprate_parameter_dict["b"]
             self.jumprate_fct = ExponentialFunction(a, b)
+
         else:
             raise Exception("Jump rate type unknown. Please choose between "
                             "MD_rates, Exponential_rates and AE_rates")
+
         if angle_dependency:
             self.angle_fct = AngleCutoff(angle_threshold)
         else:
