@@ -8,11 +8,15 @@ import os
 import numpy as np
 
 
-def chunk(iterable, step):
-    starts = range(0, len(iterable) - 1, step)
-    stops = map(lambda x: min(x, len(iterable)), range(step, len(iterable) + step, step))
+def chunk(iterable, step, length=None):
+    assert step > 0
+    if not length:
+        length = len(iterable)
+
+    starts = range(0, length, step)
+    stops = map(lambda x: min(x, length), range(step, length + step, step))
     for start, stop in zip(starts, stops):
-        yield start, stop
+        yield start, stop, iterable[start: stop]
 
 
 def timer(f):
