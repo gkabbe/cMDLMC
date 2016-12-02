@@ -67,6 +67,7 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
                 counter += frames.shape[0]
                 print("# Parsed frames: {: 6d}. {:.2f} fps".format(
                     counter, counter / (time.time() - start_time)), end="\r", flush=True)
+        traj.resize(counter, axis=0)
 
 
 def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False):
