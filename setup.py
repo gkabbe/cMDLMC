@@ -99,7 +99,8 @@ setup(name='mdlmc',
                               'excess_charge_pos=mdlmc.analysis.excess_charge_analyzer:main',
                               'trajzip=mdlmc.misc.trajzip:main',
                               'trajread=mdlmc.misc.trajread:main',
-                              'save_hdf5=mdlmc.IO.xyz_parser:save_to_hdf5_cmd'
+                              'save_hdf5=mdlmc.IO.xyz_parser:save_to_hdf5_cmd',
+                              'print_hdf5=mdlmc.IO.xyz_parser:print_hdf5'
                               ],
       },
       include_package_data=True,

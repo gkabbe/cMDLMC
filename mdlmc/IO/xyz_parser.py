@@ -2,6 +2,7 @@
 
 import os
 import time
+from functools import reduce
 
 import numpy as np
 import argparse
@@ -44,26 +45,39 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
         frame_len = int(f.readline()) + 2
         f.seek(0)
         first_frame, = parse_xyz(f, frame_len, no_of_frames=1)
+        atom_names = first_frame["name"]
+        frame_shape = first_frame["pos"].shape
 
     if not hdf5_fname:
         hdf5_fname = os.path.splitext(xyz_fname)[0] + ".hdf5"
 
     with h5py.File(hdf5_fname, "w") as hdf5_file:
         # Use blosc compression (needs tables import and code 32001)
-        traj = hdf5_file.create_dataset("trajectory", shape=(10 * chunk, *first_frame.shape),
-                                        dtype=dtype_xyz_bytes,
-                                        maxshape=(None, *first_frame.shape), compression=32001)
+        traj_atomnames = hdf5_file.create_dataset("atom_names", atom_names.shape, dtype="2S")
+        traj_atomnames[:] = atom_names
+        traj = hdf5_file.create_dataset("trajectory", shape=(10 * chunk, *frame_shape),
+                                        dtype=float, maxshape=(None, *frame_shape),
+                                        compression=32001)
 
         with open(xyz_fname, "rb") as f:
             counter = 0
             start_time = time.time()
             while True:
-                frames = parse_xyz(f, frame_len, no_of_frames=chunk)
+                frames = parse_xyz(f, frame_len, no_of_frames=chunk).astype(dtype_xyz)
+
                 if frames.shape[0] == 0:
                     break
+
                 if remove_com_movement:
                     npa.remove_center_of_mass_movement(frames)
-                traj[counter:counter + frames.shape[0]] = frames
+
+                # Resize trajectory if necessary
+                if counter + frames.shape[0] > traj.shape[0]:
+                    if verbose:
+                        print("# Need to resize trajectory hdf5 dataset")
+                    traj.resize(2 * traj.shape[0], axis=0)
+
+                traj[counter:counter + frames.shape[0]] = frames["pos"]
                 counter += frames.shape[0]
                 print("# Parsed frames: {: 6d}. {:.2f} fps".format(
                     counter, counter / (time.time() - start_time)), end="\r", flush=True)
@@ -72,10 +86,18 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
 
 def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False):
     import tables
-    f = tables.open_file(hdf5_fname, "r")
-    slice_ = slice(0, clip)
-    trajectories = [f.get_node("/trajectories", atom_name)[slice_] for atom_name in atom_names]
-    return trajectories
+    import h5py
+    with h5py.File(hdf5_fname, "r") as f:
+        traj_atom_names = f["atom_names"].value.astype("U")
+        if atom_names:
+            if verbose:
+                print("# Will select atoms", *atom_names)
+            selection = reduce(np.logical_or, [traj_atom_names == name for name in atom_names])
+        else:
+            selection = slice(None)
+        slice_ = slice(0, clip)
+        trajectories = f["trajectory"][slice_, selection]
+    return traj_atom_names[selection], trajectories
 
 
 def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
@@ -183,3 +205,23 @@ def save_to_hdf5_cmd(*args):
     parser.set_defaults(func=save_trajectory_to_hdf5)
     args = parser.parse_args()
     args.func(args)
+
+
+def print_hdf5(*args):
+    parser = argparse.ArgumentParser(description="Print HDF5 trajectory to command line in xyz "
+                                                 "format",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("hdf5_fname", help="HDF5 file name")
+    parser.add_argument("--atom_names", "-a", nargs="*", default=[],
+                        help="Which atoms should be printed?")
+    parser.add_argument("--clip", "-c", type=int, help="Clip trajectory after number of frames")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbosity")
+    args = parser.parse_args()
+    atom_names, trajectory = load_trajectory_from_hdf5(args.hdf5_fname, *args.atom_names,
+                                                       clip=args.clip, verbose=args.verbose)
+
+    for frame in trajectory:
+        print(frame.shape[0])
+        print()
+        for name, pos in zip(atom_names, frame):
+            print(name, " ".join(map(str, pos)))
