@@ -70,45 +70,61 @@ def remember_results(overwrite=False, nobackup=False):
     return decorator
 
 
-def read_file(file, *, usecols=None, dtype=float, memmap_file=None, chunks=1):
-    arr_length = 0
-    for line in file:
-        if not line.lstrip().startswith("#"):
-            arr_length += 1
-    file.seek(0)
-    print("File length:", arr_length)
+def read_file(file, *, usecols=None, dtype=float, memmap_file=None, shape=None, chunks=1000,
+              verbose=False):
 
-    if usecols:
-        arr_width = len(usecols)
-        usecols = list(usecols)
-    else:
-        line = file.readline().lstrip()
-        while line.startswith("#"):
+    def data_gen(file, chunks):
+        """Generator that iterates over <chunks> lines of a file"""
+        for i, line in enumerate(file):
+            if i == chunks:
+                break
+            yield line
+
+    if not shape:
+        if verbose:
+            print("# No shape specified")
+            print("# Determine shape by reading file once")
+
+        arr_length = 0
+        for line in file:
+            if not line.lstrip().startswith("#"):
+                arr_length += 1
+        file.seek(0)
+        if verbose:
+            print("# File length:", arr_length)
+
+        if usecols:
+            arr_width = len(usecols)
+            usecols = list(usecols)
+        else:
             line = file.readline().lstrip()
-        arr_width = len(line.split())
-        usecols = list(range(arr_width))
+            while line.startswith("#"):
+                line = file.readline().lstrip()
+            arr_width = len(line.split())
+            usecols = list(range(arr_width))
 
-    print("Using columns", usecols)
-    print("Creating array of shape", (arr_length, arr_width), flush=True)
+        shape = (arr_length, arr_width)
+
+    print("# Using columns", usecols)
+    print("# Creating array of shape", shape, flush=True)
 
     if memmap_file:
-        array = np.memmap(memmap_file, dtype=float, shape=(arr_length, arr_width), mode="w+")
+        array = np.memmap(memmap_file, dtype=dtype, shape=shape, mode="w+")
     else:
-        array = np.zeros((arr_length, arr_width), dtype=dtype)
+        array = np.zeros(shape, dtype=dtype)
 
     file.seek(0)
 
-    for start, stop, chunk_of_lines in chunk(file, chunks, length=arr_length):
-        tmp_array = np.zeros((chunks, arr_width))
-        for i, line in enumerate(chunk_of_lines):
-            if not line.lstrip().startswith("#"):
-                try:
-                    tmp_array[i] = np.fromstring(line, sep=" ")
-                except:
-                    print("error")
-                    print(tmp_array[i])
-                    break
-        array[start: stop] = tmp_array
+    position = 0
+
+    while True:
+        if verbose:
+            print("# {: 7d} / {: 7d}".format(position, shape[0]), end="\r", flush=True)
+        tmp_array = np.genfromtxt(data_gen(file, chunks), usecols=usecols)
+        if tmp_array.shape[0] == 0:
+            break
+        array[position: position + tmp_array.shape[0]] = tmp_array
+        position += tmp_array.shape[0]
 
     if memmap_file:
         array.flush()
