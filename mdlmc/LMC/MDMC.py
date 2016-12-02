@@ -267,6 +267,7 @@ def prepare_lmc(settings):
                                   jumprate_parameter_dict=settings.jumprate_params_fs,
                                   cutoff_radius=settings.cutoff_radius,
                                   angle_threshold=settings.angle_threshold,
+                                  neighbor_list=settings.neighbor_list,
                                   neighbor_search_radius=settings.neighbor_search_radius,
                                   jumprate_type=settings.jumprate_type, verbose=settings.verbose,
                                   seed=settings.seed, angle_dependency=settings.angle_dependency)

@@ -142,7 +142,8 @@ cdef class LMCRoutine:
     def __cinit__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
                   AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
                   double angle_threshold, double neighbor_search_radius, jumprate_type, *,
-                  seed=None, bool calculate_jumpmatrix=False, verbose=False, angle_dependency=True):
+                  neighbor_list=True, seed=None, bool calculate_jumpmatrix=False, verbose=False,
+                  angle_dependency=True):
         cdef:
             int i
             double[:] pbc_extended
@@ -198,13 +199,15 @@ cdef class LMCRoutine:
             self.angle_fct = AngleDummy()
 
     def __init__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
-                  AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
-                  double angle_threshold, double neighbor_search_radius, jumprate_type, *,
-                  seed=None, bool calculate_jumpmatrix=False, verbose=False, angle_dependency=True):
+                 AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
+                 double angle_threshold, double neighbor_search_radius, jumprate_type, *,
+                 neighbor_list=True, seed=None, bool calculate_jumpmatrix=False, verbose=False,
+                 angle_dependency=True):
 
         self.phosphorus_neighbors = self.atom_box.determine_phosphorus_oxygen_pairs(
             self.oxygen_trajectory[0], self.phosphorus_trajectory[0])
-        self.determine_neighbors(0)
+        if neighbor_list:
+            self.determine_neighbors(0)
 
     def __dealloc__(self):
         gsl_rng_free(self.r)
@@ -228,7 +231,47 @@ cdef class LMCRoutine:
                         neighbor_list.push_back(j)
             self.neighbors.push_back(neighbor_list)
 
-    cdef calculate_transitions(self, int frame_number, double r_cut):
+    cdef calculate_transitions_without_neighborlist(self, int frame_number, double r_cut):
+        cdef:
+            int start_index, destination_index
+            int oxygen_number_unextended = self.oxygen_trajectory.shape[1]
+            int phosphorus_number_unextended = self.phosphorus_trajectory.shape[1]
+            double dist, PO_angle
+            vector[np.int32_t] start_indices_tmp
+            vector[np.int32_t] destination_indices_tmp
+            vector[np.float32_t] jump_probability_tmp
+
+        start_indices_tmp.clear()
+        destination_indices_tmp.clear()
+        jump_probability_tmp.clear()
+        for start_index in range(self.oxygen_number):
+            for destination_index in range(start_index):
+                dist = self.atom_box.length_extended_box_ptr(
+                    start_index, &self.oxygen_trajectory[frame_number, 0, 0],
+                    oxygen_number_unextended, destination_index,
+                    &self.oxygen_trajectory[frame_number, 0, 0], oxygen_number_unextended)
+                if dist < r_cut:
+                    poo_angle = self.atom_box.angle_extended_box(
+                        self.phosphorus_neighbors[start_index],
+                        &self.phosphorus_trajectory[frame_number, 0, 0],
+                        phosphorus_number_unextended,
+                        start_index,
+                        &self.oxygen_trajectory[frame_number, 0, 0],
+                        oxygen_number_unextended,
+                        destination_index,
+                        &self.oxygen_trajectory[frame_number, 0, 0],
+                        oxygen_number_unextended)
+                    start_indices_tmp.push_back(start_index)
+                    destination_indices_tmp.push_back(destination_index)
+                    jump_probability_tmp.push_back(
+                        self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle))
+
+        self.start_indices.push_back(start_indices_tmp)
+        self.destination_indices.push_back(destination_indices_tmp)
+        self.jump_probability.push_back(jump_probability_tmp)
+        self.saved_frame_counter += 1
+
+    cdef calculate_transitions_with_neighborlist(self, int frame_number, double r_cut):
         cdef:
             int start_index, neighbor_index, destination_index
             int oxygen_number_unextended = self.oxygen_trajectory.shape[1]
@@ -285,10 +328,14 @@ cdef class LMCRoutine:
     def return_transitions(self, int frame):
         return self.start_indices[frame], self.destination_indices[frame], self.jump_probability[frame]
 
-    def store_jumprates(self, bool verbose=False):
+    def store_jumprates(self, *, bool use_neighborlist=False, bool verbose=False):
         cdef int i
         for i in range(self.oxygen_trajectory.shape[0]):
-            self.calculate_transitions(i, self.cutoff_radius)
+            if use_neighborlist:
+                self.calculate_transitions_with_neighborlist(i, self.cutoff_radius)
+            else:
+                self.calculate_transitions_without_neighborlist(i, self.cutoff_radius)
+
             if verbose and i % 1000 == 0:
                 print ("# Saving transitions {} / {}".format(i, self.oxygen_trajectory.shape[0]),
                        end="\r", flush=True)

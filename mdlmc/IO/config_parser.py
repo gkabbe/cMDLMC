@@ -182,6 +182,13 @@ CONFIG_DICT = OrderedDict([
                  "autocorrelation function be reset? reset_freq should be a multiple of "
                  "print_freq, in order to ease the averaging of the final output."
      }),
+    ("neighbor_list",
+     {
+         "parse_fct": parse_bool,
+         "default": True,
+         "help": "Use neighbor list to accelerate rate calculation. Should only be used in rather "
+                 "rigid systems."
+     }),
     ("neighbor_search_radius",
      {
          "parse_fct": parse_float,
