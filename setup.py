@@ -100,7 +100,8 @@ setup(name='mdlmc',
                               'trajzip=mdlmc.misc.trajzip:main',
                               'trajread=mdlmc.misc.trajread:main',
                               'save_hdf5=mdlmc.IO.xyz_parser:save_to_hdf5_cmd',
-                              'print_hdf5=mdlmc.IO.xyz_parser:print_hdf5'
+                              'print_hdf5=mdlmc.IO.xyz_parser:print_hdf5',
+                              'kmc=mdlmc.KMC.excess_kmc:main'
                               ],
       },
       include_package_data=True,

@@ -6,6 +6,8 @@ import time
 import numpy as np
 import cython
 cimport numpy as np
+import tables
+import h5py
 from cython_gsl cimport *
 from libcpp.vector cimport vector
 from libcpp cimport bool
@@ -382,3 +384,30 @@ cdef class LMCRoutine:
 
     def reset_jumpcounter(self):
         self.jumps = 0
+
+
+cdef class KMCRoutine:
+
+    cdef:
+        JumprateFunction jumprate_fct
+        gsl_rng * r
+        double cutoff_radius
+        AtomBox atombox
+
+        vector[vector[double]] jump_probability_per_frame
+
+    def __cinit__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox):
+        self.atombox = atombox
+
+    def __init__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox):
+        self.oxygen_trajectory_hdf5 = oxygen_trajectory_hdf5
+
+    cpdef determine_probability_sums(self, double [:, :, ::1] oxygen_trajectory, double [:] pbc):
+        probs = np.zeros(oxygen_trajectory.shape[:2])
+
+        for f in range(oxygen_trajectory.shape[0]):
+            for i in range(oxygen_trajectory.shape[1]):
+                for j in range(oxygen_trajectory.shape[1]):
+                    dist = self.atombox.length_(oxygen_trajectory[f, j], oxygen_trajectory[f, i])
+                    probs[i] += self.jumprate_fct(dist)
+        return probs
