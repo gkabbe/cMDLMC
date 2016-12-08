@@ -393,8 +393,10 @@ cdef class KMCRoutine:
         gsl_rng * r
         double cutoff_radius
         AtomBox atombox
+        public object oxygen_trajectory_hdf5
 
         vector[vector[double]] jump_probability_per_frame
+        double abc
 
     def __cinit__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox):
         self.atombox = atombox
@@ -402,12 +404,16 @@ cdef class KMCRoutine:
     def __init__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox):
         self.oxygen_trajectory_hdf5 = oxygen_trajectory_hdf5
 
-    cpdef determine_probability_sums(self, double [:, :, ::1] oxygen_trajectory, double [:] pbc):
-        probs = np.zeros(oxygen_trajectory.shape[:2])
+    def determine_probability_sums(self, double [:, :, ::1] oxygen_trajectory):
+        cdef:
+            int f, i, j
+            np.ndarray[np.float32_t, ndim=2] probs
+
+        probs = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1]), dtype=np.float32)
 
         for f in range(oxygen_trajectory.shape[0]):
             for i in range(oxygen_trajectory.shape[1]):
                 for j in range(oxygen_trajectory.shape[1]):
                     dist = self.atombox.length_(oxygen_trajectory[f, j], oxygen_trajectory[f, i])
-                    probs[i] += self.jumprate_fct(dist)
+                    probs[i, j] += self.jumprate_fct(dist)
         return probs
