@@ -1,12 +1,15 @@
+import argparse
 import os
+import configparser
 
 import tables
 import h5py
 import numpy as np
-from numba import jit
 
 from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5
-from mdlmc.misc.tools import chunk
+from mdlmc.misc.tools import chunk, argparse_compatible
+from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 
 
 def get_hdf5_filename(trajectory_fname):
@@ -17,43 +20,37 @@ def get_hdf5_filename(trajectory_fname):
         return root + "_nobackup.hdf5"
 
 
-@jit(nopython=True)
-def determine_probability_sums(a, b, oxygen_trajectory, pbc):
-    probs = np.zeros(oxygen_trajectory.shape[:2])
+def get_config(config_filename):
+    default = {"Options": {"verbose": False,
+                           "a": 1.132396e+15,
+                           "b": -16.001675}
+               }
 
-    for f in range(oxygen_trajectory.shape[0]):
-        for i in range(oxygen_trajectory.shape[1]):
-            for j in range(oxygen_trajectory.shape[1]):
-                dist = oxygen_trajectory[f, j] - oxygen_trajectory[f, i]
-                pbc_dist(dist, pbc)
-                probs[i] += exponential_jumprate(a, b, np.sqrt(dist[0]**2 + dist[1]**2 + dist[2]**2))
-
-
-@jit
-def pbc_dist(dist, pbc):
-    for i in range(3):
-        while (dist[i] > pbc[i] / 2):
-            dist[i] -= pbc[i]
-        while (dist[i] < -pbc[i] / 2):
-            dist[i] += pbc[i]
+    config = configparser.ConfigParser(defaults=default)
+    config.read(config_filename)
+    filename = config["Files"]["filename"]
 
 
-@jit
-def exponential_jumprate(a, b, distance):
-    return a * np.exp(b * distance)
+@argparse_compatible
+def kmc(config_file):
 
+    get_config(config_file)
 
-def main(*args):
-    kmc = KMC("400Kbeginning.xyz", pbc=np.array([29.122, 25.354, 12.363]), verbose=True)
+    trajectory_fname = "400Kbeginning.xyz"
+    verbose = True
+    atombox = AtomBoxCubic([29.122, 25.354, 12.363])
+    a, b = 1.132396e+15, -16.001675
 
-    step = 10000
+    kmc = KMCRoutine(trajectory_fname, atombox, a, b)
+
+    chunk_size = 10000
 
     hdf5_fname = get_hdf5_filename(trajectory_fname)
     if verbose:
-        print("Looking for HDF5 file", hdf5_fname)
+        print("# Looking for HDF5 file", hdf5_fname)
     if not os.path.exists(hdf5_fname):
         if verbose:
-            print("Could not find HDF5 file. Will create it now.")
+            print("# Could not find HDF5 file. Will create it now.")
         save_trajectory_to_hdf5(trajectory_fname, hdf5_fname, remove_com_movement=True,
                                 verbose=verbose)
 
@@ -66,14 +63,38 @@ def main(*args):
     print(oxygen_shape)
 
     if "oxygen_trajectory" not in hdf5_file.keys():
-        print("Found no oxygen trajectory")
-
+        print("# Found no oxygen trajectory in HDF5 file")
         oxygens = hdf5_file.create_dataset("oxygen_trajectory", shape=oxygen_shape,
-                                           dtype=np.float32, compression=32001)
+                                           dtype=float, compression=32001)
+        oxygens[:] = np.nan
 
-        for start, stop, _ in chunk(range(oxygens.shape[0]), step):
+    else:
+        oxygens = hdf5_file["oxygen_trajectory"]
+
+    if np.isnan(hdf5_file["oxygen_trajectory"]).any():
+        print("# It looks like the oxygen trajectory was not written completely to hdf5")
+        print("# Will do it now")
+        for start, stop, _ in chunk(range(oxygens.shape[0]), chunk_size):
             oxygens[start:stop] = trajectory[start:stop, oxygen_mask]
 
-    oxygens = hdf5_file["oxygen_trajectory"]
+    if "probability_sums" not in hdf5_file.keys():
+        print("# Found no probability sums in HDF5 file")
+        probsums = hdf5_file.create_dataset("probability_sums", shape=(oxygen_shape[:2]), dtype=float,
+                                            compression=32001)
+    else:
+        probsums = hdf5_file["probability_sums"]
 
-    a, b = 1.132396e+15, -16.001675
+    if np.isnan(hdf5_file["probability_sums"]).any():
+        print("# It looks like the probability sums were not written completely to hdf5")
+        print("# Will do it now")
+        for start, stop, oxy_chunk in chunk(oxygens, 100):
+            probsums[start:stop] = kmc.determine_probability_sums(oxy_chunk)
+
+
+def main(*args):
+    parser = argparse.ArgumentParser(description="KMC",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("config_file", help="Config file")
+    parser.set_defaults(func=kmc)
+    args = parser.parse_args()
+    args.func(args)
