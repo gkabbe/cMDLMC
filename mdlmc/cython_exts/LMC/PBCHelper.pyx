@@ -4,6 +4,7 @@
 
 import cython
 import numpy as np
+
 cimport numpy as np
 
 cimport mdlmc.cython_exts.atoms.numpyatom as cnpa
