@@ -248,10 +248,12 @@ cdef class LMCRoutine:
         jump_probability_tmp.clear()
         for start_index in range(self.oxygen_number):
             for destination_index in range(start_index):
+
                 dist = self.atom_box.length_extended_box_ptr(
                     start_index, &self.oxygen_trajectory[frame_number, 0, 0],
                     oxygen_number_unextended, destination_index,
                     &self.oxygen_trajectory[frame_number, 0, 0], oxygen_number_unextended)
+
                 if dist < r_cut:
                     poo_angle = self.atom_box.angle_extended_box(
                         self.phosphorus_neighbors[start_index],
@@ -293,6 +295,7 @@ cdef class LMCRoutine:
                     start_index, &self.oxygen_trajectory[frame_number, 0, 0],
                     oxygen_number_unextended, destination_index,
                     &self.oxygen_trajectory[frame_number, 0, 0], oxygen_number_unextended)
+
                 if dist < r_cut:
                     poo_angle = self.atom_box.angle_extended_box(
                         self.phosphorus_neighbors[start_index],
@@ -398,10 +401,13 @@ cdef class KMCRoutine:
         vector[vector[double]] jump_probability_per_frame
         double abc
 
-    def __cinit__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox):
+    def __cinit__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox,
+                  JumprateFunction jumprate_fct):
         self.atombox = atombox
+        self.jumprate_fct = jumprate_fct
 
-    def __init__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox):
+    def __init__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox,
+                 JumprateFunction jumprate_fct):
         self.oxygen_trajectory_hdf5 = oxygen_trajectory_hdf5
 
     def determine_probability_sums(self, double [:, :, ::1] oxygen_trajectory):
@@ -415,5 +421,6 @@ cdef class KMCRoutine:
             for i in range(oxygen_trajectory.shape[1]):
                 for j in range(oxygen_trajectory.shape[1]):
                     dist = self.atombox.length_(oxygen_trajectory[f, j], oxygen_trajectory[f, i])
-                    probs[i, j] += self.jumprate_fct(dist)
+                    if i != j:
+                        probs[f, i] += self.jumprate_fct.evaluate(dist)
         return probs
