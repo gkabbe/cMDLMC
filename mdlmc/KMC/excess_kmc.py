@@ -7,8 +7,9 @@ import h5py
 import numpy as np
 
 from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5
+from mdlmc.IO.config_parser import load_configfile, print_settings
 from mdlmc.misc.tools import chunk, argparse_compatible
-from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine
+from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, ExponentialFunction
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 
 
@@ -20,28 +21,18 @@ def get_hdf5_filename(trajectory_fname):
         return root + "_nobackup.hdf5"
 
 
-def get_config(config_filename):
-    default = {"Options": {"verbose": False,
-                           "a": 1.132396e+15,
-                           "b": -16.001675}
-               }
-
-    config = configparser.ConfigParser(defaults=default)
-    config.read(config_filename)
-    filename = config["Files"]["filename"]
-
-
 @argparse_compatible
 def kmc(config_file):
+    settings = load_configfile(config_file, config_type="KMCWater")
+    print_settings(settings)
 
-    get_config(config_file)
-
-    trajectory_fname = "400Kbeginning.xyz"
-    verbose = True
-    atombox = AtomBoxCubic([29.122, 25.354, 12.363])
+    trajectory_fname = settings.filename
+    verbose = settings.verbose
+    atombox = AtomBoxCubic(settings.pbc)
     a, b = 1.132396e+15, -16.001675
 
-    kmc = KMCRoutine(trajectory_fname, atombox, a, b)
+    jumprate_function = ExponentialFunction(a, b)
+    kmc = KMCRoutine(trajectory_fname, atombox, jumprate_function)
 
     chunk_size = 10000
 
