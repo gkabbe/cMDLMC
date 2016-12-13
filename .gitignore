@@ -14,3 +14,4 @@ dist
 version_hash.py
 doxy/
 mdlmc.egg-info/
+cython_debug/
