@@ -4,7 +4,8 @@ import sys
 import time
 
 import numpy as np
-from mdlmc.IO.config_parser import print_confighelp, load_configfile, print_config_template
+from mdlmc.IO.config_parser import print_confighelp, load_configfile, print_config_template, \
+    check_cmdlmc_settings, print_settings
 from mdlmc.IO.xyz_parser import load_atoms
 from mdlmc.cython_exts.LMC import LMCHelper
 from mdlmc.cython_exts.LMC import PBCHelper
@@ -169,28 +170,6 @@ class ObservableManager:
             print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]), output=self.output)
 
 
-def check_settings(settings):
-    if settings.sweeps % settings.reset_freq != 0:
-        raise ValueError("sweeps needs to be a multiple of reset_freq!")
-    if settings.sweeps <= 0:
-        raise ValueError("sweeps needs to be larger zero")
-
-
-def print_settings(settings):
-    print("# I'm using the following settings:", file=settings.output)
-    for k, v in sorted(settings.__dict__.items()):
-        if k == "h":
-            print("# h = {} {} {}".format(*v[0]), file=settings.output)
-            print("#     {} {} {}".format(*v[1]), file=settings.output)
-            print("#     {} {} {}".format(*v[2]), file=settings.output)
-        elif k == "h_inv":
-            print("# h_inv = {} {} {}".format(*v[0]), file=settings.output)
-            print("#         {} {} {}".format(*v[1]), file=settings.output)
-            print("#         {} {} {}".format(*v[2]), file=settings.output)
-        else:
-            print("# {:20} {:>20}".format(k, str(v)), file=settings.output)
-
-
 def initialize_oxygen_lattice(oxygen_number, proton_number):
     """The oxygen lattice stores the occupation state of each oxygen.
     Protons are numbered from 1 to proton_number"""
@@ -207,7 +186,7 @@ def prepare_lmc(settings):
     except ImportError:
         print("# No commit information found", file=sys.stderr)
 
-    check_settings(settings)
+    check_cmdlmc_settings(settings)
     verbose = settings.verbose
 
     if settings.o_neighbor:
