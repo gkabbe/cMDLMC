@@ -390,6 +390,12 @@ CONFIG_DICT = {
              "default": None,
              "help": "Equilibration sweeps"
          }),
+        ("chunk_size",
+         {
+             "parse_fct": parse_int,
+             "default": 1000,
+             "help": "Chunk size"
+         }),
         ("pbc",
          {
             "parse_fct": get_pbc,
