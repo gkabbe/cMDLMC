@@ -100,6 +100,56 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False)
     return traj_atom_names[selection], trajectories
 
 
+def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_name, selection,
+                                        chunk_size):
+    """Given a hdf5 trajectory, this function creates a new data set inside the hdf5 file with the
+    specified dataset_name according to the supplied selection.
+
+    Parameters
+    ----------
+    hdf5_file: HDF5 file
+               The new dataset will be saved in this file
+
+    trajectory_dataset: array_like
+                        The array or HDF5 dataset containing the atom trajectory
+
+    dataset_name: str
+                  Name of the new dataset
+
+    selection: function or array_like
+               Will be used to select items from trajectory_dataset.
+               Can be an array of indices or a function that creates a new array out of
+               trajectory_dataset"""
+
+    first_frame = trajectory_dataset[:1]
+    if type(selection) in (types.FunctionType, types.MethodType, types.BuiltinFunctionType,
+                           types.BuiltinMethodType):
+        selection_fct = selection
+    else:
+        def selection_fct(arr):
+            return np.take(arr, selection, axis=1)
+
+    one_frame_shape = selection_fct(first_frame).shape
+
+    if dataset_name not in hdf5_file.keys():
+        print("# Did not find data set", dataset_name, "in HDF5 file")
+        new_dataset = hdf5_file.create_dataset(dataset_name,
+                                               shape=(trajectory_dataset.shape[0], *one_frame_shape[1:]),
+                                               dtype=float, compression=32001)
+        new_dataset[:] = np.nan
+
+    else:
+        new_dataset = hdf5_file[dataset_name]
+
+    if np.isnan(hdf5_file[dataset_name]).any():
+        print("# It looks like data set", dataset_name, "has not been written to hdf5 yet.")
+        print("# Will do it now")
+        for start, stop, traj_chunk in chunk(trajectory_dataset, chunk_size):
+            new_dataset[start:stop] = selection_fct(traj_chunk)
+
+    return new_dataset
+
+
 def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
                            verbose=False):
     with open(xyz_fname, "rb") as f:
