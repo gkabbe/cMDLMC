@@ -6,7 +6,7 @@ import tables
 import h5py
 import numpy as np
 
-from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5
+from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory
 from mdlmc.IO.config_parser import load_configfile, print_settings
 from mdlmc.misc.tools import chunk, argparse_compatible
 from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, ExponentialFunction
@@ -21,6 +21,17 @@ def get_hdf5_filename(trajectory_fname):
         return root + "_nobackup.hdf5"
 
 
+def kmc_state_to_xyz(oxygens, protons, oxygen_lattice):
+    print(oxygens.shape[0] + protons.shape[0] + 1)
+    print()
+    for ox in oxygens:
+        print("O", " ".join([3 * "{:14.8f}"]).format(*ox))
+    for p in protons:
+        print("H", " ".join([3 * "{:14.8f}"]).format(*p))
+    oxygen_index = np.where(oxygen_lattice > 0)[0][0]
+    print("S", " ".join([3 * "{:14.8f}"]).format(*oxygens[oxygen_index]))
+
+
 @argparse_compatible
 def kmc(config_file):
     settings = load_configfile(config_file, config_type="KMCWater")
@@ -29,12 +40,10 @@ def kmc(config_file):
     trajectory_fname = settings.filename
     verbose = settings.verbose
     atombox = AtomBoxCubic(settings.pbc)
-    a, b = 1.132396e+15, -16.001675
-
+    a, b = settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"]
     jumprate_function = ExponentialFunction(a, b)
     kmc = KMCRoutine(trajectory_fname, atombox, jumprate_function)
-
-    chunk_size = 10000
+    chunk_size = settings.chunk_size
 
     hdf5_fname = get_hdf5_filename(trajectory_fname)
     if verbose:
@@ -49,37 +58,62 @@ def kmc(config_file):
     trajectory = hdf5_file["trajectory"]
 
     atom_names = hdf5_file["atom_names"][:].astype("U")
-    oxygen_mask = atom_names == "O"
-    oxygen_shape = (trajectory.shape[0], *trajectory[0][oxygen_mask].shape)
-    print(oxygen_shape)
 
-    if "oxygen_trajectory" not in hdf5_file.keys():
-        print("# Found no oxygen trajectory in HDF5 file")
-        oxygens = hdf5_file.create_dataset("oxygen_trajectory", shape=oxygen_shape,
-                                           dtype=float, compression=32001)
-        oxygens[:] = np.nan
+    oxygen_indices, = np.where(atom_names == "O")
+    oxygen_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory, "oxygen_trajectory",
+                                                            oxygen_indices, chunk_size)
 
-    else:
-        oxygens = hdf5_file["oxygen_trajectory"]
+    proton_indices = np.where(atom_names == "H")
+    proton_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory, "proton_trajectory",
+                                                            proton_indices, chunk_size)
 
-    if np.isnan(hdf5_file["oxygen_trajectory"]).any():
-        print("# It looks like the oxygen trajectory was not written completely to hdf5")
-        print("# Will do it now")
-        for start, stop, _ in chunk(range(oxygens.shape[0]), chunk_size):
-            oxygens[start:stop] = trajectory[start:stop, oxygen_mask]
+    probsums = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory, "probability_sums",
+                                                   kmc.determine_probability_sums, chunk_size)
 
-    if "probability_sums" not in hdf5_file.keys():
-        print("# Found no probability sums in HDF5 file")
-        probsums = hdf5_file.create_dataset("probability_sums", shape=(oxygen_shape[:2]), dtype=float,
-                                            compression=32001)
-    else:
-        probsums = hdf5_file["probability_sums"]
+    trajectory_length = oxygen_trajectory.shape[0]
+    t, dt = 0, settings.md_timestep_fs
+    frame, sweep, jumps = 0, 0, 0
+    total_sweeps = settings.sweeps
+    xyz_output = settings.xyz_output
 
-    if np.isnan(hdf5_file["probability_sums"]).any():
-        print("# It looks like the probability sums were not written completely to hdf5")
-        print("# Will do it now")
-        for start, stop, oxy_chunk in chunk(oxygens, 100):
-            probsums[start:stop] = kmc.determine_probability_sums(oxy_chunk)
+    if xyz_output:
+        proton_trajectory, = load_atoms(settings.filename, "H")
+
+    output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}"
+
+    while sweep < total_sweeps:
+        proton_position = np.where(oxygen_lattice)[0][0]
+        time_selector = -np.log(np.random.random())
+        prob_sum = 0
+        start, destination, probabilities = helper.return_transitions(frame)
+        transition_indices, = np.where(np.array(start) == proton_position)
+        prob_sum += determine_probsum(probabilities, transition_indices, dt)
+        while prob_sum < time_selector:
+            if xyz_output:
+                kmc_state_to_xyz(oxygen_trajectory[frame], proton_trajectory[frame],
+                                 oxygen_lattice)
+            else:
+                print(output_format.format(sweep, t, *oxygen_trajectory[frame, proton_position],
+                                           jumps), flush=True, file=settings.output)
+            sweep, t = sweep + 1, t + dt
+            frame = sweep % trajectory_length
+            start, destination, probabilities = helper.return_transitions(frame)
+            transition_indices, = np.where(np.array(start) == proton_position)
+            prob_sum += determine_probsum(probabilities, transition_indices, dt)
+        jumps += 1
+        transition_probs = np.array(probabilities)[transition_indices]
+        destination_indices = np.array(destination)[transition_indices]
+        event_selector = np.random.random() * transition_probs.sum()
+        transition_index = np.searchsorted(np.cumsum(transition_probs), event_selector)
+        oxygen_lattice[proton_position] = 0
+        proton_position = destination_indices[transition_index]
+        oxygen_lattice[proton_position] = 1
+        if xyz_output:
+            kmc_state_to_xyz(oxygen_trajectory[frame], proton_trajectory[frame],
+                             oxygen_lattice)
+        else:
+            print(output_format.format(sweep, t, *oxygen_trajectory[frame, proton_position],
+                                       jumps), flush=True, file=settings.output)
 
 
 def main(*args):
