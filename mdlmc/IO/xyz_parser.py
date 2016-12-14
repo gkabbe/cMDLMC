@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
+import argparse
+from functools import reduce
 import os
 import time
-from functools import reduce
+import types
 
 import numpy as np
-import argparse
+import tables
+import h5py
 
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.atoms.numpyatom import dtype_xyz, dtype_xyz_bytes
-from mdlmc.misc.tools import argparse_compatible
+from mdlmc.misc.tools import argparse_compatible, chunk
 
 
 def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
@@ -39,8 +42,7 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
 @argparse_compatible
 def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movement=False,
                             verbose=False):
-    import tables
-    import h5py
+
     with open(xyz_fname, "rb") as f:
         frame_len = int(f.readline()) + 2
         f.seek(0)
@@ -85,8 +87,6 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
 
 
 def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False):
-    import tables
-    import h5py
     with h5py.File(hdf5_fname, "r") as f:
         traj_atom_names = f["atom_names"].value.astype("U")
         if atom_names:
