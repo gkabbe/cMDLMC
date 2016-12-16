@@ -101,9 +101,10 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False)
 
 
 def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_name, selection,
-                                        chunk_size):
+                                        chunk_size, verbose=False):
     """Given a hdf5 trajectory, this function creates a new data set inside the hdf5 file with the
     specified dataset_name according to the supplied selection.
+    If it already exists, it will be returned directly.
 
     Parameters
     ----------
@@ -119,7 +120,11 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
     selection: function or array_like
                Will be used to select items from trajectory_dataset.
                Can be an array of indices or a function that creates a new array out of
-               trajectory_dataset"""
+               trajectory_dataset
+
+    Returns
+    -------
+    new_dataset: HDF5 dataset"""
 
     first_frame = trajectory_dataset[:1]
     if type(selection) in (types.FunctionType, types.MethodType, types.BuiltinFunctionType,
@@ -136,7 +141,8 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
         new_dataset = hdf5_file.create_dataset(dataset_name,
                                                shape=(trajectory_dataset.shape[0], *one_frame_shape[1:]),
                                                dtype=float, compression=32001)
-        new_dataset[:] = np.nan
+        # Set last frame to nan, to identify the data set as unfinished
+        new_dataset[-1] = np.nan
 
     else:
         new_dataset = hdf5_file[dataset_name]
@@ -144,8 +150,11 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
     if np.isnan(hdf5_file[dataset_name]).any():
         print("# It looks like data set", dataset_name, "has not been written to hdf5 yet.")
         print("# Will do it now")
+        start_time = time.time()
         for start, stop, traj_chunk in chunk(trajectory_dataset, chunk_size):
             new_dataset[start:stop] = selection_fct(traj_chunk)
+            print("# Parsed frames: {: 6d}. {:.2f} fps".format(
+                  stop, stop / (time.time() - start_time)), end="\r", flush=True)
 
     return new_dataset
 
