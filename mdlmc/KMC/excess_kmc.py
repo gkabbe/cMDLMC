@@ -11,6 +11,7 @@ from mdlmc.IO.config_parser import load_configfile, print_settings
 from mdlmc.misc.tools import chunk, argparse_compatible
 from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, ExponentialFunction
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
+from mdlmc.LMC.MDMC import initialize_oxygen_lattice
 
 
 def get_hdf5_filename(trajectory_fname):
@@ -76,8 +77,9 @@ def kmc(config_file):
     total_sweeps = settings.sweeps
     xyz_output = settings.xyz_output
 
-    if xyz_output:
-        proton_trajectory, = load_atoms(settings.filename, "H")
+    oxygen_number = len(oxygen_indices)
+    # Initialize with one excess proton
+    oxygen_lattice = initialize_oxygen_lattice(oxygen_number, 1)
 
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}"
 
@@ -85,23 +87,27 @@ def kmc(config_file):
         proton_position = np.where(oxygen_lattice)[0][0]
         time_selector = -np.log(np.random.random())
         prob_sum = 0
-        start, destination, probabilities = helper.return_transitions(frame)
-        transition_indices, = np.where(np.array(start) == proton_position)
-        prob_sum += determine_probsum(probabilities, transition_indices, dt)
-        while prob_sum < time_selector:
+        probabilities = probsums[:, proton_position] * dt
+        import ipdb; ipdb.set_trace()
+
+        probabilities = np.roll(probabilities, -frame)
+        cumsum = np.cumsum(probabilities)
+        delta_frame = np.searchsorted(cumsum, time_selector)
+
+        for i in range(frame, frame + delta_frame):
             if xyz_output:
-                kmc_state_to_xyz(oxygen_trajectory[frame], proton_trajectory[frame],
-                                 oxygen_lattice)
+                kmc_state_to_xyz(oxygen_trajectory[i % trajectory_length],
+                                 proton_trajectory[i % trajectory_length], oxygen_lattice)
             else:
-                print(output_format.format(sweep, t, *oxygen_trajectory[frame, proton_position],
+                print(output_format.format(sweep, t, *oxygen_trajectory[i % trajectory_length,
+                                                                        proton_position],
                                            jumps), flush=True, file=settings.output)
-            sweep, t = sweep + 1, t + dt
-            frame = sweep % trajectory_length
-            start, destination, probabilities = helper.return_transitions(frame)
-            transition_indices, = np.where(np.array(start) == proton_position)
-            prob_sum += determine_probsum(probabilities, transition_indices, dt)
+        frame = (frame + delta_frame) % trajectory_length
+        sweep += delta_frame
+        t += delta_frame * dt
+
         jumps += 1
-        transition_probs = np.array(probabilities)[transition_indices]
+        transition_probs = # determine transitions for each oxygen pair
         destination_indices = np.array(destination)[transition_indices]
         event_selector = np.random.random() * transition_probs.sum()
         transition_index = np.searchsorted(np.cumsum(transition_probs), event_selector)
