@@ -171,8 +171,15 @@ class ObservableManager:
 
 
 def initialize_oxygen_lattice(oxygen_number, proton_number):
-    """The oxygen lattice stores the occupation state of each oxygen.
-    Protons are numbered from 1 to proton_number"""
+    """Creates an integer array of length <oxygen_number> filled with randomly
+    distributed numbers from 1 to <proton_number>
+
+    Parameters
+    ----------
+    oxygen_number: int
+                   The number of oxygen sites
+    proton_number: int
+                   The number of protons"""
     oxygen_lattice = np.zeros(oxygen_number, np.uint8)
     oxygen_lattice[:proton_number] = range(1, proton_number + 1)
     np.random.shuffle(oxygen_lattice)
