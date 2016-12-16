@@ -5,9 +5,11 @@ import time
 
 import numpy as np
 import cython
-cimport numpy as np
 import tables
 import h5py
+
+cimport numpy as np
+cimport cython
 from cython_gsl cimport *
 from libcpp.vector cimport vector
 from libcpp cimport bool
@@ -389,6 +391,7 @@ cdef class LMCRoutine:
         self.jumps = 0
 
 
+@cython.final
 cdef class KMCRoutine:
 
     cdef:
