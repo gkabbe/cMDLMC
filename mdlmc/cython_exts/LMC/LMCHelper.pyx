@@ -5,6 +5,7 @@ import time
 
 import numpy as np
 import cython
+from cython.parallel import prange
 import tables
 import h5py
 
@@ -399,19 +400,23 @@ cdef class KMCRoutine:
         gsl_rng * r
         double cutoff_radius
         AtomBox atombox
-        public object oxygen_trajectory_hdf5
+        public np.uint8_t [:] oxygen_lattice
+        int proton_position
 
         vector[vector[double]] jump_probability_per_frame
         double abc
 
-    def __cinit__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox,
+    def __cinit__(self, AtomBox atombox, np.uint8_t[:] oxygen_lattice,
                   JumprateFunction jumprate_fct):
         self.atombox = atombox
         self.jumprate_fct = jumprate_fct
+        self.r = gsl_rng_alloc(gsl_rng_mt19937)
+        self.oxygen_lattice = oxygen_lattice
 
-    def __init__(self, oxygen_trajectory_hdf5: "Trajectory in HDF5 format", AtomBox atombox,
-                 JumprateFunction jumprate_fct):
-        self.oxygen_trajectory_hdf5 = oxygen_trajectory_hdf5
+        proton_positions, = np.where(oxygen_lattice)
+        assert proton_positions.size == 1, "Only one excess proton, please!"
+
+        self.proton_position = proton_positions[0]
 
     def determine_probability_sums(self, double [:, :, ::1] oxygen_trajectory):
         cdef:
@@ -427,3 +432,28 @@ cdef class KMCRoutine:
                     if i != j:
                         probs[f, i] += self.jumprate_fct.evaluate(dist)
         return probs
+
+    def determine_transition(self, double[:, ::1] oxygen_frame):
+        cdef:
+            int i
+            double dist
+            double rand
+
+            vector[int] destination
+            vector[double] probability
+
+        for i in range(oxygen_frame.shape[0]):
+            if i != self.proton_position:
+                destination.push_back(i)
+                dist = self.atombox.length_ptr(&oxygen_frame[self.proton_position, 0],
+                                               &oxygen_frame[i, 0])
+                probability.push_back(self.jumprate_fct.evaluate(dist))
+
+        while True:
+            i = gsl_rng_uniform_int(self.r, oxygen_frame.shape[0] - 1)
+            rand = gsl_rng_uniform(self.r)
+            if rand < probability[i]:
+                self.oxygen_lattice[destination[i]] = self.oxygen_lattice[self.proton_position]
+                self.oxygen_lattice[self.proton_position] = 0
+                self.proton_position = destination[i]
+                return destination[i]
