@@ -33,16 +33,20 @@ def kmc_state_to_xyz(oxygens, protons, oxygen_lattice):
     print("S", " ".join([3 * "{:14.8f}"]).format(*oxygens[oxygen_index]))
 
 
-def fastforward_to_next_jump(probsums, proton_position, dt, frame):
+def fastforward_to_next_jump(probsums, proton_position, dt, frame, time):
 
     time_selector = -np.log(np.random.random())
     probabilities = probsums[:, proton_position] * dt
-
     probabilities = np.roll(probabilities, -frame)
+    # If time is not exactly a multiple of the time step dt, the probability of a jump within
+    # the first frame is lowered
+    probabilities[0] *= 1 - (time % dt) / dt
     cumsum = np.cumsum(probabilities)
-    delta_frame = np.searchsorted(cumsum, time_selector)
+    delta_frame = np.searchsorted(cumsum, time_selector) - 1
+    rest = time_selector - cumsum[delta_frame]
+    delta_t = delta_frame * dt + rest / probsums[delta_frame, proton_position]
 
-    return delta_frame
+    return delta_frame, delta_t
 
 
 @argparse_compatible
@@ -90,7 +94,7 @@ def kmc_main(config_file):
     atombox = AtomBoxCubic(settings.pbc)
     a, b = settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"]
     jumprate_function = ExponentialFunction(a, b)
-    kmc = KMCRoutine(trajectory_fname, atombox, oxygen_lattice, jumprate_function)
+    kmc = KMCRoutine(atombox, oxygen_lattice, jumprate_function)
 
     probsums = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory, "probability_sums",
                                                    kmc.determine_probability_sums, chunk_size)
@@ -101,12 +105,12 @@ def kmc_main(config_file):
 
         delta_frame = fastforward_to_next_jump(probsums, proton_position, dt, frame)
 
-        for i in range(frame, frame + delta_frame):
+        for i in range(sweep, sweep + delta_frame):
             if xyz_output:
                 kmc_state_to_xyz(oxygen_trajectory[i % trajectory_length],
                                  proton_trajectory[i % trajectory_length], oxygen_lattice)
             else:
-                print(output_format.format(sweep, t, *oxygen_trajectory[i % trajectory_length,
+                print(output_format.format(i, i * dt, *oxygen_trajectory[i % trajectory_length,
                                                                         proton_position],
                                            jumps), flush=True, file=settings.output)
 
