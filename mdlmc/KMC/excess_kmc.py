@@ -68,8 +68,11 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time):
     # the first frame is lowered
     probabilities[0] *= 1 - (time % dt) / dt
     cumsum = np.cumsum(probabilities)
-    delta_frame = np.searchsorted(cumsum, time_selector) - 1
-    rest = time_selector - cumsum[delta_frame]
+    delta_frame = np.searchsorted(cumsum, time_selector)
+    if delta_frame > 0:
+        rest = time_selector - cumsum[delta_frame - 1]
+    else:
+        rest = time_selector
     delta_t = delta_frame * dt + rest / probsums[delta_frame, proton_position]
 
     return delta_frame, delta_t
