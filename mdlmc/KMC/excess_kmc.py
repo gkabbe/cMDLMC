@@ -5,6 +5,7 @@ import configparser
 import tables
 import h5py
 import numpy as np
+from numba import jit
 
 from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory
 from mdlmc.IO.config_parser import load_configfile, print_settings
@@ -77,6 +78,37 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time):
     delta_t = (delta_frame - 1 + first_frame_fraction) * dt \
               + rest / probsums[delta_frame, proton_position]
 
+    return delta_frame, delta_t
+
+
+def ffjn(probsums, proton_position, dt, frame, time, traj_len):
+    time_selector = -np.log(1 - np.random.random())
+
+    # Handle case where time selector is so small that the next frame is not reached
+    t_trial = time_selector / probsums[frame, proton_position]
+    if (time + t_trial) // dt == time // dt:
+        return 0, t_trial
+
+    delta_t, delta_frame = dt - time % dt, 0
+    current_prob = probsums[frame, proton_position] * delta_t
+    next_frame = frame + 1
+    if next_frame == traj_len:
+        next_frame = 0
+    next_prob = current_prob + probsums[next_frame, proton_position] * dt
+
+    while next_prob < time_selector:
+        delta_frame += 1
+        frame = next_frame
+        next_frame = frame + 1
+        if next_frame == traj_len:
+            next_frame = 0
+        current_prob = next_prob
+        next_prob = current_prob + probsums[next_frame, proton_position] * dt
+
+    # import ipdb; ipdb.set_trace()
+
+    rest = time_selector - current_prob
+    delta_t += delta_frame * dt + rest / probsums[frame, proton_position]
     return delta_frame, delta_t
 
 
