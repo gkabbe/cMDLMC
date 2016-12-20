@@ -11,28 +11,30 @@ class TestKMC(unittest.TestCase):
         """Compare the KMC with time-dependent rates with the KMC with constant rates"""
         # Set a fixed rate of 0.06 / fs
         omega = 0.06
-        probsums = np.ones((1000, 2)) * omega
-        probsums[:, 1] = range(1000)
+        probsums = np.ones((1000, 1)) * omega
         sweep, frame, time = 0, 0, 0
         jumps = 0
         dt = 0.5  # fs
         times = []
+        sweeps = []
         np.random.seed(0)
         for i in range(100):
-            delta_frame, delta_t = excess_kmc.fastforward_to_next_jump(probsums, 0, dt, frame, time)
+            delta_frame, delta_t = excess_kmc.ffjn(probsums, 0, dt, frame, time, 1000)
             frame = (frame + delta_frame) % 100
             sweep += delta_frame
             time += delta_t
             jumps += 1
             times.append(time)
+            sweeps.append(sweep)
 
         time = 0
         times_verify = []
         np.random.seed(0)
         for i in range(100):
-            delta_t = -np.log(np.random.random()) / omega
+            delta_t = -np.log(1 - np.random.random()) / omega
             time += delta_t
             times_verify.append(time)
 
-        for t1, t2 in zip(times, times_verify):
-            print(t1, t2)
+        for i, (t1, t2, s) in enumerate(zip(times, times_verify, sweeps)):
+            print(i, t1, t2, s * dt)
+            self.assertAlmostEqual(t1, t2)
