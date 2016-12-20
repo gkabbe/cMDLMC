@@ -61,19 +61,21 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time):
         Difference between current time and the time of the next event
     """
 
-    time_selector = -np.log(np.random.random())
+    time_selector = -np.log(1 - np.random.random())
     probabilities = probsums[:, proton_position] * dt
     probabilities = np.roll(probabilities, -frame)
     # If time is not exactly a multiple of the time step dt, the probability of a jump within
     # the first frame is lowered
-    probabilities[0] *= 1 - (time % dt) / dt
+    first_frame_fraction = 1 - (time % dt) / dt
+    probabilities[0] *= first_frame_fraction
     cumsum = np.cumsum(probabilities)
     delta_frame = np.searchsorted(cumsum, time_selector)
     if delta_frame > 0:
         rest = time_selector - cumsum[delta_frame - 1]
     else:
         rest = time_selector
-    delta_t = delta_frame * dt + rest / probsums[delta_frame, proton_position]
+    delta_t = (delta_frame - 1 + first_frame_fraction) * dt \
+              + rest / probsums[delta_frame, proton_position]
 
     return delta_frame, delta_t
 
