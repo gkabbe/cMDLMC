@@ -34,6 +34,32 @@ def kmc_state_to_xyz(oxygens, protons, oxygen_lattice):
 
 
 def fastforward_to_next_jump(probsums, proton_position, dt, frame, time):
+    """Implements Kinetic Monte Carlo with time-dependent rates.
+    Note that too short arrays lead to index errors as the next jump event will be outside of
+    the trajectory time scale.
+
+    Parameters
+    ----------
+    probsums : array_like
+        Array containing the probability of a proton jump for every possible proton position
+        at every frame in the trajectory. Shape: (Trajectory length, No. of oxygen atoms)
+        Unit: femtosecond^{-1}
+    proton_position : int
+        Index of oxygen at which the excess proton is residing.
+    dt : float
+        Trajectory time step
+    frame : int
+        Frame index of trajectory
+    time : float
+        Time passed
+
+    Returns
+    -------
+    delta_frame : int
+        Difference between frame and the index at which the next event occurs
+    delta_t : float
+        Difference between current time and the time of the next event
+    """
 
     time_selector = -np.log(np.random.random())
     probabilities = probsums[:, proton_position] * dt
