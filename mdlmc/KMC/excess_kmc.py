@@ -89,7 +89,7 @@ def ffjn(probsums, proton_position, dt, frame, time, traj_len):
     if (time + t_trial) // dt == time // dt:
         return 0, t_trial
 
-    delta_t, delta_frame = dt - time % dt, 0
+    delta_t, delta_frame = dt - time % dt, 1
     current_prob = probsums[frame, proton_position] * delta_t
     next_frame = frame + 1
     if next_frame == traj_len:
@@ -108,7 +108,7 @@ def ffjn(probsums, proton_position, dt, frame, time, traj_len):
     # import ipdb; ipdb.set_trace()
 
     rest = time_selector - current_prob
-    delta_t += delta_frame * dt + rest / probsums[frame, proton_position]
+    delta_t += (delta_frame - 1) * dt + rest / probsums[frame, proton_position]
     return delta_frame, delta_t
 
 
