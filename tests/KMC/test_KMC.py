@@ -22,7 +22,8 @@ class TestKMC(unittest.TestCase):
             sweeps = []
             np.random.seed(0)
             for i in range(100):
-                delta_frame, delta_t = excess_kmc.ffjn(probsums, 0, dt, frame, time, 1000)
+                delta_frame, delta_t = excess_kmc.fastforward_to_next_jump(probsums, 0, dt, frame,
+                                                                           time, 1000)
                 frame = (frame + delta_frame) % 100
                 sweep += delta_frame
                 time += delta_t

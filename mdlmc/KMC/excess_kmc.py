@@ -34,10 +34,8 @@ def kmc_state_to_xyz(oxygens, protons, oxygen_lattice):
     print("S", " ".join([3 * "{:14.8f}"]).format(*oxygens[oxygen_index]))
 
 
-def fastforward_to_next_jump(probsums, proton_position, dt, frame, time):
+def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_len):
     """Implements Kinetic Monte Carlo with time-dependent rates.
-    Note that too short arrays lead to index errors as the next jump event will be outside of
-    the trajectory time scale.
 
     Parameters
     ----------
@@ -53,6 +51,8 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time):
         Frame index of trajectory
     time : float
         Time passed
+    traj_len: int
+        Trajectory length
 
     Returns
     -------
@@ -62,26 +62,6 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time):
         Difference between current time and the time of the next event
     """
 
-    time_selector = -np.log(1 - np.random.random())
-    probabilities = probsums[:, proton_position] * dt
-    probabilities = np.roll(probabilities, -frame)
-    # If time is not exactly a multiple of the time step dt, the probability of a jump within
-    # the first frame is lowered
-    first_frame_fraction = 1 - (time % dt) / dt
-    probabilities[0] *= first_frame_fraction
-    cumsum = np.cumsum(probabilities)
-    delta_frame = np.searchsorted(cumsum, time_selector)
-    if delta_frame > 0:
-        rest = time_selector - cumsum[delta_frame - 1]
-    else:
-        rest = time_selector
-    delta_t = (delta_frame - 1 + first_frame_fraction) * dt \
-              + rest / probsums[delta_frame, proton_position]
-
-    return delta_frame, delta_t
-
-
-def ffjn(probsums, proton_position, dt, frame, time, traj_len):
     time_selector = -np.log(1 - np.random.random())
 
     # Handle case where time selector is so small that the next frame is not reached
@@ -104,8 +84,6 @@ def ffjn(probsums, proton_position, dt, frame, time, traj_len):
             next_frame = 0
         current_prob = next_prob
         next_prob = current_prob + probsums[next_frame, proton_position] * dt
-
-    # import ipdb; ipdb.set_trace()
 
     rest = time_selector - current_prob
     delta_t += (delta_frame - 1) * dt + rest / probsums[frame, proton_position]
