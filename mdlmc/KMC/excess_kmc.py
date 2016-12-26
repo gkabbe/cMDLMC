@@ -8,7 +8,7 @@ import numpy as np
 from numba import jit
 
 from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory
-from mdlmc.IO.config_parser import load_configfile, print_settings
+from mdlmc.IO.config_parser import load_configfile, print_settings, print_config_template, print_confighelp
 from mdlmc.misc.tools import chunk, argparse_compatible
 from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, ExponentialFunction
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
@@ -92,7 +92,7 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_le
 
 @argparse_compatible
 def kmc_main(config_file):
-    settings = load_configfile(config_file, config_type="KMCWater")
+    settings = load_configfile(config_file, config_name="KMCWater")
     print_settings(settings)
 
     trajectory_fname = settings.filename

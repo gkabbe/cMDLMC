@@ -55,7 +55,7 @@ def parse_bool(line):
         raise ValueError("Expected value is \"True\" or \"False\". Got {} instead".format(val))
 
 
-def load_configfile(config_filename, config_type="cMDLMC", verbose=False):
+def load_configfile(config_filename, config_name="cMDLMC", verbose=False):
     class Settings:
         def __init__(self, dict_):
             self.__dict__.update(dict_)
@@ -63,7 +63,7 @@ def load_configfile(config_filename, config_type="cMDLMC", verbose=False):
         def __repr__(self):
             return self.__dict__.__repr__()
 
-    parser_dict = CONFIG_DICT[config_type]
+    parser_dict = CONFIG_DICT[config_name]
     config_dict = dict()
     with open(config_filename, "r") as f:
         if verbose:
@@ -92,9 +92,9 @@ def load_configfile(config_filename, config_type="cMDLMC", verbose=False):
     return Settings(config_dict)
 
 
-def print_confighelp():
+def print_confighelp(config_name="cMDLMC"):
     text_width = 80
-    parser_dict = CONFIG_DICT
+    parser_dict = CONFIG_DICT[config_name]
     for k, v in parser_dict.items():
         keylen = len(k)
         delim_len = (text_width - 2 - keylen) // 2
@@ -108,10 +108,10 @@ def print_confighelp():
         print("")
 
 
-def print_config_template(args):
-    parser_dict = CONFIG_DICT
+def print_config_template(config_name="cMDLMC", sort=False):
+    parser_dict = CONFIG_DICT[config_name]
     items = parser_dict.items()
-    if args.sorted:
+    if sort:
         items = sorted(items)
     for k, v in items:
         if v["default"] is None:
@@ -384,6 +384,12 @@ CONFIG_DICT = {
              "default": None,
              "help": "Number of sweeps"
          }),
+        ("print_frequency",
+         {
+             "parse_fct": parse_int,
+             "default": 1,
+             "help": "Print frequency. 1 means every frame, 2 every second and so on."
+         }),
         ("equilibration_sweeps",
          {
              "parse_fct": parse_int,
@@ -428,7 +434,7 @@ CONFIG_DICT = {
         ("jumprate_params_fs",
          {
              "parse_fct": get_jumprate_parameters,
-             "default": False,
+             "default": None,
              "help": "Jump rate parameters"
          }),
         ("verbose",

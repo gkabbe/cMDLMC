@@ -396,7 +396,7 @@ def main(*args):
     args = parser.parse_args()
 
     if args.subparser_name == "config_file":
-        print_config_template(args)
+        print_config_template(sort=args.sorted)
     elif args.subparser_name == "config_help":
         print_confighelp()
     else:
