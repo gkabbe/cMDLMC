@@ -147,7 +147,7 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
     else:
         new_dataset = hdf5_file[dataset_name]
 
-    if np.isnan(hdf5_file[dataset_name]).any():
+    if np.isnan(hdf5_file[dataset_name][-1]).any():
         print("# It looks like data set", dataset_name, "has not been written to hdf5 yet.")
         print("# Will do it now")
         start_time = time.time()
