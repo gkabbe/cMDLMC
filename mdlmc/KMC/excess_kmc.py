@@ -91,9 +91,7 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_le
     return delta_frame, delta_t
 
 
-@argparse_compatible
-def kmc_main(config_file):
-    settings = load_configfile(config_file, config_name="KMCWater")
+def kmc_main(settings):
     print_settings(settings)
 
     trajectory_fname = settings.filename
@@ -210,4 +208,5 @@ def main(*args):
     elif args.subparser_name == "config_help":
         print_confighelp()
     else:
-        args.func(args)
+        settings = load_configfile(args.config_file, config_name="KMCWater")
+        args.func(settings)
