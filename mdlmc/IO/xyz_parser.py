@@ -5,6 +5,7 @@ from functools import reduce
 import os
 import time
 import types
+import sys
 
 import numpy as np
 import tables
@@ -41,7 +42,7 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
 
 @argparse_compatible
 def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movement=False,
-                            verbose=False):
+                            verbose=False, file=sys.stdout):
 
     with open(xyz_fname, "rb") as f:
         frame_len = int(f.readline()) + 2
@@ -76,22 +77,22 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
                 # Resize trajectory if necessary
                 if counter + frames.shape[0] > traj.shape[0]:
                     if verbose:
-                        print("# Need to resize trajectory hdf5 dataset")
+                        print("# Need to resize trajectory hdf5 dataset", file=file)
                     traj.resize(2 * traj.shape[0], axis=0)
 
                 traj[counter:counter + frames.shape[0]] = frames["pos"]
                 counter += frames.shape[0]
                 print("# Parsed frames: {: 6d}. {:.2f} fps".format(
-                    counter, counter / (time.time() - start_time)), end="\r", flush=True)
+                    counter, counter / (time.time() - start_time)), end="\r", flush=True, file=file)
         traj.resize(counter, axis=0)
 
 
-def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False):
+def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False, file=sys.stdout):
     with h5py.File(hdf5_fname, "r") as f:
         traj_atom_names = f["atom_names"].value.astype("U")
         if atom_names:
             if verbose:
-                print("# Will select atoms", *atom_names)
+                print("# Will select atoms", *atom_names, file=file)
             selection = reduce(np.logical_or, [traj_atom_names == name for name in atom_names])
         else:
             selection = slice(None)
@@ -101,7 +102,7 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False)
 
 
 def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_name, selection,
-                                        chunk_size, verbose=False):
+                                        chunk_size, verbose=False, file=sys.stdout):
     """Given a hdf5 trajectory, this function creates a new data set inside the hdf5 file with the
     specified dataset_name according to the supplied selection.
     If it already exists, it will be returned directly.
@@ -148,13 +149,14 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
         new_dataset = hdf5_file[dataset_name]
 
     if np.isnan(hdf5_file[dataset_name][-1]).any():
-        print("# It looks like data set", dataset_name, "has not been written to hdf5 yet.")
-        print("# Will do it now")
+        print("# It looks like data set", dataset_name, "has not been written to hdf5 yet.",
+              file=file)
+        print("# Will do it now", file=file)
         start_time = time.time()
         for start, stop, traj_chunk in chunk(trajectory_dataset, chunk_size):
             new_dataset[start:stop] = selection_fct(traj_chunk)
             print("# Parsed frames: {: 6d}. {:.2f} fps".format(
-                  stop, stop / (time.time() - start_time)), end="\r", flush=True)
+                  stop, stop / (time.time() - start_time)), end="\r", flush=True, file=file)
 
     return new_dataset
 

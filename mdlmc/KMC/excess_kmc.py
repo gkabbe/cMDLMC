@@ -115,10 +115,14 @@ def kmc_main(config_file):
     atom_names = hdf5_file["atom_names"][:].astype("U")
 
     oxygen_indices, = np.where(atom_names == "O")
+    if verbose:
+        print("# Loading oxygen trajectory", file=settings.output)
     oxygen_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory, "oxygen_trajectory",
                                                             oxygen_indices, chunk_size)
 
     proton_indices = np.where(atom_names == "H")
+    if verbose:
+        print("# Loading proton trajectory", file=settings.output)
     proton_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory, "proton_trajectory",
                                                             proton_indices, chunk_size)
 
@@ -143,10 +147,14 @@ def kmc_main(config_file):
     kmc = KMCRoutine(atombox, oxygen_lattice, jumprate_function)
 
     if settings.rescale_parameters:
+        if verbose:
+            print("# Creating probability sum array for rescaled distances", file=settings.output)
         probsums = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
                                                        "probability_sums_rescaled",
                                                        kmc.determine_probability_sums, chunk_size)
     else:
+        if verbose:
+            print("# Creating probability sum array", file=settings.output)
         probsums = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
                                                        "probability_sums",
                                                        kmc.determine_probability_sums, chunk_size)
