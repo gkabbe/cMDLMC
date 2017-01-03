@@ -88,6 +88,10 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
 
 
 def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False, file=sys.stdout):
+    """Loads hdf5 trajectory.
+    Be careful when specifying clip or atom_names! In this case, the trajectory slice will be loaded
+    into memory.
+    """
     with h5py.File(hdf5_fname, "r") as f:
         traj_atom_names = f["atom_names"].value.astype("U")
         if atom_names:
@@ -96,8 +100,14 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False,
             selection = reduce(np.logical_or, [traj_atom_names == name for name in atom_names])
         else:
             selection = slice(None)
+
         slice_ = slice(0, clip)
-        trajectories = f["trajectory"][slice_, selection]
+
+        if clip or atom_names:
+            print("np array!!!!")
+            trajectories = f["trajectory"][slice_, selection]
+        else:
+            trajectories = f
     return traj_atom_names[selection], trajectories
 
 
