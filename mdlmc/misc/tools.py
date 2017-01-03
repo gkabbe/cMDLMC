@@ -9,15 +9,43 @@ from itertools import islice
 import numpy as np
 
 
-def chunk(iterable, step, length=None):
-    assert step > 0
+def chunk(iterable, chunk_size, length=None):
+    assert chunk_size > 0
     if not length:
         length = len(iterable)
 
-    starts = range(0, length, step)
-    stops = map(lambda x: min(x, length), range(step, length + step, step))
+    starts = range(0, length, chunk_size)
+    stops = map(lambda x: min(x, length), range(chunk_size, length + chunk_size, chunk_size))
     for start, stop in zip(starts, stops):
-        yield start, stop, iterable[start: stop]
+        yield start, stop, iterable[start:stop]
+
+
+def chunk_trajectory(trajectory, chunk_size, length=None, selection=None):
+    """Chunk Numpy/HDF5 trajectory
+    Parameters
+    ----------
+    trajectory: array_like
+        The trajectory that will be iterated in chunks.
+        Expected dimensions: (no_of_frames, no_of_atoms, 3)
+    chunk_size: int
+        Chunk size
+    length: int
+        Trajectory length.
+        Allows iterating over only a part of the trajectory
+    selection: array_like
+        Expects a boolean array"""
+
+    assert chunk_size > 0
+    if not length:
+        length = trajectory.shape[0]
+    starts = range(0, length, chunk_size)
+    stops = map(lambda x: min(x, length), range(chunk_size, length + chunk_size, chunk_size))
+
+    if selection is None:
+        selection = slice(None)
+
+    for start, stop in zip(starts, stops):
+        yield start, stop, trajectory[start:stop, selection]
 
 
 def timer(f):
