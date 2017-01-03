@@ -86,7 +86,7 @@ cdef class AtomBox:
 
         return result.reshape(arr1.shape[:-1])
 
-    @cython.boundscheck(True)
+    @cython.boundscheck(False)
     def length_all_to_all(self, arr1, arr2):
         cdef int i, j
         if len(arr1.shape) > 2 or len(arr2.shape) > 2:
