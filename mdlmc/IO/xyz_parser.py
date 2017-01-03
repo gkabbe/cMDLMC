@@ -92,22 +92,22 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False,
     Be careful when specifying clip or atom_names! In this case, the trajectory slice will be loaded
     into memory.
     """
-    with h5py.File(hdf5_fname, "r") as f:
-        traj_atom_names = f["atom_names"].value.astype("U")
-        if atom_names:
-            if verbose:
-                print("# Will select atoms", *atom_names, file=file)
-            selection = reduce(np.logical_or, [traj_atom_names == name for name in atom_names])
-        else:
-            selection = slice(None)
+    f = h5py.File(hdf5_fname, "r")
+    traj_atom_names = f["atom_names"].value.astype("U")
+    if atom_names:
+        if verbose:
+            print("# Will select atoms", *atom_names, file=file)
+        selection = reduce(np.logical_or, [traj_atom_names == name for name in atom_names])
+    else:
+        selection = slice(None)
 
-        slice_ = slice(0, clip)
+    slice_ = slice(0, clip)
 
-        if clip or atom_names:
-            print("np array!!!!")
-            trajectories = f["trajectory"][slice_, selection]
-        else:
-            trajectories = f
+    if clip or atom_names:
+        print("np array!!!!")
+        trajectories = f["trajectory"][slice_, selection]
+    else:
+        trajectories = f["trajectory"]
     return traj_atom_names[selection], trajectories
 
 
