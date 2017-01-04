@@ -12,7 +12,7 @@ from mdlmc.misc.tools import argparse_compatible, chunk, chunk_trajectory
 
 
 def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, bins, *,
-                        normalized=False, verbose=False):
+                        normalized=False, verbose=False, mask=None):
 
     if normalized:
         pbc = np.array(atombox.periodic_boundaries)
@@ -30,7 +30,7 @@ def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, b
         chk2 = np.array(chk1, order="C")
         for frame_1, frame_2 in zip(chk1, chk2):
             dists = atombox.length_all_to_all(frame_1, frame_2)
-            histo, edges = np.histogram(dists, bins=max_bins, range=range_)
+            histo, edges = np.histogram(dists[mask], bins=max_bins, range=range_)
             if counter % 1000 == 0 and verbose:
                 print("{:8d} ({:8.2f} fps)".format(counter,
                                                    float(counter) / (time.time() - start_time)),
@@ -90,12 +90,17 @@ def radial_distribution_function(trajectory, selection1, selection2, atombox, dm
 
 def calculate_distance_histogram(trajectory, selection1, selection2, atombox, dmin, dmax, bins, *,
                                  clip=None, plot=False, normalized=False, verbose=False,
-                                 chunk_size=None):
+                                 chunk_size=None, single_element=False):
     traj_gen1 = chunk_trajectory(trajectory, chunk_size, length=clip, selection=selection1)
     traj_gen2 = chunk_trajectory(trajectory, chunk_size, length=clip, selection=selection2)
 
+    mask = np.ones((selection1.sum(), selection2.sum()), dtype=bool)
+    if single_element:
+        np.fill_diagonal(mask, 0)
+
     dists, _, histogram = calculate_histogram(traj_gen1, traj_gen2, atombox, dmin, dmax, bins,
-                                              normalized=normalized, verbose=verbose)
+                                              normalized=normalized, verbose=verbose,
+                                              mask=mask)
 
     mask = np.logical_and(dmin <= dists, dists <= dmax)
     if plot:
@@ -132,8 +137,10 @@ def prepare_trajectory(file, pbc, bins, dmin, dmax, clip, elements, acidic_proto
 
     if elements and elements[0] != "H":
         selection2 = atom_names == elements[0]
+        single_element = False
     else:
         selection2 = selection1
+        single_element = True
 
     if subparser_name == "rdf":
         radial_distribution_function(trajectory, selection1, selection2, atombox, dmin,
@@ -143,7 +150,7 @@ def prepare_trajectory(file, pbc, bins, dmin, dmax, clip, elements, acidic_proto
         calculate_distance_histogram(trajectory, selection1, selection2, atombox, dmin,
                                      dmax, bins, clip=clip, plot=plot,
                                      verbose=verbose, chunk_size=chunk_size,
-                                     normalized=normalized)
+                                     normalized=normalized, single_element=single_element)
     else:
         raise RuntimeError("What is", subparser_name, "?")
 
