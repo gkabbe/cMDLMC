@@ -202,5 +202,5 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
         plt.plot(distance[mask], histogram[mask])
         plt.show()
 
-    for d, c in zip(distance[mask], histogram[mask]):
+    for d, c in zip(distance, histogram):
         print(d, c)
