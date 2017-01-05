@@ -1,7 +1,8 @@
 import unittest
 import numpy as np
 
-from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic, AtomBoxWater
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic, AtomBoxWater, \
+    AtomBoxWaterLinearConversion, AtomBoxWaterRampConversion
 
 np.random.seed(0)
 
@@ -22,7 +23,7 @@ class TestAtomBoxes(unittest.TestCase):
 
         for i in range(-5, 5):
             a2 = atom_2 + i * 10
-            self.assertAlmostEqual(self.atombox_cubic.length(atom_1, a2)[0], desired_result)
+            self.assertAlmostEqual(self.atombox_cubic.length(atom_1, a2), desired_result)
 
         # Test vectorized input
 
@@ -125,9 +126,9 @@ class TestAtomBoxes(unittest.TestCase):
 
         for i in range(10):
             dist_c = self.atombox_cubic.distance(atom_1[i], atom_2[i])
-            dist_m = self.atombox_cubic.distance(atom_1[i], atom_2[i])
-            len_c, = self.atombox_monoclinic.length(atom_1[i], atom_2[i])
-            len_m, = self.atombox_monoclinic.length(atom_1[i], atom_2[i])
+            dist_m = self.atombox_monoclinic.distance(atom_1[i], atom_2[i])
+            len_c = self.atombox_cubic.length(atom_1[i], atom_2[i])
+            len_m = self.atombox_monoclinic.length(atom_1[i], atom_2[i])
             angle_c = self.atombox_cubic.angle(atom_1[i], atom_2[i], atom_3[i])
             angle_m = self.atombox_monoclinic.angle(atom_1[i], atom_2[i], atom_3[i])
 
@@ -167,11 +168,45 @@ class TestAtomBoxWater(unittest.TestCase):
         diffs = atombox.length(atoms1, atoms2)
         print(diffs[diffs >= atoms2[:, 2]], atoms2[:, 2][diffs >= atoms2[:, 2]])
 
-        import matplotlib.pylab as plt
+        # import matplotlib.pylab as plt
         distance = np.linspace(2.3, 2.9, 100)
-        plt.plot(atoms2[:, 2], diffs, "^")
-        plt.plot(atoms2[:, 2], atoms2[:, 2])
-        plt.plot(distance, conversion(distance, *parameters[:4]))
-        plt.show()
+        # plt.plot(atoms2[:, 2], diffs, "^")
+        # plt.plot(atoms2[:, 2], atoms2[:, 2])
+        # plt.plot(distance, conversion(distance, *parameters[:4]))
+        # plt.show()
 
         self.assertTrue((diffs < atoms2[:, 2]).all())
+
+    def test_linear(self):
+        a, b, left_bound, right_bound = 0.5, 1.1, 2.2, 3.3
+        pbc = np.asfarray([10, 10, 10])
+        parameters = dict(a=a, b=b, left_bound=left_bound, right_bound=right_bound)
+
+        atom1 = np.asfarray([[0, 0, 0]])
+        atom2 = np.asfarray([[2.5, 0, 0]])
+
+        atombox = AtomBoxCubic(pbc)
+        atombox_lin = AtomBoxWaterLinearConversion(pbc, parameters)
+        len1 = float(atombox.length(atom1, atom2))
+        len2 = float(atombox_lin.length(atom1, atom2))
+        print(a * len1 + b, len2)
+        self.assertAlmostEqual(a * len1 + b, len2)
+
+    def test_ramp(self):
+        a, b, d0, left_bound, right_bound = 0.5, 2.3, 2.45, 2.3, 3.33
+        parameters = dict(a=a, b=b, d0=d0, left_bound=left_bound, right_bound=right_bound)
+        pbc = np.asfarray([10, 10, 10])
+
+        atom1 = np.zeros(3)[None, :]
+        atom2 = np.asfarray([2.7, 0, 0])
+        atom3 = np.asfarray([2.3, 0, 0])
+
+        atombox = AtomBoxCubic(pbc)
+        atombox_ramp = AtomBoxWaterRampConversion(pbc, parameters)
+
+        len1 = float(atombox.length(atom1, atom2))
+        len2 = float(atombox_ramp.length(atom1, atom2))
+        len3 = float(atombox_ramp.length(atom1, atom3))
+
+        self.assertEqual(a * (len1 - d0) + b, len2)
+        self.assertEqual(b, len3)
