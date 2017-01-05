@@ -71,9 +71,11 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, fit_fct, p0=None)
     popt, pcov = curve_fit(fit_fct, dist_fine[mask], dist_fine[mask][convert], p0=p0)
 
     param_names = list(signature(fit_fct).parameters.keys())
+    parameter_dict = {}
 
     for k, v in zip(param_names[1:], popt):
         print("{} = {}".format(k, v))
+        parameter_dict[k] = v
     print("{} < d < {}".format(left_limit, right_limit))
 
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex="col")
@@ -85,3 +87,5 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, fit_fct, p0=None)
     ax2.plot(dist_fine, fit_fct(dist_fine, *popt), "r-", label="Fit")
     ax2.legend(loc="upper left")
     plt.show()
+
+    return parameter_dict
