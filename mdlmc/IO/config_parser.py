@@ -8,7 +8,7 @@ import numpy as np
 
 
 # Functions which parse the input from the config file
-def get_jumprate_parameters(line):
+def get_dictionary(line):
     dict_string = re.findall("\{.*\}|dict\s*\(.*\)", line)[0]
     param_dict = eval(dict_string)
     return param_dict
@@ -323,7 +323,7 @@ CONFIG_DICT = {
          }),
         ("jumprate_params_fs",
          {
-             "parse_fct": get_jumprate_parameters,
+             "parse_fct": get_dictionary,
              "default": "no_default",
              "help": "Specify the parameters used for the calculation of the distance dependent "
                      "jump rate. If jumprate_type is set to \"MD_rates\", a dict containing values "
@@ -408,22 +408,24 @@ CONFIG_DICT = {
              "default": None,
              "Help": "Periodic box lengths"
          }),
+        ("rescale_function",
+         {
+             "parse_fct": parse_string,
+             "default": None,
+             "help": "Specify the rescale function. Choices are 'linear' and 'ramp_function'."
+                     "Accordingly, the expected rescale_parameters are a, b for linear and"
+                     "a, b, d0 for ramp_function"
+         }
+         ),
         ("rescale_parameters",
          {
-             "parse_fct": parse_multifloat,
+             "parse_fct": get_dictionary,
              "default": None,
              "help": "Parameters of the rescaling function for water, which transforms the O-O "
                      "distance"
                      "distribution of uncharged water molecules into the distance distribution "
                      "between"
                      "a hydronium ion and an uncharged water molecule."
-                     "Expects six parameters:"
-                     "The first four parameters are the parameters of the function"
-                     "f(d) = a * x + b / (x + c) + d"
-                     "The fifth and sixth parameter determine the distance range in which the "
-                     "conversion "
-                     "function is applied."
-
          }),
         ("xyz_output",
          {
@@ -433,7 +435,7 @@ CONFIG_DICT = {
          }),
         ("jumprate_params_fs",
          {
-             "parse_fct": get_jumprate_parameters,
+             "parse_fct": get_dictionary,
              "default": None,
              "help": "Jump rate parameters"
          }),
