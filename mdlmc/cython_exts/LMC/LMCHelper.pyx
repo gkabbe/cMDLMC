@@ -428,7 +428,8 @@ cdef class KMCRoutine:
         for f in range(oxygen_trajectory.shape[0]):
             for i in range(oxygen_trajectory.shape[1]):
                 for j in range(oxygen_trajectory.shape[1]):
-                    dist = self.atombox.length_(oxygen_trajectory[f, j], oxygen_trajectory[f, i])
+                    dist = self.atombox.length_ptr(&oxygen_trajectory[f, j, 0],
+                                                   &oxygen_trajectory[f, i, 0])
                     if i != j:
                         probs[f, i] += self.jumprate_fct.evaluate(dist)
         return probs
