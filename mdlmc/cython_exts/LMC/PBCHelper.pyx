@@ -74,6 +74,7 @@ cdef class AtomBox:
         return result
 
     @cython.boundscheck(True)
+    @cython.wraparound(True)
     def length(self, arr1, arr2):
         cdef:
             int i, j
@@ -255,12 +256,13 @@ cdef class AtomBoxWater(AtomBoxCubic):
 
     def __cinit__(self, periodic_boundaries, *args, box_multiplier=(1, 1, 1), **kwargs):
         # Parameters for the conversion function
-        self.a = args[0]
-        self.b = args[1]
-        self.c = args[2]
-        self.d = args[3]
-        self.left_bound = args[4]
-        self.right_bound = args[5]
+        param_dict = args[0]
+        self.a = param_dict["a"]
+        self.b = param_dict["b"]
+        self.c = param_dict["c"]
+        self.d = param_dict["d"]
+        self.left_bound = param_dict["left_bound"]
+        self.right_bound = param_dict["right_bound"]
 
     cdef double convert_distance(self, double distance) nogil:
         if self.left_bound < distance < self.right_bound:
@@ -284,6 +286,57 @@ cdef class AtomBoxWater(AtomBoxCubic):
             length[i] = self.convert_distance(length[i])
 
         return length
+
+    cdef double length_ptr(self, double * arr1, double * arr2) nogil:
+        cdef double dist = AtomBoxCubic.length_ptr(self, arr1, arr2)
+        return self.convert_distance(dist)
+
+
+cdef class AtomBoxWaterLinearConversion(AtomBoxWater):
+    """Converts oxygen-oxygen distances to typical hydronium-oxygen distances"""
+
+    def __cinit__(self, periodic_boundaries, *args, box_multiplier=(1, 1, 1), **kwargs):
+        param_dict = args[0]
+        # Parameters for the conversion function
+        self.a = param_dict["a"]
+        self.b = param_dict["b"]
+        self.left_bound = param_dict["left_bound"]
+        self.right_bound = param_dict["right_bound"]
+
+    cdef double convert_distance(self, double distance) nogil:
+        cdef double new_distance
+        if self.left_bound < distance < self.right_bound:
+            new_distance = self.a * distance + self.b
+        else:
+            new_distance = distance
+        return distance
+
+
+cdef class AtomBoxWaterRampConversion(AtomBoxWater):
+    """Converts oxygen-oxygen distances to typical hydronium-oxygen distances"""
+
+    cdef:
+        double d0
+
+    def __cinit__(self, periodic_boundaries, *args, box_multiplier=(1, 1, 1), **kwargs):
+        param_dict = args[0]
+        # Parameters for the conversion function
+        self.a = param_dict["a"]
+        self.b = param_dict["b"]
+        self.d0 = param_dict["d0"]
+        self.left_bound = param_dict["left_bound"]
+        self.right_bound = param_dict["right_bound"]
+
+    cdef double convert_distance(self, double distance) nogil:
+        cdef double new_distance
+        if self.left_bound < distance < self.right_bound:
+            if distance < self.d0:
+                new_distance = self.b
+            else:
+                new_distance = self.a * (distance - self.d0) + self.b
+        else:
+            new_distance = distance
+        return new_distance
 
 
 cdef class AtomBoxMonoclinic(AtomBox):
