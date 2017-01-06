@@ -445,6 +445,12 @@ CONFIG_DICT = {
              "default": False,
              "help": "Turn verbosity on or off."
          }),
+        ("overwrite_jumprates",
+         {
+             "parse_fct": parse_bool,
+             "default": False,
+             "help": "Overwrite jump rates in HDF5 file if True"
+         }),
         ("cutoff_radius",
          {
              "parse_fct": parse_float,

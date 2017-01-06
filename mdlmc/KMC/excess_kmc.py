@@ -149,13 +149,15 @@ def kmc_main(settings):
             print("# Creating probability sum array for rescaled distances", file=settings.output)
         probsums = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
                                                        "probability_sums_rescaled",
-                                                       kmc.determine_probability_sums, chunk_size)
+                                                       kmc.determine_probability_sums, chunk_size,
+                                                       overwrite=settings.overwrite_jumprates)
     else:
         if verbose:
             print("# Creating probability sum array", file=settings.output)
         probsums = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
                                                        "probability_sums",
-                                                       kmc.determine_probability_sums, chunk_size)
+                                                       kmc.determine_probability_sums, chunk_size,
+                                                       overwrite=settings.overwrite_jumprates)
 
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}"
 

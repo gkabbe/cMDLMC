@@ -112,7 +112,7 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False,
 
 
 def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_name, selection,
-                                        chunk_size, verbose=False, file=sys.stdout):
+                                        chunk_size, verbose=False, file=sys.stdout, overwrite=False):
     """Given a hdf5 trajectory, this function creates a new data set inside the hdf5 file with the
     specified dataset_name according to the supplied selection.
     If it already exists, it will be returned directly.
@@ -158,10 +158,16 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
     else:
         new_dataset = hdf5_file[dataset_name]
 
-    if np.isnan(hdf5_file[dataset_name][-1]).any():
-        print("# It looks like data set", dataset_name, "has not been written to hdf5 yet.",
-              file=file)
-        print("# Will do it now", file=file)
+    is_unfinished = np.isnan(hdf5_file[dataset_name][-1]).any()
+    if is_unfinished or overwrite:
+        if is_unfinished:
+            print("# It looks like data set", dataset_name,
+                  "has not been written (completely) to hdf5 yet.",
+                  file=file)
+            print("# Will do it now", file=file)
+        if not is_unfinished and overwrite:
+            print("# File has been written before, but overwrite = True")
+            print("# Will overwrite now")
         start_time = time.time()
         for start, stop, traj_chunk in chunk(trajectory_dataset, chunk_size):
             new_dataset[start:stop] = selection_fct(traj_chunk)
