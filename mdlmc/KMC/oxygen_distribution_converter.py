@@ -76,6 +76,8 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, fit_fct, p0=None)
     for k, v in zip(param_names[1:], popt):
         print("{} = {}".format(k, v))
         parameter_dict[k] = v
+    parameter_dict["left_bound"] = left_limit
+    parameter_dict["right_bound"] = right_limit
     print("{} < d < {}".format(left_limit, right_limit))
 
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex="col")
@@ -84,7 +86,7 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, fit_fct, p0=None)
     ax1.legend()
     ax2.plot(dist_fine[mask], dist_fine[mask][convert], label="Conversion data")
     ax2.plot(dist_fine, dist_fine, "g--")
-    ax2.plot(dist_fine, fit_fct(dist_fine, *popt), "r-", label="Fit")
+    ax2.plot(dist_fine[mask], fit_fct(dist_fine[mask], *popt), "r-", label="Fit")
     ax2.legend(loc="upper left")
     plt.show()
 
