@@ -1,17 +1,17 @@
 import argparse
 import os
-import configparser
+import time
 
 import tables
 import h5py
 import numpy as np
-from numba import jit
 
 from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory
 from mdlmc.IO.config_parser import load_configfile, print_settings, print_config_template, print_confighelp
 from mdlmc.misc.tools import chunk, argparse_compatible
 from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, ExponentialFunction
-from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWater
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWater, AtomBoxWaterLinearConversion, \
+    AtomBoxWaterRampConversion
 from mdlmc.LMC.MDMC import initialize_oxygen_lattice
 
 
@@ -34,7 +34,6 @@ def kmc_state_to_xyz(oxygens, protons, oxygen_lattice):
     print("S", " ".join([3 * "{:14.8f}"]).format(*oxygens[oxygen_index]))
 
 
-@jit(nopython=False)
 def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_len):
     """Implements Kinetic Monte Carlo with time-dependent rates.
 
@@ -125,7 +124,7 @@ def kmc_main(settings):
                                                             proton_indices, chunk_size)
 
     trajectory_length = oxygen_trajectory.shape[0]
-    time, timestep_md = 0, settings.md_timestep_fs
+    current_time, timestep_md = 0, settings.md_timestep_fs
     frame, sweep, jumps = 0, 0, 0
     total_sweeps = settings.sweeps
     xyz_output = settings.xyz_output
@@ -137,7 +136,12 @@ def kmc_main(settings):
     proton_position, = np.where(oxygen_lattice)[0]
 
     if settings.rescale_parameters:
-        atombox = AtomBoxWater(settings.pbc, *settings.rescale_parameters)
+        if settings.rescale_function == "linear":
+            atombox = AtomBoxWaterLinearConversion(settings.pbc, settings.rescale_parameters)
+        elif settings.rescale_function == "ramp_function":
+            atombox = AtomBoxWaterRampConversion(settings.pbc, settings.rescale_parameters)
+        else:
+            raise ValueError("Unknown rescale function name", settings.rescale_function)
     else:
         atombox = AtomBoxCubic(settings.pbc)
     a, b = settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"]
@@ -164,7 +168,7 @@ def kmc_main(settings):
     while sweep < total_sweeps:
 
         delta_frame, delta_time = fastforward_to_next_jump(probsums, proton_position, timestep_md,
-                                                           frame, time, trajectory_length)
+                                                           frame, current_time, trajectory_length)
 
         for i in range(sweep, sweep + delta_frame):
             if i % print_frequency == 0:
@@ -178,18 +182,17 @@ def kmc_main(settings):
 
         frame = (frame + delta_frame) % trajectory_length
         sweep += delta_frame
-        time += delta_time
+        current_time += delta_time
         jumps += 1
 
         proton_position = kmc.determine_transition(oxygen_trajectory[frame])
 
-        # TODO: is that right? maybe freq + 1?
         if sweep % print_frequency == 0:
             if xyz_output:
                 kmc_state_to_xyz(oxygen_trajectory[frame], proton_trajectory[frame],
                                  oxygen_lattice)
             else:
-                print(output_format.format(sweep, time, *oxygen_trajectory[frame, proton_position],
+                print(output_format.format(sweep, current_time, *oxygen_trajectory[frame, proton_position],
                                            jumps), flush=True, file=settings.output)
 
 
