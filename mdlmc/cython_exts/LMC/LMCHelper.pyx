@@ -32,10 +32,12 @@ cdef double R = 1.9872041e-3   # universal gas constant in kcal/mol/K
 
 # Define Function Objects. These can later be substituted easily by LMCRoutine
 cdef class JumprateFunction:
-    cpdef double evaluate(self, double distance):
+    def evaluate(self, double distance):
+        return self._evaluate(distance)
+    cdef double _evaluate(self, double distance) nogil:
         return 0
 
-
+@cython.final
 cdef class FermiFunction(JumprateFunction):
     """Calculates the jump probability according to the function
         f(x) = a / ( (1 + exp(x - b) / c)"""
@@ -47,10 +49,11 @@ cdef class FermiFunction(JumprateFunction):
         self.b = b
         self.c = c
 
-    cpdef double evaluate(self, double distance):
+    cdef double _evaluate(self, double distance) nogil:
         return self.a / (1 + exp((distance - self.b) / self.c))
 
 
+@cython.final
 cdef class ExponentialFunction(JumprateFunction):
     """Calculates the jump probability according to the function
         f(x) = a * exp(b*x)"""
@@ -61,10 +64,11 @@ cdef class ExponentialFunction(JumprateFunction):
         self.a = a
         self.b = b
         
-    cpdef double evaluate(self, double distance):
+    cdef double _evaluate(self, double distance) nogil:
         return self.a * exp(self.b * distance)
 
 
+@cython.final
 cdef class ActivationEnergyFunction(JumprateFunction):
     """Calculates the activation energy according to the function
         E(x) = a * (x - d0) / sqrt(b + 1 / (x -d0)**2)
@@ -80,7 +84,7 @@ cdef class ActivationEnergyFunction(JumprateFunction):
         self.d0 = d0
         self.T = T
 
-    cpdef double evaluate(self, double distance):
+    cdef double _evaluate(self, double distance) nogil:
         cdef double E
         if distance <= self.d0:
             E = 0
@@ -418,20 +422,21 @@ cdef class KMCRoutine:
 
         self.proton_position = proton_positions[0]
 
-    def determine_probability_sums(self, double [:, :, ::1] oxygen_trajectory):
+    def determine_probability_sums(self, double [:, :, ::1] oxygen_trajectory, double upper_bound=1e8):
         cdef:
             int f, i, j
             np.ndarray[np.float32_t, ndim=2] probs
 
         probs = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1]), dtype=np.float32)
 
-        for f in range(oxygen_trajectory.shape[0]):
-            for i in range(oxygen_trajectory.shape[1]):
-                for j in range(oxygen_trajectory.shape[1]):
-                    dist = self.atombox.length_ptr(&oxygen_trajectory[f, j, 0],
-                                                   &oxygen_trajectory[f, i, 0])
-                    if i != j:
-                        probs[f, i] += self.jumprate_fct.evaluate(dist)
+        with nogil:
+            for f in range(oxygen_trajectory.shape[0]):
+                for i in range(oxygen_trajectory.shape[1]):
+                    for j in range(oxygen_trajectory.shape[1]):
+                        dist = self.atombox.length_ptr(&oxygen_trajectory[f, j, 0],
+                                                       &oxygen_trajectory[f, i, 0])
+                        if i != j and dist < upper_bound:
+                            probs[f, i] += self.jumprate_fct._evaluate(dist)
         return probs
 
     def determine_transition(self, double[:, ::1] oxygen_frame):
