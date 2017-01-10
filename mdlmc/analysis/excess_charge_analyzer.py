@@ -31,52 +31,6 @@ class HydroniumHelper:
             raise RuntimeError("Could not determine excess charge index.")
 
 
-def main(*args):
-    """Determine the excess charge movement in a water box"""
-    parser = argparse.ArgumentParser(
-        description="Determine the excess charge movement in a water box",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--visualize", action="store_true", help="Visualize excess charge position")
-    parser.add_argument("trajectory", help="Trajectory path")
-    parser.add_argument("pbc", nargs=3, type=float, help="periodic boundary conditions")
-
-    subparsers = parser.add_subparsers()
-
-    parser_cv = subparsers.add_parser("cv", help="Track evolution of collective variable")
-    parser_cv.set_defaults(func=track_collective_variable)
-
-    parser_occupation = subparsers.add_parser("occupation", help="Track position of H3O+ ion")
-    parser_occupation.set_defaults(func=track_hydronium_ion)
-
-    parser_histo_closest = subparsers.add_parser("histo_closest",
-                                                 help="Calculate distance histogram between "
-                                                      "hydronium and the closest oxygen")
-    parser_histo_closest.add_argument("--dmin", default=2.0, type=float,
-                                      help="Minimum distance of histogram")
-    parser_histo_closest.add_argument("--dmax", default=3.0, type=float,
-                                      help="Maximum distance of histogram")
-    parser_histo_closest.add_argument("--bins", default=50, type=int,
-                                      help="Number of bins in histogram")
-    parser_histo_closest.add_argument("--plot", action="store_true", help="Plot result")
-    parser_histo_closest.set_defaults(func=distance_histogram_between_hydronium_and_closest_oxygen)
-
-    parser_histo_all = subparsers.add_parser("histo_all",
-                                                 help="Calculate distance histogram between "
-                                                      "hydronium and all oxygens")
-    parser_histo_all.add_argument("--dmin", default=2.0, type=float,
-                                      help="Minimum distance of histogram")
-    parser_histo_all.add_argument("--dmax", default=3.0, type=float,
-                                      help="Maximum distance of histogram")
-    parser_histo_all.add_argument("--bins", default=50, type=int,
-                                      help="Number of bins in histogram")
-    parser_histo_all.add_argument("--plot", action="store_true", help="Plot result")
-    parser_histo_all.add_argument("--normalized", action="store_true", help="Normalize histogram")
-    parser_histo_all.set_defaults(func=distance_histogram_between_hydronium_and_all_oxygens)
-
-    args = parser.parse_args()
-    args.func(args)
-
-
 @argparse_compatible
 def track_collective_variable(trajectory, pbc, *, visualize=False):
     pbc = np.array(pbc)
@@ -163,7 +117,8 @@ def distance_histogram_between_hydronium_and_closest_oxygen(trajectory, pbc, dmi
 
 @argparse_compatible
 def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, dmax, bins, *,
-                                                         plot=False, normalized=False):
+                                                         plot=False, print_=False, clip=None,
+                                                         normalized=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
     oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
@@ -180,10 +135,12 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
     histogram = np.zeros(max_bins, dtype=int)
 
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
+        if clip and i == clip:
+            break
         if i % 1000 == 0:
             print(i, end="\r", flush=True)
-        hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame,
-                                                                        proton_frame, atombox)
+        hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame, proton_frame,
+                                                                     atombox)
         distances = atombox.length_all_to_all(oxygen_frame[[hydronium_index]], oxygen_frame[
             np.arange(oxygen_frame.shape[0]) != hydronium_index])
 
@@ -202,5 +159,103 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
         plt.plot(distance[mask], histogram[mask])
         plt.show()
 
-    for d, c in zip(distance, histogram):
-        print(d, c)
+    if print_:
+        for d, c in zip(distance, histogram):
+            print(d, c)
+
+    return {"distance": distance,
+            "edges": edges,
+            "histogram": histogram,
+            "trajectory_length": oxygens.shape[0],
+            "oxygen_number": oxygens.shape[1]
+            }
+
+
+@argparse_compatible
+def rdf_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, dmax, bins, *, plot=False,
+                                          clip=None):
+    """Calculate the RDF between hydronium and neutral water molecules"""
+    results = distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, dmax,
+                                                                   bins, clip=clip)
+    distance, edges, histogram = results["distance"], results["edges"], results["histogram"]
+    number_of_oxygens = results["oxygen_number"]
+    trajectory_length = results["trajectory_length"] if not clip else clip
+    histo_per_frame_and_particle = np.array(histogram, dtype=float) / trajectory_length
+    rho = (number_of_oxygens - 1) / (pbc[0] * pbc[1] * pbc[2])
+    distance_distribution_ideal_gas = 4. / 3 * np.pi * rho * (edges[1:]**3 - edges[:-1]**3)
+    rdf = histo_per_frame_and_particle / distance_distribution_ideal_gas
+
+    if plot:
+        plt.plot(distance, rdf)
+        plt.show()
+
+    print("# Rho =", rho)
+    print("# Distance, RDF")
+    for d, r in zip(distance, rdf):
+        print(d, r)
+
+    return {"distance": distance,
+            "edges": edges,
+            "rdf": rdf,
+            "histogram": histo_per_frame_and_particle
+           }
+
+
+def main(*args):
+    """Determine the excess charge movement in a water box"""
+    parser = argparse.ArgumentParser(
+        description="Determine the excess charge movement in a water box",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--visualize", action="store_true", help="Visualize excess charge position")
+    parser.add_argument("trajectory", help="Trajectory path")
+    parser.add_argument("pbc", nargs=3, type=float, help="periodic boundary conditions")
+
+    subparsers = parser.add_subparsers(dest="subparser_name")
+
+    parser_cv = subparsers.add_parser("cv", help="Track evolution of collective variable")
+    parser_cv.set_defaults(func=track_collective_variable)
+
+    parser_occupation = subparsers.add_parser("occupation", help="Track position of H3O+ ion")
+    parser_occupation.set_defaults(func=track_hydronium_ion)
+
+    parser_histo_closest = subparsers.add_parser("histo_closest",
+                                                 help="Calculate distance histogram between "
+                                                      "hydronium and the closest oxygen")
+    parser_histo_closest.add_argument("--dmin", default=2.0, type=float,
+                                      help="Minimum distance of histogram")
+    parser_histo_closest.add_argument("--dmax", default=3.0, type=float,
+                                      help="Maximum distance of histogram")
+    parser_histo_closest.add_argument("--bins", default=50, type=int,
+                                      help="Number of bins in histogram")
+    parser_histo_closest.add_argument("--plot", action="store_true", help="Plot result")
+    parser_histo_closest.set_defaults(func=distance_histogram_between_hydronium_and_closest_oxygen)
+
+    parser_histo_all = subparsers.add_parser("histo_all",
+                                             help="Calculate distance histogram between "
+                                                  "hydronium and all oxygens")
+    parser_histo_all.add_argument("--dmin", default=2.0, type=float,
+                                  help="Minimum distance of histogram")
+    parser_histo_all.add_argument("--dmax", default=3.0, type=float,
+                                  help="Maximum distance of histogram")
+    parser_histo_all.add_argument("--bins", default=50, type=int,
+                                  help="Number of bins in histogram")
+    parser_histo_all.add_argument("--plot", action="store_true", help="Plot result")
+    parser_histo_all.add_argument("--normalized", action="store_true", help="Normalize histogram")
+    parser_histo_all.add_argument("--clip", type=int, help="Determine maximum length")
+    parser_histo_all.set_defaults(func=distance_histogram_between_hydronium_and_all_oxygens)
+
+    parser_rdf = subparsers.add_parser("rdf", help="Calculate RDF between hydronium and the closest"
+                                       "oxygen")
+    parser_rdf.add_argument("--dmin", default=2.0, type=float, help="Minimum distance of histogram")
+    parser_rdf.add_argument("--dmax", default=3.0, type=float, help="Maximum distance of histogram")
+    parser_rdf.add_argument("--bins", default=50, type=int, help="Number of bins in histogram")
+    parser_rdf.add_argument("--plot", action="store_true", help="Plot result")
+    parser_rdf.add_argument("--clip", type=int, help="Determine maximum length")
+    parser_rdf.set_defaults(func=rdf_between_hydronium_and_all_oxygens)
+
+    args = parser.parse_args()
+
+    if args.subparser_name == "histo_all":
+        args.print_ = True
+
+    args.func(args)
