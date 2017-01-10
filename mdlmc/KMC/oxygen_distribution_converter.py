@@ -8,22 +8,11 @@ from scipy.integrate import quad
 import matplotlib.pylab as plt
 
 
-def find_first_solvation_shell(dist_histo):
-    def gaussian(x, a, b, c):
-        return a * np.exp(-(x - b)**2 / c)
-
-    locmaxind = argrelmax(dist_histo[1:, 1])[0][0]
-    locminind = argrelmin(dist_histo[1:, 1])[0][0]
-    gaussian_width = locminind - locmaxind
-    range_ = slice(locmaxind - gaussian_width // 2, locmaxind + gaussian_width // 2)
-    x = dist_histo[1:, 0]
-    y = dist_histo[1:, 1] / dist_histo[1:, 0]**2
-    popt, pcov = curve_fit(gaussian, x[range_], y[range_])
-    a, b, c = popt
-
-    xlim = x[locmaxind] + np.sqrt(c)
-
-    return x[locminind]
+def find_first_solvation_shell(dist_histo, n=4):
+    """Find the first solvation shell by integrating the distance probability over space.
+    The point at which the integral equals the coordination number, the first solvation shell ends.
+    """
+    dist, prob = dist_histo.T
 
 
 def normalize(OO_dist_interpolator, right_limit):
@@ -32,28 +21,37 @@ def normalize(OO_dist_interpolator, right_limit):
     return normalization_constant
 
 
-# noinspection PyTupleAssignmentBalance
-def construct_conversion_fct(dist_histo, dist_histo_reference, fit_fct, p0=None):
-    # Find approximate right end of first solvation shell
-    dist_histo_right_limit = find_first_solvation_shell(dist_histo)
-    dist_histo_reference_right_limit = find_first_solvation_shell(dist_histo_reference)
+def integrate_rdf(OO_dist_interpolator, up_to, number_of_atoms):
+    xmin, xmax = OO_dist_interpolator.x[0], OO_dist_interpolator.x[-1]
+    dist_fine = np.linspace(xmin, xmax, 1000)
+    cumsum = np.cumsum(OO_dist_interpolator(dist_fine))
+    idx = np.where(cumsum >= up_to)[0][0]
+    return dist_fine[idx]
 
+
+# noinspection PyTupleAssignmentBalance
+def construct_conversion_fct(dist_histo, dist_histo_reference, number_of_atoms, fit_fct, p0=None):
+    number_of_atoms_in_1st_solvation_shell = 3
+    noa_1, noa_2 = number_of_atoms
     # Interpolate the distributions
     dist_histo_interpolator = interp1d(dist_histo[:, 0], dist_histo[:, 1], kind="cubic")
     dist_histo_reference_interpolator = interp1d(dist_histo_reference[:, 0],
                                                  dist_histo_reference[:, 1], kind="cubic")
 
-    # Normalize the distributions, so the probability to find an oxygen within the first solvation shell is 1
-    normalization_constant, err = normalize(dist_histo_interpolator, dist_histo_right_limit)
-    normalization_constant_reference, err_ref = normalize(dist_histo_reference_interpolator,
-                                                          dist_histo_reference_right_limit)
+    dist_histo_right_limit = integrate_rdf(dist_histo_interpolator,
+                                           up_to=number_of_atoms_in_1st_solvation_shell,
+                                           number_of_atoms=number_of_atoms)
+    dist_histo_reference_right_limit = integrate_rdf(dist_histo_reference_interpolator,
+                                                     up_to=number_of_atoms_in_1st_solvation_shell,
+                                                     number_of_atoms=number_of_atoms)
+    print(dist_histo_reference_right_limit, dist_histo_reference_right_limit)
 
     dist_fine = np.linspace(2.0, max(dist_histo_right_limit, dist_histo_reference_right_limit), 1000)
 
     delta_d = dist_fine[1] - dist_fine[0]
 
-    cumsum = np.cumsum(dist_histo_interpolator(dist_fine)) / normalization_constant
-    cumsum_reference = np.cumsum(dist_histo_reference_interpolator(dist_fine)) / normalization_constant_reference
+    cumsum = np.cumsum(dist_histo_interpolator(dist_fine)) * noa_1
+    cumsum_reference = np.cumsum(dist_histo_reference_interpolator(dist_fine)) * noa_2
 
     right_limit = max(dist_histo_right_limit, dist_histo_reference_right_limit)
     mask = reduce(np.logical_and, [dist_fine <= right_limit, cumsum > 10e-8])
@@ -88,6 +86,5 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, fit_fct, p0=None)
     ax2.plot(dist_fine, dist_fine, "g--")
     ax2.plot(dist_fine[mask], fit_fct(dist_fine[mask], *popt), "r-", label="Fit")
     ax2.legend(loc="upper left")
-    plt.show()
 
-    return parameter_dict
+    return parameter_dict, fig
