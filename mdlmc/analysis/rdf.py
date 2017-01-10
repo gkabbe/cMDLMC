@@ -56,16 +56,23 @@ def calculate_rdf(trajectory, selection1, selection2, atombox, dmin, dmax, bins,
                                               verbose=verbose)
 
     if (selection1 == selection2).all():
-        n1, n2 = selection1.shape[0], selection1.shape[0] - 1
+        n1, n2 = selection1.sum(), selection1.sum() - 1
     else:
-        n1, n2 = selection1.shape[1], selection2.shape[1]
+        n1, n2 = selection1.sum(), selection2.sum()
+
+    if verbose:
+        print("# n1 =", n1)
+        print("# n2 =", n2)
 
     volume = atombox.periodic_boundaries[0] * atombox.periodic_boundaries[1] * \
         atombox.periodic_boundaries[2]
     rho = n2 / volume
-    trajectory_length = trajectory[0].shape[0]
+    trajectory_length = trajectory.shape[0] if not clip else clip
 
-    histo_per_frame_and_particle = np.array(histo, dtype=float) / trajectory_length / n1
+    if verbose:
+        print("# Trajectory length:", trajectory_length)
+
+    histo_per_frame_and_particle = np.array(histo, dtype=float) / (trajectory_length * n1)
     distance_distribution_ideal_gas = 4. / 3 * np.pi * rho * (edges[1:]**3 - edges[:-1]**3)
 
     rdf = histo_per_frame_and_particle / distance_distribution_ideal_gas
@@ -83,7 +90,7 @@ def radial_distribution_function(trajectory, selection1, selection2, atombox, dm
         plt.plot(dists, rdf)
         plt.show()
 
-    print("{:10} {:10} {:10}".format("Distance", "RDF"))
+    print("{:10} {:10}".format("Distance", "RDF"))
     for d, r in zip(dists, rdf):
         print("{:10.8f} {:10.8f}".format(d, r))
 
@@ -113,8 +120,8 @@ def calculate_distance_histogram(trajectory, selection1, selection2, atombox, dm
 
 
 @argparse_compatible
-def prepare_trajectory(file, pbc, bins, dmin, dmax, clip, elements, acidic_protons, verbose,
-                       plot, chunk_size, normalized, subparser_name):
+def prepare_trajectory(file, pbc, bins, dmin, dmax, clip, elements, acidic_protons, chunk_size,
+                       subparser_name, normalized=False, verbose=False, plot=False):
     _, ext = os.path.splitext(file)
     if ext == ".hdf5":
         atom_names, trajectory = xyz_parser.load_trajectory_from_hdf5(file)
