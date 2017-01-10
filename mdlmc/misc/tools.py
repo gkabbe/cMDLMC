@@ -4,7 +4,6 @@ import argparse
 import inspect
 import pickle
 import os
-from itertools import islice
 
 import numpy as np
 
@@ -64,9 +63,15 @@ def argparse_compatible(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if len(args) == 1 and type(args[0]) == argparse.Namespace:
-            expected_args = inspect.signature(func).parameters.keys()
-            args = {arg: getattr(args[0], arg) for arg in expected_args if hasattr(args[0], arg)}
-            return func(**args)
+            func_params = inspect.signature(func).parameters
+            expected_args = func_params.keys()
+            args_dict = {}
+            for arg in expected_args:
+                if hasattr(args[0], arg):
+                    args_dict[arg] = getattr(args[0], arg)
+                elif func_params[arg].default is not inspect._empty:
+                    args_dict[arg] = func_params[arg].default
+            return func(**args_dict)
         else:
             return func(*args, **kwargs)
 
