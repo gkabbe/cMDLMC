@@ -398,6 +398,8 @@ cdef class LMCRoutine:
 
 @cython.final
 cdef class KMCRoutine:
+    """Uses "classical" KMC (i.e. not constant, but randomly drawn time steps) to determine the
+    excess proton motion in a water box."""
 
     cdef:
         JumprateFunction jumprate_fct
