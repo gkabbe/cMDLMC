@@ -13,6 +13,7 @@ cimport numpy as np
 cimport cython
 from cython_gsl cimport *
 from libcpp.vector cimport vector
+from libcpp.algorithm cimport sort
 from libcpp cimport bool
 from libc.stdio cimport *
 
@@ -424,21 +425,31 @@ cdef class KMCRoutine:
 
         self.proton_position = proton_positions[0]
 
+    @cython.wraparound(True)
     def determine_probability_sums(self, double [:, :, ::1] oxygen_trajectory, double upper_bound=1e8):
+        """Save probabilities for the closest 3 oxygens.
+        This corresponds to the first solvation shell of H2O."""
         cdef:
             int f, i, j
-            np.ndarray[np.float32_t, ndim=2] probs
+            np.ndarray[np.float32_t, ndim=3] probs
+            vector[double] distances
 
-        probs = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1]), dtype=np.float32)
+        probs = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3), dtype=np.float32)
 
         with nogil:
             for f in range(oxygen_trajectory.shape[0]):
                 for i in range(oxygen_trajectory.shape[1]):
+                    distances.clear()
                     for j in range(oxygen_trajectory.shape[1]):
+                        # Collect all distances
                         dist = self.atombox.length_ptr(&oxygen_trajectory[f, j, 0],
                                                        &oxygen_trajectory[f, i, 0])
-                        if i != j and dist < upper_bound:
-                            probs[f, i] += self.jumprate_fct._evaluate(dist)
+                        if i != j:
+                            distances.push_back(dist)
+                    sort(distances.begin(), distances.end())
+                    probs[f, i, 0] = self.jumprate_fct._evaluate(distances[0])
+                    probs[f, i, 1] = self.jumprate_fct._evaluate(distances[1])
+                    probs[f, i, 2] = self.jumprate_fct._evaluate(distances[2])
         return probs
 
     def determine_transition(self, double[:, ::1] oxygen_frame):
