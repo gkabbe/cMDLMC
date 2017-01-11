@@ -406,7 +406,7 @@ CONFIG_DICT = {
          {
             "parse_fct": get_pbc,
              "default": None,
-             "Help": "Periodic box lengths"
+             "help": "Periodic box lengths"
          }),
         ("rescale_function",
          {
