@@ -211,7 +211,7 @@ def main(*args):
     if args.subparser_name == "config_file":
         print_config_template("KMCWater", args.sorted)
     elif args.subparser_name == "config_help":
-        print_confighelp()
+        print_confighelp("KMCWater")
     else:
         settings = load_configfile(args.config_file, config_name="KMCWater")
         args.func(settings)
