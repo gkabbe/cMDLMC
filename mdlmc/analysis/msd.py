@@ -78,7 +78,7 @@ def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay):
     delta = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
     for interval_length in range(0, total_length - subinterval_delay, subinterval_delay):
         ind_helper = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
-        sqdist = npa.sqdist_np_multibox(atom_traj[interval_length: total_length, :, :],
+        sqdist = squared_distance(atom_traj[interval_length: total_length, :, :],
                                         atom_traj[interval_length, :, :], pbc, axis_wise=True)
         ind_helper[:total_length - interval_length, :, :] = sqdist
         indices = np.where(ind_helper != 0)
@@ -86,7 +86,11 @@ def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay):
         delta[indices] = sqdist[indices] - msd_mean[indices]
         msd_mean[indices] += delta[indices] / (occurrence_counter[indices] + 1)
         msd_var[indices] += delta[indices] * (sqdist[indices] - msd_mean[indices])
-    msd_var /= (occurrence_counter - 1)
+    indices2 = np.where(occurrence_counter > 1)
+    indices3 = np.where(occurrence_counter == 0)
+    occurrence_counter[indices2] = occurrence_counter[indices2] - 1
+    occurrence_counter[indices3] = occurrence_counter[indices3] + 1
+    msd_var /= occurrence_counter
     msd_var2 = msd_var.mean(axis=1)
     msd_mean2 = msd_mean.mean(axis=1)
     return msd_mean2, msd_var2
@@ -154,6 +158,8 @@ def main(*args):
         # use only first 60% of the calculated interval because of statistic
         msd_mean, msd_var = msd_mean[:int(msd_mean.shape[0] * 0.6)], \
                             msd_var[:int(msd_var.shape[0] * 0.6)]
+        for i  in range(msd_mean.shape[0]):
+            print(i, msd_mean[i].sum(), msd_var[i].sum())
 
     else:
         intervalnumber = args.intervalnumber
