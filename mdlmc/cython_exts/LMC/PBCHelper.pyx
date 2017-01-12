@@ -57,21 +57,20 @@ cdef class AtomBox:
 
     @cython.boundscheck(True)
     def distance(self, arr1, arr2):
+        """Calculates for two arrays of positions an array of vector distances"""
         cdef:
             int i, j
         arr1 = arr1.reshape((-1, 3))
         arr2 = arr2.reshape((-1, 3))
-        result = np.zeros(arr1.shape)
 
         cdef:
             double [:, ::1] arr1_view = arr1
             double [:, ::1] arr2_view = arr2
-            double [:, ::1] result_view = result
-
+            np.ndarray[np.float64_t, ndim=2] result = np.zeros(arr1.shape)
 
         for i in range(arr1_view.shape[0]):
-            self.distance_vector(&arr1_view[i, 0], &arr2_view[i, 0], &result_view[i, 0])
-        return result
+            self.distance_vector(&arr1_view[i, 0], &arr2_view[i, 0], &result[i, 0])
+        return np.squeeze(result)
 
     @cython.boundscheck(True)
     @cython.wraparound(True)
