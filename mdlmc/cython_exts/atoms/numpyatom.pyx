@@ -160,7 +160,6 @@ def bruteforce_test(double [:] a1_pos, double [:] a2_pos, double [:,::1] h, doub
 cpdef double length(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
     cdef:
         double dist[3]
-        int i
 
     diff_ptr(&a1_pos[0], &a2_pos[0], &pbc[0], &dist[0])
 
@@ -170,7 +169,6 @@ cpdef double length(double [:] a1_pos, double [:] a2_pos, double [:] pbc):
 cdef double length_ptr(double *a1_pos, double *a2_pos, double *pbc) nogil:
     cdef:
         double dist[3]
-        int i
 
     diff_ptr(a1_pos, a2_pos, pbc, &dist[0])
 
