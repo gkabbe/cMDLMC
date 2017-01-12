@@ -426,15 +426,21 @@ cdef class KMCRoutine:
         self.proton_position = proton_positions[0]
 
     @cython.wraparound(True)
-    def determine_probability_sums(self, double [:, :, ::1] oxygen_trajectory, double upper_bound=1e8):
+    def determine_probabilities(self, double [:, :, ::1] oxygen_trajectory, double upper_bound=1e8):
         """Save probabilities for the closest 3 oxygens.
         This corresponds to the first solvation shell of H2O."""
         cdef:
-            int f, i, j
+            int f, i, j, k
             np.ndarray[np.float32_t, ndim=3] probs
+            np.ndarray[np.int32_t, ndim=3] all_indices
             vector[double] distances
+            vector[size_t] neighbor_indices
 
+        all_indices = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3), dtype=np.int32)
         probs = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3), dtype=np.float32)
+
+        # indices stores the indices of the three closest oxygen neighbors
+        neighbor_indices.resize(3)
 
         with nogil:
             for f in range(oxygen_trajectory.shape[0]):
@@ -446,11 +452,18 @@ cdef class KMCRoutine:
                                                        &oxygen_trajectory[f, i, 0])
                         if i != j:
                             distances.push_back(dist)
-                    sort(distances.begin(), distances.end())
-                    probs[f, i, 0] = self.jumprate_fct._evaluate(distances[0])
-                    probs[f, i, 1] = self.jumprate_fct._evaluate(distances[1])
-                    probs[f, i, 2] = self.jumprate_fct._evaluate(distances[2])
-        return probs
+                        else:
+                            # Set atom's distance to itself to large value, so it won't find
+                            # itself as a neighbor
+                            distances.push_back(10**8)
+                    gsl_sort_smallest_index(&neighbor_indices[0], 3, &distances[0], 1, distances.size())
+
+                    for k in range(3):
+                        probs[f, i, k] = self.jumprate_fct._evaluate(distances[neighbor_indices[k]])
+                        probs[f, i, k] = self.jumprate_fct._evaluate(distances[neighbor_indices[k]])
+                        probs[f, i, k] = self.jumprate_fct._evaluate(distances[neighbor_indices[k]])
+                        all_indices[f, i, k] = neighbor_indices[k]
+        return probs, all_indices
 
     def determine_transition(self, double[:, ::1] oxygen_frame):
         cdef:
