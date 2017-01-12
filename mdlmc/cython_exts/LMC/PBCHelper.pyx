@@ -75,8 +75,9 @@ cdef class AtomBox:
     @cython.boundscheck(True)
     @cython.wraparound(True)
     def length(self, arr1, arr2):
+        """Calculates for two arrays of positions an array of scalar distances"""
         cdef:
-            int i, j
+            int i
             double [:, ::1] arr1_view = arr1.reshape((-1, 3))
             double [:, ::1] arr2_view = arr2.reshape((-1, 3))
         result = np.zeros(arr1_view.shape[0])
@@ -84,7 +85,7 @@ cdef class AtomBox:
         for i in range(arr1_view.shape[0]):
             result[i] = self.length_(arr1_view[i], arr2_view[i])
 
-        return result.reshape(arr1.shape[:-1])
+        return result
 
     @cython.boundscheck(False)
     def length_all_to_all(self, arr1, arr2):
