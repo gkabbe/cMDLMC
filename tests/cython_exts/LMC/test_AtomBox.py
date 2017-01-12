@@ -34,6 +34,27 @@ class TestAtomBoxes(unittest.TestCase):
         self.assertTrue(
             np.isclose(self.atombox_cubic.length(atoms_1, atoms_2), desired_result).all())
 
+    def test_atomboxcubic_distance(self):
+
+        atom_1 = np.asfarray([0, 0, 0])
+        atom_2 = np.asfarray([6, 6, 6])
+
+        desired_result = np.asfarray([-4, -4, -4])
+        result = self.atombox_cubic.distance(atom_1, atom_2)
+        print("Desired:", desired_result)
+        print("Result:", result)
+
+        self.assertTrue(np.allclose(result, desired_result))
+
+        atom_1 = np.zeros((3, 3))
+        atom_2 = np.asfarray([[1, 1, 1],
+                              [2, 2, 2],
+                              [3, 3, 3]])
+
+        result = self.atombox_cubic.distance(atom_1, atom_2)
+
+        self.assertTrue(np.allclose(result, atom_2))
+
     def test_atomboxcubic_angle(self):
         atom_1 = np.asfarray([0, 0, 0])
         atom_2 = np.asfarray([3, 0, 0])
