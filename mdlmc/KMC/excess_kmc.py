@@ -160,7 +160,7 @@ def kmc_main(settings):
     probabilities, indices = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
                                                                  (probname, "indices"),
                                                                  kmc.determine_probabilities,
-                                                                 chunk_size,
+                                                                 chunk_size, dtype=(float, int),
                                                                  overwrite=settings.overwrite_jumprates)
     if verbose:
         print("# Creating probability sums {}".format(rescaled), file=settings.output)
