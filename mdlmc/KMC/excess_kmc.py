@@ -193,7 +193,11 @@ def kmc_main(settings):
         current_time += delta_time
         jumps += 1
 
-        proton_position = kmc.determine_transition(oxygen_trajectory[frame])
+        probs = np.cumsum(probabilities[frame, proton_position])
+        neighbor_indices = indices[frame, proton_position]
+        random_draw = np.random.uniform(0, probs[-1])
+        ix = np.searchsorted(probs, random_draw)
+        proton_position = neighbor_indices[ix]
 
         if sweep % print_frequency == 0:
             if xyz_output:
