@@ -112,7 +112,8 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False,
 
 
 def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_name, selection,
-                                        chunk_size, verbose=False, file=sys.stdout, overwrite=False):
+                                        chunk_size, verbose=False, file=sys.stdout, overwrite=False,
+                                        dtype=float):
     """Given a hdf5 trajectory, this function creates a new data set inside the hdf5 file with the
     specified dataset_name according to the supplied selection.
     If it already exists, it will be returned directly.
@@ -120,45 +121,83 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
     Parameters
     ----------
     hdf5_file: HDF5 file
-               The new dataset will be saved in this file
+        The new dataset will be saved in this file
 
     trajectory_dataset: array_like
-                        The array or HDF5 dataset containing the atom trajectory
+        The array or HDF5 dataset containing the atom trajectory
+        or the data on which the selection will operate
 
-    dataset_name: str
-                  Name of the new dataset
+    dataset_name: str or tuple of str
+        Name of the new dataset(s).
+        If a tuple of dataset names is given, a selection function is expected that
+        returns tuples of data.
 
     selection: function or array_like
-               Will be used to select items from trajectory_dataset.
-               Can be an array of indices or a function that creates a new array out of
-               trajectory_dataset
+        Will be used to select items from trajectory_dataset.
+        Can be an array of indices or a function that creates a new array out of
+        trajectory_dataset
+
+    chunk_size: int
+        The size of the data processed in one step
+
+    verbose: bool
+        Verbosity
+
+    file: file_like
+
+    overwrite: bool
+        If set True, an already existing dataset will be overwritten
+
+    dtype: type or tuple of types
+        Specifies the dtype(s) used for the dataset(s)
 
     Returns
     -------
-    new_dataset: HDF5 dataset"""
+    new_dataset: HDF5 dataset or tuple of HDF5 datasets"""
 
-    first_frame = trajectory_dataset[:1]
     if type(selection) in (types.FunctionType, types.MethodType, types.BuiltinFunctionType,
                            types.BuiltinMethodType):
         selection_fct = selection
     else:
+        if type(dataset_name) is tuple:
+            raise TypeError("If a tuple of dataset names is given, selection needs to be a function"
+                            "returning a tuple of data")
+
         def selection_fct(arr):
             return np.take(arr, selection, axis=1)
 
-    one_frame_shape = selection_fct(first_frame).shape
-
-    if dataset_name not in hdf5_file.keys():
-        print("# Did not find data set", dataset_name, "in HDF5 file")
-        new_dataset = hdf5_file.create_dataset(dataset_name,
-                                               shape=(trajectory_dataset.shape[0], *one_frame_shape[1:]),
-                                               dtype=float, compression=32001)
-        # Set last frame to nan, to identify the data set as unfinished
-        new_dataset[-1] = np.nan
-
+    if type(dataset_name) not in (tuple, list):
+        dataset_names = (dataset_name,)
     else:
-        new_dataset = hdf5_file[dataset_name]
+        dataset_names = dataset_name
 
-    is_unfinished = np.isnan(hdf5_file[dataset_name][-1]).any()
+    if type(dtype) is type:
+        dtypes = tuple([dtype for ds in dataset_names])
+    elif type(dtype) is tuple:
+        dtypes = dtype
+        assert len(dtypes) == len(dataset_names), "Number of dtypes and number of datasets is not" \
+                                                  " equal."
+    else:
+        raise TypeError("dtype must be of type \"type\" or tuple of types")
+
+    first_frame = trajectory_dataset[:1]
+    one_frame_shapes = [ff.shape for ff in selection_fct(first_frame)]
+
+    new_datasets = []
+    for dsn, ofs, dt in zip(dataset_names, one_frame_shapes, dtypes):
+        if dsn not in hdf5_file.keys():
+            print("# Did not find data set", dsn, "in HDF5 file")
+            new_dataset = hdf5_file.create_dataset(dsn, shape=(trajectory_dataset.shape[0],
+                                                   *ofs[1:]), dtype=dt, compression=32001)
+            # Set last frame to nan, to identify the data set as unfinished
+            new_dataset[-1] = np.nan
+
+        else:
+            new_dataset = hdf5_file[dsn]
+        new_datasets.append(new_dataset)
+
+    # Check if any dataset has not been completely written
+    is_unfinished = any([np.isnan(hdf5_file[dsn][-1]).any() for dsn in dataset_names])
     if is_unfinished or overwrite:
         if is_unfinished:
             print("# It looks like data set", dataset_name,
@@ -170,11 +209,16 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
             print("# Will overwrite now")
         start_time = time.time()
         for start, stop, traj_chunk in chunk(trajectory_dataset, chunk_size):
-            new_dataset[start:stop] = selection_fct(traj_chunk)
+            chunk_of_datasets = selection_fct(traj_chunk)
+            for ds, chnk in zip(new_datasets, chunk_of_datasets):
+                ds[start:stop] = chnk
             print("# Parsed frames: {: 6d}. {:.2f} fps".format(
                   stop, stop / (time.time() - start_time)), end="\r", flush=True, file=file)
 
-    return new_dataset
+    if len(new_datasets) == 1:
+        return new_datasets[0]
+
+    return new_datasets
 
 
 def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
