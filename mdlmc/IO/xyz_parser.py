@@ -155,9 +155,11 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
     -------
     new_dataset: HDF5 dataset or tuple of HDF5 datasets"""
 
+    # If selection is a function, leave it as it is
     if type(selection) in (types.FunctionType, types.MethodType, types.BuiltinFunctionType,
                            types.BuiltinMethodType):
         selection_fct = selection
+    # If not, make a function out of it
     else:
         if type(dataset_name) is tuple:
             raise TypeError("If a tuple of dataset names is given, selection needs to be a function"
@@ -166,10 +168,16 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
         def selection_fct(arr):
             return np.take(arr, selection, axis=1)
 
+    # If selection_fct does not return tuples, make it do that
     if type(dataset_name) not in (tuple, list):
         dataset_names = (dataset_name,)
+
+        def selection_fct_tup(arr):
+            return (selection_fct(arr),)
+
     else:
         dataset_names = dataset_name
+        selection_fct_tup = selection_fct
 
     if type(dtype) is type:
         dtypes = tuple([dtype for ds in dataset_names])
@@ -181,7 +189,7 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
         raise TypeError("dtype must be of type \"type\" or tuple of types")
 
     first_frame = trajectory_dataset[:1]
-    one_frame_shapes = [ff.shape for ff in selection_fct(first_frame)]
+    one_frame_shapes = [ff.shape for ff in selection_fct_tup(first_frame)]
 
     new_datasets = []
     for dsn, ofs, dt in zip(dataset_names, one_frame_shapes, dtypes):
@@ -209,7 +217,7 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
             print("# Will overwrite now")
         start_time = time.time()
         for start, stop, traj_chunk in chunk(trajectory_dataset, chunk_size):
-            chunk_of_datasets = selection_fct(traj_chunk)
+            chunk_of_datasets = selection_fct_tup(traj_chunk)
             for ds, chnk in zip(new_datasets, chunk_of_datasets):
                 ds[start:stop] = chnk
             print("# Parsed frames: {: 6d}. {:.2f} fps".format(
