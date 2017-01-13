@@ -149,19 +149,27 @@ def kmc_main(settings):
     kmc = KMCRoutine(atombox, oxygen_lattice, jumprate_function)
 
     if settings.rescale_parameters:
-        if verbose:
-            print("# Creating probability sum array for rescaled distances", file=settings.output)
-        probsums = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
-                                                       "probability_sums_rescaled",
-                                                       kmc.determine_probability_sums, chunk_size,
-                                                       overwrite=settings.overwrite_jumprates)
+        probname = "probabilities_rescaled"
+        rescaled = "rescaled "
     else:
-        if verbose:
-            print("# Creating probability sum array", file=settings.output)
-        probsums = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
-                                                       "probability_sums",
-                                                       kmc.determine_probability_sums, chunk_size,
-                                                       overwrite=settings.overwrite_jumprates)
+        probname = "probabilities"
+        rescaled = "unrescaled"
+
+    if verbose:
+        print("# Creating probability array for {}distances".format(rescaled), file=settings.output)
+    probabilities, indices = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
+                                                                 (probname, "indices"),
+                                                                 kmc.determine_probabilities,
+                                                                 chunk_size,
+                                                                 overwrite=settings.overwrite_jumprates)
+    if verbose:
+        print("# Creating probability sums {}".format(rescaled), file=settings.output)
+
+    rescaled = "_rescaled" if settings.rescale_parameters else ""
+    probsums = create_dataset_from_hdf5_trajectory(hdf5_file, probabilities,
+                                                   "probability_sums{}".format(rescaled),
+                                                   lambda x: np.sum(x, axis=-1), chunk_size,
+                                                   overwrite=settings.overwrite_jumprates)
 
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}"
 
