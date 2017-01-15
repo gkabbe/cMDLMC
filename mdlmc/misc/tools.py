@@ -8,6 +8,45 @@ import os
 import numpy as np
 
 
+def online_variance_generator(data_size=1, use_mask=False):
+    """Calculates the variance in one pass as described in
+    "https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance"
+
+    Parameters:
+    -----------
+    data_size: int or tuple of int
+        Size of the data
+    use_mask: bool
+        If True, both data and a mask must be sent to the generator in each step.
+    """
+    if type(data_size) is tuple or data_size > 1:
+        n = np.zeros(data_size)
+        mean = np.zeros(data_size)
+        M2 = np.zeros(data_size)
+        if not use_mask:
+            mask = slice(None)
+    else:
+        n, mean, M2 = np.zeros((3, 1))
+        mask = slice(0, 1)
+        if use_mask:
+            raise ValueError("use_mask can only be used if data size > 1")
+
+    while True:
+        # Get next data
+        x = yield
+        if use_mask:
+            mask = yield
+        else:
+            x = np.array(x, ndmin=1)
+        n[mask] += 1
+        delta = x - mean[mask]
+        mean[mask] += delta / n[mask]
+        delta2 = x - mean[mask]
+        M2[mask] += delta * delta2
+
+        yield np.where(n < 2, np.nan, M2 / (n - 1))
+
+
 def chunk(iterable, chunk_size, length=None):
     assert chunk_size > 0
     if not length:
