@@ -95,7 +95,7 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
         atom_box = AtomBoxCubic(pbc)
         nonorthorhombic_box = False
     elif len(pbc) == 9:
-        if args.verbose:
+        if verbose:
             print("# Got 9 PBC values. Assuming nonorthorhombic box")
         atom_box = AtomBoxMonoclinic(pbc)
         nonorthorhombic_box = True
@@ -159,10 +159,12 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
 
     print("")
     print("# Proton jump histogram:")
-    print("# Oxygen distance, jump probability, oxygen distance histogram")
+    print("# Oxygen Distance, Jump Probability, Oxygen Distance Histogram at Jump, "
+          "Oxygen Distance Histogram")
     print("#", 60 * "-")
-    for ox_dist, jump_prob, oxy_histo in zip(ox_dists, jump_probabilities, oxygen_distance_histo):
-        print("  {:>15.8f}  {:>16.8f}  {:>25}".format(ox_dist, jump_prob, oxy_histo))
+    for ox_dist, jump_prob, oxy_histo, ctr in zip(ox_dists, jump_probabilities,
+                                                  oxygen_distance_histo, counter):
+        print("  {:>15.8f}  {:>16.8f}  {:>25} {:>25}".format(ox_dist, jump_prob, oxy_histo, ctr))
 
 
 @argparse_compatible
@@ -211,14 +213,20 @@ def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
                 donor_indices = protonated_oxygens_before[proton_indices]
                 acceptor_indices = protonated_oxygens_after[proton_indices]
             oxygen_dists = atombox.length(
-                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), donor_indices],
-                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), acceptor_indices])
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
+                        donor_indices],
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
+                        acceptor_indices])
             donor_proton_dists = atombox.length(
-                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), donor_indices],
-                protons[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), proton_indices])
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
+                        donor_indices],
+                protons[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
+                        proton_indices])
             proton_acceptor_dists = atombox.length(
-                protons[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), proton_indices],
-                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)), acceptor_indices])
+                protons[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
+                        proton_indices],
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
+                        acceptor_indices])
 
             if not no_shuttling or (proton_acceptor_dists[time_window // 2:] < donor_proton_dists[
                     time_window // 2:]).all():
@@ -298,22 +306,25 @@ def main(*args):
                                  help="Periodic boundaries. If 3 values are given, an orthorhombic "
                                       "cell is assumed. If 9 values are given, the pbc vectors are "
                                       "constructed from them")
-    parser_jumpprob.add_argument("--dmin", type=float, default=2., help="Minimal value in Histogram")
-    parser_jumpprob.add_argument("--dmax", type=float, default=3., help="Maximal value in Histogram")
+    parser_jumpprob.add_argument("--dmin", type=float, default=2.,
+                                 help="Minimal value in Histogram")
+    parser_jumpprob.add_argument("--dmax", type=float, default=3.,
+                                 help="Maximal value in Histogram")
     parser_jumpprob.add_argument("--bins", type=int, default=100, help="Maximal value in Histogram")
     parser_jumpprob.add_argument("--time_delay", "-t", type=int, default=0,
-                                 help="Take time delay into account when measuring oxygen distances")
+                                 help="Take time delay into account when measuring oxygen "
+                                      "distances")
     parser_jumpprob.set_defaults(func=proton_jump_probability_at_oxygen_distance)
 
     parser_jumpmotion = subparsers.add_parser("jumpmotion")
     parser_jumpmotion.add_argument("filename", help="trajectory")
     parser_jumpmotion.add_argument("pbc", type=float, nargs="+",
-                                   help="Periodic boundaries. If 3 values are given, an orthorhombic"
-                                        " cell is assumed. If 9 values are given, the pbc vectors "
-                                        "are constructed from them")
+                                   help="Periodic boundaries. If 3 values are given, an "
+                                   "orthorhombic cell is assumed. If 9 values are given,"
+                                   " the pbc vectors are constructed from them")
     parser_jumpmotion.add_argument("--time_window", "-t", type=int, default=200,
-                                   help="Length of the time window over which the proton and oxygen "
-                                                                   "motion are averaged")
+                                   help="Length of the time window over which the proton and oxygen"
+                                        " motion are averaged")
     parser_jumpmotion.add_argument("--plot", action="store_true", help="Plot result")
     parser_jumpmotion.add_argument("--no_shuttling", action="store_true", help="Plot result")
     parser_jumpmotion.set_defaults(func=oxygen_and_proton_motion_during_a_jump)
