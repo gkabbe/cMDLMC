@@ -12,7 +12,7 @@ import matplotlib.pylab as plt
 from mdlmc.IO import xyz_parser
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxMonoclinic, AtomBoxCubic
-from mdlmc.misc.tools import argparse_compatible
+from mdlmc.misc.tools import argparse_compatible, online_variance_generator
 
 
 def determine_phosphorus_oxygen_pairs(oxygen_frame, phosphorus_frame, atom_box):
@@ -124,6 +124,8 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
     oxygen_trajectory, = npa.select_atoms(atoms, "O")
     counter = np.zeros(bins, int)
 
+    variance_gen = online_variance_generator(data_size=bins, use_mask=True)
+
     for frame in range(time_delay, oxygen_trajectory.shape[0] - 1):
         oxygen_distances_at_jump = []
         if verbose and frame % 1000 == 0:
@@ -151,20 +153,27 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
         histo_ox, edges = np.histogram(all_to_all, bins=bins, range=(dmin, dmax))
         mask = histo_ox != 0
         counter += mask
-        jump_probabilities[mask] += (np.asfarray(histo_jump[mask]) / histo_ox[mask])
+        jumpprobs_temp = (np.asfarray(histo_jump[mask]) / histo_ox[mask])
+        jump_probabilities[mask] += jumpprobs_temp
         oxygen_distance_histo += histo_jump
+        next(variance_gen)
+        variance_gen.send(jumpprobs_temp)
+        jumpprob_var = variance_gen.send(mask)
+
     jump_probabilities /= counter
 
     ox_dists = (edges[:-1] + edges[1:]) / 2
 
     print("")
     print("# Proton jump histogram:")
-    print("# Oxygen Distance, Jump Probability, Oxygen Distance Histogram at Jump, "
+    print("# Oxygen Distance, Jump Probability, Jump Prob Var, Oxygen Distance Histogram at Jump, "
           "Oxygen Distance Histogram")
     print("#", 60 * "-")
-    for ox_dist, jump_prob, oxy_histo, ctr in zip(ox_dists, jump_probabilities,
-                                                  oxygen_distance_histo, counter):
-        print("  {:>15.8f}  {:>16.8f}  {:>25} {:>25}".format(ox_dist, jump_prob, oxy_histo, ctr))
+    for ox_dist, jump_prob, jp_var, oxy_histo, ctr in zip(ox_dists, jump_probabilities,
+                                                          jumpprob_var, oxygen_distance_histo,
+                                                          counter):
+        print("  {:>15.8f}  {:>16.8f}  {:>16.8f} {:>25} {:>25}".format(ox_dist, jump_prob, jp_var,
+                                                                       oxy_histo, ctr))
 
 
 @argparse_compatible
