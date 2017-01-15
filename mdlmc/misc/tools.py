@@ -34,7 +34,7 @@ def chunk_trajectory(trajectory, chunk_size, length=None, selection=None):
     selection: array_like
         Expects a boolean array"""
 
-    assert chunk_size > 0
+    assert chunk_size > 0, "Chunk size must be greater than zero"
     if not length:
         length = trajectory.shape[0]
     starts = range(0, length, chunk_size)
