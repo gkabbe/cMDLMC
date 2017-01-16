@@ -9,7 +9,7 @@ import numpy as np
 from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory
 from mdlmc.IO.config_parser import load_configfile, print_settings, print_config_template, print_confighelp
 from mdlmc.misc.tools import chunk, argparse_compatible
-from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, ExponentialFunction
+from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, FermiFunction
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWater, AtomBoxWaterLinearConversion, \
     AtomBoxWaterRampConversion
 from mdlmc.LMC.MDMC import initialize_oxygen_lattice
@@ -144,8 +144,9 @@ def kmc_main(settings):
             raise ValueError("Unknown rescale function name", settings.rescale_function)
     else:
         atombox = AtomBoxCubic(settings.pbc)
-    a, b = settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"]
-    jumprate_function = ExponentialFunction(a, b)
+    a, b, c = settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"], \
+              settings.jumprate_params_fs["c"]
+    jumprate_function = FermiFunction(a, b, c)
     kmc = KMCRoutine(atombox, oxygen_lattice, jumprate_function)
 
     if settings.rescale_parameters:
