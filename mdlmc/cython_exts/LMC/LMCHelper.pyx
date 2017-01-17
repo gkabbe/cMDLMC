@@ -339,7 +339,8 @@ cdef class LMCRoutine:
         print("In total", self.start_indices[frame].size(), "connections")
 
     def return_transitions(self, int frame):
-        return self.start_indices[frame], self.destination_indices[frame], self.jump_probability[frame]
+        return self.start_indices[frame], self.destination_indices[frame], \
+               self.jump_probability[frame]
 
     def store_jumprates(self, *, bool use_neighborlist=False, bool verbose=False):
         cdef int i
