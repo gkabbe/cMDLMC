@@ -135,42 +135,60 @@ def kmc_main(settings):
     oxygen_lattice = initialize_oxygen_lattice(oxygen_number, 1)
     proton_position, = np.where(oxygen_lattice)[0]
 
-    if settings.rescale_parameters:
-        if settings.rescale_function == "linear":
-            atombox = AtomBoxWaterLinearConversion(settings.pbc, settings.rescale_parameters)
-        elif settings.rescale_function == "ramp_function":
-            atombox = AtomBoxWaterRampConversion(settings.pbc, settings.rescale_parameters)
-        else:
-            raise ValueError("Unknown rescale function name", settings.rescale_function)
-    else:
-        atombox = AtomBoxCubic(settings.pbc)
-    a, b, c = settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"], \
-              settings.jumprate_params_fs["c"]
-    jumprate_function = FermiFunction(a, b, c)
-    kmc = KMCRoutine(atombox, oxygen_lattice, jumprate_function)
+    atombox_cubic = AtomBoxCubic(settings.pbc)
 
     if settings.rescale_parameters:
-        probname = "probabilities_rescaled"
+        if settings.rescale_function == "linear":
+            atombox_rescale = AtomBoxWaterLinearConversion(settings.pbc, settings.rescale_parameters)
+        elif settings.rescale_function == "ramp_function":
+            atombox_rescale = AtomBoxWaterRampConversion(settings.pbc, settings.rescale_parameters)
+        else:
+            raise ValueError("Unknown rescale function name", settings.rescale_function)
+
+    a, b, c = settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"], \
+              settings.jumprate_params_fs["c"]
+
+    jumprate_function = FermiFunction(a, b, c)
+    kmc = KMCRoutine(atombox_cubic, oxygen_lattice, jumprate_function)
+    if settings.rescale_parameters:
+        kmc_rescale = KMCRoutine(atombox_rescale, oxygen_lattice, jumprate_function)
+
+    if settings.rescale_parameters:
+        distname = "distances_rescaled"
         rescaled = "rescaled "
     else:
-        probname = "probabilities"
+        distname = "distances"
         rescaled = "unrescaled"
 
     if verbose:
-        print("# Creating probability array for {}distances".format(rescaled), file=settings.output)
-    probabilities, indices = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
-                                                                 (probname, "indices"),
-                                                                 kmc.determine_probabilities,
-                                                                 chunk_size, dtype=(float, int),
-                                                                 overwrite=settings.overwrite_jumprates)
+        print("# Creating array of distances", file=settings.output)
+    distances, indices = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
+                                                             ("distances", "indices"),
+                                                             kmc.determine_distances,
+                                                             chunk_size, dtype=(float, int),
+                                                             overwrite=settings.overwrite_jumprates)
+
+    if settings.rescale_parameters:
+        if verbose:
+            print("# Creating array of rescaled distances")
+        distances_rescaled, indices = create_dataset_from_hdf5_trajectory(
+            hdf5_file, oxygen_trajectory, ("distances_rescaled", "indices"),
+            kmc_rescale.determine_distances, chunk_size, dtype=(float, int),
+            overwrite=settings.overwrite_jumprates)
+
     if verbose:
         print("# Creating probability sums {}".format(rescaled), file=settings.output)
 
-    rescaled = "_rescaled" if settings.rescale_parameters else ""
-    probsums = create_dataset_from_hdf5_trajectory(hdf5_file, probabilities,
-                                                   "probability_sums{}".format(rescaled),
-                                                   lambda x: np.sum(x, axis=-1), chunk_size,
-                                                   overwrite=settings.overwrite_jumprates)
+    probsums = create_dataset_from_hdf5_trajectory(
+        hdf5_file, distances, "probability_sums".format(rescaled),
+        lambda x: np.sum(fermi(x, a, b, c), axis=-1), chunk_size,
+        overwrite=settings.overwrite_jumprates)
+
+    if settings.rescale_parameters:
+        probsums_rescaled = create_dataset_from_hdf5_trajectory(
+            hdf5_file, distances_rescaled, "probability_sums_rescaled".format(rescaled),
+            lambda x: np.sum(fermi(x, a, b, c), axis=-1), chunk_size,
+            overwrite=settings.overwrite_jumprates)
 
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}"
 
