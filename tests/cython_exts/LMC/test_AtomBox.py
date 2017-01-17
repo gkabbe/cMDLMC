@@ -154,7 +154,7 @@ class TestAtomBoxes(unittest.TestCase):
             angle_m = self.atombox_monoclinic.angle(atom_1[i], atom_2[i], atom_3[i])
 
             self.assertTrue(np.isclose(dist_c, dist_m).all())
-            self.assertAlmostEqual(len_c, len_m)
+            self.assertTrue(np.allclose(len_c, len_m))
             self.assertAlmostEqual(angle_c, angle_m)
 
     def test_length_all_to_all(self):
