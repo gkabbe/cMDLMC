@@ -427,18 +427,20 @@ cdef class KMCRoutine:
         self.proton_position = proton_positions[0]
 
     @cython.wraparound(True)
-    def determine_probabilities(self, double [:, :, ::1] oxygen_trajectory, double upper_bound=1e8):
+    def determine_distances(self, double [:, :, ::1] oxygen_trajectory, double upper_bound=1e8):
         """Save probabilities for the closest 3 oxygens.
         This corresponds to the first solvation shell of H2O."""
         cdef:
             int f, i, j, k
-            np.ndarray[np.float32_t, ndim=3] probs
+            np.ndarray[np.float32_t, ndim=3] dist_array
             np.ndarray[np.int32_t, ndim=3] all_indices
             vector[double] distances
             vector[size_t] neighbor_indices
 
-        all_indices = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3), dtype=np.int32)
-        probs = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3), dtype=np.float32)
+        all_indices = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3),
+                               dtype=np.int32)
+        dist_array = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3),
+                         dtype=np.float32)
 
         # indices stores the indices of the three closest oxygen neighbors
         neighbor_indices.resize(3)
@@ -457,14 +459,15 @@ cdef class KMCRoutine:
                             # Set atom's distance to itself to large value, so it won't find
                             # itself as a neighbor
                             distances.push_back(10**8)
-                    gsl_sort_smallest_index(&neighbor_indices[0], 3, &distances[0], 1, distances.size())
+                    gsl_sort_smallest_index(&neighbor_indices[0], 3, &distances[0], 1,
+                                            distances.size())
 
                     for k in range(3):
-                        probs[f, i, k] = self.jumprate_fct._evaluate(distances[neighbor_indices[k]])
-                        probs[f, i, k] = self.jumprate_fct._evaluate(distances[neighbor_indices[k]])
-                        probs[f, i, k] = self.jumprate_fct._evaluate(distances[neighbor_indices[k]])
+                        dist_array[f, i, k] = distances[neighbor_indices[k]]
+                        dist_array[f, i, k] = distances[neighbor_indices[k]]
+                        dist_array[f, i, k] = distances[neighbor_indices[k]]
                         all_indices[f, i, k] = neighbor_indices[k]
-        return probs, all_indices
+        return dist_array, all_indices
 
     def determine_transition(self, double[:, ::1] oxygen_frame):
         cdef:
