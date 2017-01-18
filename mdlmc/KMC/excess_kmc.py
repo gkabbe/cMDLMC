@@ -15,6 +15,10 @@ from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWater, AtomBoxW
 from mdlmc.LMC.MDMC import initialize_oxygen_lattice
 
 
+def fermi(x, a, b, c):
+    return a / (1 + np.exp(-(x - b) / c))
+
+
 def get_hdf5_filename(trajectory_fname):
     root, ext = os.path.splitext(trajectory_fname)
     if ext == ".hdf5":
@@ -62,6 +66,9 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_le
         Difference between current time and the time of the next event
     """
 
+    # Arbitrary guess
+    relaxation_frames = 200
+
     time_selector = -np.log(1 - np.random.random())
 
     # Handle case where time selector is so small that the next frame is not reached
@@ -88,6 +95,43 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_le
     rest = time_selector - current_prob
     delta_t += (delta_frame - 1) * dt + rest / probsums[frame, proton_position]
     return delta_frame, delta_t
+
+
+def trajectory_generator(hdf5_dataset, chunk_size=10000):
+    while True:
+        for start, stop, chk in chunk(hdf5_dataset, chunk_size=chunk_size):
+            for frame in chk:
+                yield frame
+
+
+class KMCGen:
+    def __init__(self, oxy_idx, distances, distances_rescaled, jumprate_fct, jumprate_params):
+        self.oxy_idx = oxy_idx
+        self.delay = 0
+        self.distances = distances
+        self.distances_rescaled = distances_rescaled
+        self.jumprate_fct = jumprate_fct
+        self.jumprate_params = jumprate_params
+
+    def distance_generator(self):
+        distance_gen = trajectory_generator(self.distances)
+        distance_rescaled_gen = trajectory_generator(self.distances_rescaled)
+
+        while True:
+            if self.delay:
+                for i in range(self.delay):
+                    dist = next(distance_gen)[self.oxy_idx]
+                    dist_rescaled = next(distance_rescaled_gen)[self.oxy_idx]
+                    yield dist + i / (self.delay - 1) * (dist_rescaled - dist)
+                self.delay = 0
+            else:
+                yield next(distance_rescaled_gen)[self.oxy_idx]
+
+    def probsum_generator(self):
+        distance_gen = self.distance_generator()
+        while True:
+            for dists in distance_gen:
+                yield self.jumprate_fct(dists, *self.jumprate_params)
 
 
 def kmc_main(settings):
