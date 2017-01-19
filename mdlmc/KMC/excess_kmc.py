@@ -69,35 +69,39 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_le
     # Arbitrary guess
     relaxation_frames = 200
 
-    time_selector = -np.log(1 - np.random.random())
+    while True:
+        time_selector = -np.log(1 - np.random.random())
 
-    # Handle case where time selector is so small that the next frame is not reached
-    t_trial = time_selector / probsums[frame, proton_position]
-    if (time + t_trial) // dt == time // dt:
-        return 0, t_trial
+        # Handle case where time selector is so small that the next frame is not reached
+        probsum = next(probsums)
+        t_trial = time_selector / probsum
+        if (time + t_trial) // dt == time // dt:
+            return 0, t_trial
 
-    delta_t, delta_frame = dt - time % dt, 1
-    current_prob = probsums[frame, proton_position] * delta_t
-    next_frame = frame + 1
-    if next_frame == traj_len:
-        next_frame = 0
-    next_prob = current_prob + probsums[next_frame, proton_position] * dt
-
-    while next_prob < time_selector:
-        delta_frame += 1
-        frame = next_frame
+        delta_t, delta_frame = dt - time % dt, 1
+        current_prob = probsum * delta_t
         next_frame = frame + 1
         if next_frame == traj_len:
             next_frame = 0
-        current_prob = next_prob
-        next_prob = current_prob + probsums[next_frame, proton_position] * dt
+        next_prob = current_prob + next(probsums) * dt
 
-    rest = time_selector - current_prob
-    delta_t += (delta_frame - 1) * dt + rest / probsums[frame, proton_position]
-    return delta_frame, delta_t
+        while next_prob < time_selector:
+            delta_frame += 1
+            frame = next_frame
+            next_frame = frame + 1
+            if next_frame == traj_len:
+                next_frame = 0
+            current_prob = next_prob
+            next_prob = current_prob + next(probsums) * dt
+
+        rest = time_selector - current_prob
+        delta_t += (delta_frame - 1) * dt + rest / probsums[frame, proton_position]
+        # TODO: take care of probsum rest!!!
+        yield delta_frame, delta_t
 
 
-def trajectory_generator(hdf5_dataset, chunk_size=10000):
+def trajectory_generator(trajectory, chunk_size=10000):
+    """Chunks the HDF5 trajectory first before yielding it"""
     while True:
         for start, stop, chk in chunk(hdf5_dataset, chunk_size=chunk_size):
             for frame in chk:
