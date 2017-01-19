@@ -1,6 +1,5 @@
 import argparse
 import os
-import time
 
 import tables
 import h5py
@@ -225,25 +224,16 @@ def kmc_main(settings):
             kmc_rescale.determine_distances, chunk_size, dtype=(float, int),
             overwrite=settings.overwrite_jumprates)
 
-    if verbose:
-        print("# Creating probability sums {}".format(rescaled), file=settings.output)
-
-    probsums = create_dataset_from_hdf5_trajectory(
-        hdf5_file, distances, "probability_sums".format(rescaled),
-        lambda x: np.sum(fermi(x, a, b, c), axis=-1), chunk_size,
-        overwrite=settings.overwrite_jumprates)
-
-    if settings.rescale_parameters:
-        probsums_rescaled = create_dataset_from_hdf5_trajectory(
-            hdf5_file, distances_rescaled, "probability_sums_rescaled".format(rescaled),
-            lambda x: np.sum(fermi(x, a, b, c), axis=-1), chunk_size,
-            overwrite=settings.overwrite_jumprates)
-
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}"
+
+    kmc_gen = KMCGen(proton_position, distances, distances_rescaled, fermi, (a, b, c))
+    fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
+
+    probsum_gen = kmc_gen.jumprate_generator()
 
     while sweep < total_sweeps:
 
-        delta_frame, delta_time = fastforward_to_next_jump(probsums, proton_position, timestep_md,
+        delta_frame, delta_time = fastforward_to_next_jump(probsum_gen, proton_position, timestep_md,
                                                            frame, current_time, trajectory_length)
 
         for i in range(sweep, sweep + delta_frame):
