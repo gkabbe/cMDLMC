@@ -38,25 +38,22 @@ def kmc_state_to_xyz(oxygens, protons, oxygen_lattice):
     print("S", " ".join([3 * "{:14.8f}"]).format(*oxygens[oxygen_index]))
 
 
-def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_len):
+def fastforward_to_next_jump(jumprates, dt):
     """Implements Kinetic Monte Carlo with time-dependent rates.
 
     Parameters
     ----------
-    probsums : array_like
-        Array containing the probability of a proton jump for every possible proton position
-        at every frame in the trajectory. Shape: (Trajectory length, No. of oxygen atoms)
+    jumprates : generator / iterator
         Unit: femtosecond^{-1}
+        Proton jump rate from an oxygen site to any neighbor
     proton_position : int
         Index of oxygen at which the excess proton is residing.
     dt : float
         Trajectory time step
     frame : int
-        Frame index of trajectory
+        Start frame
     time : float
-        Time passed
-    traj_len: int
-        Trajectory length
+        Start time
 
     Returns
     -------
@@ -68,36 +65,33 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_le
 
     # Arbitrary guess
     relaxation_frames = 200
+    frame, time = 0, 0
 
+    current_rate = next(jumprates)
     while True:
         time_selector = -np.log(1 - np.random.random())
 
         # Handle case where time selector is so small that the next frame is not reached
-        probsum = next(probsums)
-        t_trial = time_selector / probsum
+        t_trial = time_selector / current_rate
         if (time + t_trial) // dt == time // dt:
-            return 0, t_trial
+            time += t_trial
+            yield 0, t_trial
+        else:
+            delta_t, delta_frame = dt - time % dt, 1
+            current_probsum = current_rate * delta_t
+            next_rate = next(jumprates)
+            next_probsum = current_probsum + next_rate * dt
 
-        delta_t, delta_frame = dt - time % dt, 1
-        current_prob = probsum * delta_t
-        next_frame = frame + 1
-        if next_frame == traj_len:
-            next_frame = 0
-        next_prob = current_prob + next(probsums) * dt
+            while next_probsum < time_selector:
+                delta_frame += 1
+                current_probsum = next_probsum
+                next_rate = next(jumprates)
+                next_probsum = current_probsum + next_rate * dt
 
-        while next_prob < time_selector:
-            delta_frame += 1
-            frame = next_frame
-            next_frame = frame + 1
-            if next_frame == traj_len:
-                next_frame = 0
-            current_prob = next_prob
-            next_prob = current_prob + next(probsums) * dt
-
-        rest = time_selector - current_prob
-        delta_t += (delta_frame - 1) * dt + rest / probsums[frame, proton_position]
-        # TODO: take care of probsum rest!!!
-        yield delta_frame, delta_t
+            rest = time_selector - current_probsum
+            delta_t += (delta_frame - 1) * dt + rest / next_rate
+            time += delta_t
+            yield delta_frame, delta_t
 
 
 def trajectory_generator(trajectory, chunk_size=10000):
