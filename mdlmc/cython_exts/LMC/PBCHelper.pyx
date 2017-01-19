@@ -288,7 +288,7 @@ cdef class AtomBoxWater(AtomBoxCubic):
     cdef double left_bound, right_bound
 
     cdef double convert_distance(self, double distance) nogil:
-        return 0
+        return distance
 
     cdef double length_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len,
                                           int index_2, double * frame_2, int frame_2_len) nogil:
