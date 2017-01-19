@@ -120,12 +120,16 @@ class KMCGen:
         while True:
             if self.delay:
                 for i in range(self.delay):
-                    dist = next(distance_gen)[self.oxy_idx]
-                    dist_rescaled = next(distance_rescaled_gen)[self.oxy_idx]
-                    yield dist + i / (self.delay - 1) * (dist_rescaled - dist)
+                    _, dist = next(distance_gen)
+                    dist = dist[self.oxy_idx]
+                    counter, dist_rescaled = next(distance_rescaled_gen)
+                    dist_rescaled = dist_rescaled[self.oxy_idx]
+                    yield counter, dist + i / self.delay * (dist_rescaled - dist)
                 self.delay = 0
             else:
-                yield next(distance_rescaled_gen)[self.oxy_idx]
+                counter, dist = next(distance_rescaled_gen)
+                dist = dist[self.oxy_idx]
+                yield counter, dist
 
     def probsum_generator(self):
         distance_gen = self.distance_generator()
