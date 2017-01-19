@@ -64,8 +64,7 @@ def fastforward_to_next_jump(jumprates, dt):
     """
 
     # Arbitrary guess
-    relaxation_frames = 200
-    frame, time = 0, 0
+    frame, kmc_time = 0, 0
 
     current_rate = next(jumprates)
     while True:
@@ -73,11 +72,11 @@ def fastforward_to_next_jump(jumprates, dt):
 
         # Handle case where time selector is so small that the next frame is not reached
         t_trial = time_selector / current_rate
-        if (time + t_trial) // dt == time // dt:
-            time += t_trial
-            yield 0, t_trial
+        if (kmc_time + t_trial) // dt == kmc_time // dt:
+            kmc_time += t_trial
+            yield frame, 0, kmc_time
         else:
-            delta_t, delta_frame = dt - time % dt, 1
+            delta_t, delta_frame = dt - kmc_time % dt, 1
             current_probsum = current_rate * delta_t
             next_rate = next(jumprates)
             next_probsum = current_probsum + next_rate * dt
@@ -90,8 +89,9 @@ def fastforward_to_next_jump(jumprates, dt):
 
             rest = time_selector - current_probsum
             delta_t += (delta_frame - 1) * dt + rest / next_rate
-            time += delta_t
-            yield delta_frame, delta_t
+            kmc_time += delta_t
+            frame += delta_frame
+            yield frame, delta_frame, kmc_time
 
 
 def trajectory_generator(trajectory, chunk_size=10000):
