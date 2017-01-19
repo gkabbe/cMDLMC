@@ -102,10 +102,12 @@ def fastforward_to_next_jump(probsums, proton_position, dt, frame, time, traj_le
 
 def trajectory_generator(trajectory, chunk_size=10000):
     """Chunks the HDF5 trajectory first before yielding it"""
+    counter = 0
     while True:
-        for start, stop, chk in chunk(hdf5_dataset, chunk_size=chunk_size):
+        for start, stop, chk in chunk(trajectory, chunk_size=chunk_size):
             for frame in chk:
-                yield frame
+                yield counter, frame
+                counter += 1
 
 
 class KMCGen:
