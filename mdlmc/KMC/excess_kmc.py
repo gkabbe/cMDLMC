@@ -131,11 +131,12 @@ class KMCGen:
                 dist = dist[self.oxy_idx]
                 yield counter, dist
 
-    def probsum_generator(self):
+    def jumprate_generator(self):
         distance_gen = self.distance_generator()
         while True:
-            for dists in distance_gen:
-                yield self.jumprate_fct(dists, *self.jumprate_params)
+            for counter, dists in distance_gen:
+                prob = self.jumprate_fct(dists, *self.jumprate_params).sum()
+                yield counter, prob
 
 
 def kmc_main(settings):
