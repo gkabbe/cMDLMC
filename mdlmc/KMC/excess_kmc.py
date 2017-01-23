@@ -105,6 +105,10 @@ def trajectory_generator(trajectory, chunk_size=10000):
 
 
 class KMCGen:
+    """Class responsible for the generation of distances and jump rates.
+    If relaxation_time is set, distances will be larger after a proton jump,
+    and linearly decrease to the rescaled distances within the set relaxation time."""
+
     def __init__(self, oxy_idx, distances, distances_rescaled, jumprate_fct, jumprate_params):
         self.oxy_idx = oxy_idx
         self.relaxation_time = 0
