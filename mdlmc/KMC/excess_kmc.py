@@ -56,14 +56,15 @@ def fastforward_to_next_jump(jumprates, dt):
 
     Returns
     -------
+    frame: int
+        Frame at which the next event occurs
     delta_frame : int
         Difference between frame and the index at which the next event occurs
     delta_t : float
         Difference between current time and the time of the next event
     """
 
-    # Arbitrary guess
-    frame, kmc_time = 0, 0
+    sweep, kmc_time = 0, 0
 
     current_rate = next(jumprates)
     while True:
@@ -73,7 +74,7 @@ def fastforward_to_next_jump(jumprates, dt):
         t_trial = time_selector / current_rate
         if (kmc_time + t_trial) // dt == kmc_time // dt:
             kmc_time += t_trial
-            yield frame, 0, kmc_time
+            delta_frame = 0
         else:
             delta_t, delta_frame = dt - kmc_time % dt, 1
             current_probsum = current_rate * delta_t
@@ -89,8 +90,8 @@ def fastforward_to_next_jump(jumprates, dt):
             rest = time_selector - current_probsum
             delta_t += (delta_frame - 1) * dt + rest / next_rate
             kmc_time += delta_t
-            frame += delta_frame
-            yield frame, delta_frame, kmc_time
+        sweep += delta_frame
+        yield sweep, delta_frame, kmc_time
 
 
 def trajectory_generator(trajectory, chunk_size=10000):
