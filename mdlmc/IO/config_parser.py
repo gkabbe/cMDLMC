@@ -402,6 +402,15 @@ CONFIG_DICT = {
              "default": 1000,
              "help": "Chunk size"
          }),
+        ("relaxation_time",
+         {
+             "parse_fct": parse_int,
+             "default": "no_default",
+             "help": "Express the next-neighbor distances as a linear combination between the "
+                     "relaxed and the unrelaxed distances. After a jump the distances are equal "
+                     "to the unrelaxed distances and will decrease within <relaxation_time> to"
+                     "the relaxed distances."
+         }),
         ("pbc",
          {
             "parse_fct": get_pbc,
