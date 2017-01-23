@@ -6,10 +6,11 @@ import h5py
 import numpy as np
 
 from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory
-from mdlmc.IO.config_parser import load_configfile, print_settings, print_config_template, print_confighelp
-from mdlmc.misc.tools import chunk, argparse_compatible
+from mdlmc.IO.config_parser import load_configfile, print_settings, print_config_template, \
+        print_confighelp
+from mdlmc.misc.tools import chunk
 from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, FermiFunction
-from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWater, AtomBoxWaterLinearConversion, \
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWaterLinearConversion, \
     AtomBoxWaterRampConversion
 from mdlmc.LMC.MDMC import initialize_oxygen_lattice
 
@@ -171,13 +172,15 @@ def kmc_main(settings):
     oxygen_indices, = np.where(atom_names == "O")
     if verbose:
         print("# Loading oxygen trajectory", file=settings.output)
-    oxygen_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory, "oxygen_trajectory",
+    oxygen_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory,
+                                                            "oxygen_trajectory",
                                                             oxygen_indices, chunk_size)
 
     proton_indices = np.where(atom_names == "H")
     if verbose:
         print("# Loading proton trajectory", file=settings.output)
-    proton_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory, "proton_trajectory",
+    proton_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory,
+                                                            "proton_trajectory",
                                                             proton_indices, chunk_size)
 
     trajectory_length = oxygen_trajectory.shape[0]
@@ -196,14 +199,15 @@ def kmc_main(settings):
 
     if settings.rescale_parameters:
         if settings.rescale_function == "linear":
-            atombox_rescale = AtomBoxWaterLinearConversion(settings.pbc, settings.rescale_parameters)
+            atombox_rescale = AtomBoxWaterLinearConversion(settings.pbc,
+                                                           settings.rescale_parameters)
         elif settings.rescale_function == "ramp_function":
             atombox_rescale = AtomBoxWaterRampConversion(settings.pbc, settings.rescale_parameters)
         else:
             raise ValueError("Unknown rescale function name", settings.rescale_function)
 
-    a, b, c = settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"], \
-              settings.jumprate_params_fs["c"]
+    a, b, c = (settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"],
+               settings.jumprate_params_fs["c"])
 
     jumprate_function = FermiFunction(a, b, c)
     kmc = KMCRoutine(atombox_cubic, oxygen_lattice, jumprate_function)
