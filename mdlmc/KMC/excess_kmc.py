@@ -107,36 +107,40 @@ def trajectory_generator(trajectory, chunk_size=10000):
 class KMCGen:
     def __init__(self, oxy_idx, distances, distances_rescaled, jumprate_fct, jumprate_params):
         self.oxy_idx = oxy_idx
-        self.delay = 0
+        self.relaxation_time = 0
         self.distances = distances
         self.distances_rescaled = distances_rescaled
         self.jumprate_fct = jumprate_fct
         self.jumprate_params = jumprate_params
+        self.current_frame = 0
 
     def distance_generator(self):
         distance_gen = trajectory_generator(self.distances)
         distance_rescaled_gen = trajectory_generator(self.distances_rescaled)
 
         while True:
-            if self.delay:
-                for i in range(self.delay):
+            if self.relaxation_time:
+                for i in range(self.relaxation_time):
                     _, dist = next(distance_gen)
                     dist = dist[self.oxy_idx]
                     counter, dist_rescaled = next(distance_rescaled_gen)
                     dist_rescaled = dist_rescaled[self.oxy_idx]
-                    yield counter, dist + i / self.delay * (dist_rescaled - dist)
-                self.delay = 0
+                    yield dist + i / self.relaxation_time * (dist_rescaled - dist)
+                    self.current_frame = counter
+                self.relaxation_time = 0
             else:
                 counter, dist = next(distance_rescaled_gen)
                 dist = dist[self.oxy_idx]
-                yield counter, dist
+                yield dist
+                self.current_frame = counter
 
     def jumprate_generator(self):
         distance_gen = self.distance_generator()
         while True:
-            for counter, dists in distance_gen:
-                prob = self.jumprate_fct(dists, *self.jumprate_params).sum()
-                yield counter, prob
+            for dists in distance_gen:
+                prob = self.jumprate_fct(dists, *self.jumprate_params)
+                self.prob = prob
+                yield prob.sum()
 
 
 def kmc_main(settings):
@@ -173,11 +177,11 @@ def kmc_main(settings):
                                                             proton_indices, chunk_size)
 
     trajectory_length = oxygen_trajectory.shape[0]
-    current_time, timestep_md = 0, settings.md_timestep_fs
-    frame, sweep, jumps = 0, 0, 0
+    timestep_md = settings.md_timestep_fs
     total_sweeps = settings.sweeps
     xyz_output = settings.xyz_output
     print_frequency = settings.print_frequency
+    relaxation_time = settings.relaxation_time
 
     oxygen_number = len(oxygen_indices)
     # Initialize with one excess proton
@@ -202,15 +206,7 @@ def kmc_main(settings):
     if settings.rescale_parameters:
         kmc_rescale = KMCRoutine(atombox_rescale, oxygen_lattice, jumprate_function)
 
-    if settings.rescale_parameters:
-        distname = "distances_rescaled"
-        rescaled = "rescaled "
-    else:
-        distname = "distances"
-        rescaled = "unrescaled"
-
-    if verbose:
-        print("# Creating array of distances", file=settings.output)
+    print("# Creating array of distances", file=settings.output)
     distances, indices = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
                                                              ("distances", "indices"),
                                                              kmc.determine_distances,
@@ -230,14 +226,13 @@ def kmc_main(settings):
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, fermi, (a, b, c))
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
 
-    probsum_gen = kmc_gen.jumprate_generator()
+    kmc_time, frame, sweep, jumps = 0, 0, 0, 0
 
     while sweep < total_sweeps:
+        next_sweep, delta_frame, kmc_time = next(fastforward_gen)
+        frame = sweep % trajectory_length
 
-        delta_frame, delta_time = fastforward_to_next_jump(probsum_gen, proton_position, timestep_md,
-                                                           frame, current_time, trajectory_length)
-
-        for i in range(sweep, sweep + delta_frame):
+        for i in range(sweep, next_sweep):
             if i % print_frequency == 0:
                 if xyz_output:
                     kmc_state_to_xyz(oxygen_trajectory[i % trajectory_length],
@@ -247,24 +242,17 @@ def kmc_main(settings):
                                                *oxygen_trajectory[i % trajectory_length, proton_position],
                                                jumps), flush=True, file=settings.output)
 
-        frame = (frame + delta_frame) % trajectory_length
-        sweep += delta_frame
-        current_time += delta_time
         jumps += 1
+        sweep = next_sweep
 
-        probs = np.cumsum(probabilities[frame, proton_position])
+        probs = kmc_gen.prob
         neighbor_indices = indices[frame, proton_position]
         random_draw = np.random.uniform(0, probs[-1])
         ix = np.searchsorted(probs, random_draw)
         proton_position = neighbor_indices[ix]
-
-        if sweep % print_frequency == 0:
-            if xyz_output:
-                kmc_state_to_xyz(oxygen_trajectory[frame], proton_trajectory[frame],
-                                 oxygen_lattice)
-            else:
-                print(output_format.format(sweep, current_time, *oxygen_trajectory[frame, proton_position],
-                                           jumps), flush=True, file=settings.output)
+        kmc_gen.oxy_idx = proton_position
+        # After a jump, the relaxation time is increased
+        kmc_gen.relaxation_time = relaxation_time
 
 
 def main(*args):
