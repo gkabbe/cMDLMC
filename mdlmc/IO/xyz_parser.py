@@ -222,7 +222,7 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
                 ds[start:stop] = chnk
             print("# Parsed frames: {: 6d}. {:.2f} fps".format(
                   stop, stop / (time.time() - start_time)), end="\r", flush=True, file=file)
-
+        print(file=file)
     if len(new_datasets) == 1:
         return new_datasets[0]
 
