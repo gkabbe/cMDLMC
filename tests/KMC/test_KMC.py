@@ -134,7 +134,7 @@ class TestGenerators(unittest.TestCase):
 
         # Assert that the delay results in larger distances, which will be scaled linearly down
         # to the scaled distances
-        kmcgen.delay = 6
+        kmcgen.relaxation_time = 6
         for i in range(6):
             counter, dist = next(distance_gen)
             self.assertGreater(dist[0], distances_rescaled[0, 0, 0], "The distance should be "
@@ -169,7 +169,7 @@ class TestGenerators(unittest.TestCase):
                 break
 
         probsum_gen = kmcgen.jumprate_generator()
-        kmcgen.delay = 20
+        kmcgen.relaxation_time = 20
         for frame, probsum in probsum_gen:
             print(frame, probsum)
             if frame == 20:
