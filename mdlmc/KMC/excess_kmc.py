@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 
 import tables
 import h5py
@@ -229,13 +230,14 @@ def kmc_main(settings):
             kmc_rescale.determine_distances, chunk_size, dtype=(float, int),
             overwrite=settings.overwrite_jumprates)
 
-    output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d}"
+    output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:8.2f} fps"
 
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, fermi, (a, b, c))
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
 
     kmc_time, frame, sweep, jumps = 0, 0, 0, 0
 
+    start_time = time.time()
     while sweep < total_sweeps:
         next_sweep, delta_frame, kmc_time = next(fastforward_gen)
         frame = sweep % trajectory_length
@@ -248,7 +250,8 @@ def kmc_main(settings):
                 else:
                     print(output_format.format(i, i * timestep_md,
                                                *oxygen_trajectory[i % trajectory_length, proton_position],
-                                               jumps), flush=True, file=settings.output)
+                                               jumps, i / (time.time() - start_time)),
+                          flush=True, file=settings.output)
 
         jumps += 1
         sweep = next_sweep
