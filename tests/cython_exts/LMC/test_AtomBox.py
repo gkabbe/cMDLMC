@@ -175,28 +175,20 @@ class TestAtomBoxes(unittest.TestCase):
 
 class TestAtomBoxWater(unittest.TestCase):
     def test_length(self):
-        def conversion(distance, a, b, c, d):
-            return a * distance + b / (distance + c) + d
+        def conversion(distance, a, b, d0, left_bound, right_bound):
+            return np.where(distance < d0, b, a * (distance - d0) + b)
 
         pbc = np.asfarray([100, 100, 100])
-        parameters = [0.26223111, -0.17704908, -3.37329752, 1.50342535, 2.23270176, 3.0]
+        parameters = dict(a=0.97672, b=2.342541, d0=2.578514, left_bound=2.34, right_bound=3.058)
         atoms1 = np.zeros((100, 3))
         atoms2 = np.zeros((100, 3))
         atoms2[:, 2] = np.random.uniform(2.3, 2.9, size=100)
 
-        atombox = AtomBoxWater(pbc, *parameters)
+        atombox = AtomBoxWaterRampConversion(pbc, parameters)
 
         diffs = atombox.length(atoms1, atoms2)
-        print(diffs[diffs >= atoms2[:, 2]], atoms2[:, 2][diffs >= atoms2[:, 2]])
 
-        # import matplotlib.pylab as plt
-        distance = np.linspace(2.3, 2.9, 100)
-        # plt.plot(atoms2[:, 2], diffs, "^")
-        # plt.plot(atoms2[:, 2], atoms2[:, 2])
-        # plt.plot(distance, conversion(distance, *parameters[:4]))
-        # plt.show()
-
-        self.assertTrue((diffs < atoms2[:, 2]).all())
+        self.assertTrue((diffs <= atoms2[:, 2]).all())
 
     def test_linear(self):
         a, b, left_bound, right_bound = 0.5, 1.1, 2.2, 3.3

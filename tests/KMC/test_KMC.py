@@ -129,14 +129,14 @@ class TestGenerators(unittest.TestCase):
         distance_gen = kmcgen.distance_generator()
 
         # Assert that distance_gen returns the rescaled distances if delay is not set
-        counter, dist = next(distance_gen)
+        dist = next(distance_gen)
         self.assertTrue(np.allclose(dist, [5, 0, 0]))
 
         # Assert that the delay results in larger distances, which will be scaled linearly down
         # to the scaled distances
         kmcgen.relaxation_time = 6
         for i in range(6):
-            counter, dist = next(distance_gen)
+            dist = next(distance_gen)
             self.assertGreater(dist[0], distances_rescaled[0, 0, 0], "The distance should be "
                                                                      "greater than the rescaled "
                                                                      "distance")
@@ -144,7 +144,7 @@ class TestGenerators(unittest.TestCase):
         # Assert that after the delay has passed, the distances are equal to the rescaled
         # distances
         for i in range(20):
-            counter, dist = next(distance_gen)
+            dist = next(distance_gen)
             self.assertEqual(dist[0], distances_rescaled[0, 0, 0])
 
     def test_jumprate_generator(self):
@@ -163,14 +163,14 @@ class TestGenerators(unittest.TestCase):
                                    jumprate_params=params)
 
         probsum_gen = kmcgen.jumprate_generator()
-        for frame, probsum in probsum_gen:
+        for frame, probsum in enumerate(probsum_gen):
             print(frame, probsum)
             if frame == 20:
                 break
 
         probsum_gen = kmcgen.jumprate_generator()
         kmcgen.relaxation_time = 20
-        for frame, probsum in probsum_gen:
+        for frame, probsum in enumerate(probsum_gen):
             print(frame, probsum)
             if frame == 20:
                 break
