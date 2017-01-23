@@ -9,12 +9,13 @@
 *.so
 *.swp
 
-.idea
-build
+.idea/
+build/
 cython_debug/
-dist
+dist/
 doxy/
 htmlcov/
 mdkmc.egg-info/
 mdlmc.egg-info/
+stats/
 version_hash.py
