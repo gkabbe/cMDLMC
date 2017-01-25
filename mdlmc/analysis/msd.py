@@ -142,31 +142,38 @@ def main(*args):
     parser_multi = subparsers.add_parser("multi", help="Intervals with variable size")
     parser_multi.add_argument("--variance_all_H", action="store_true",
                               help="If set, determine variance over every proton trajectory")
+    parser_water = subparsers.add_parser("water", help="MSD for single excess proton")
+    parser_water.add_argument("--columns", "-c", type=int, nargs="+",
+                              help="Which columns contain the position?")
+    parser_water.add_argument("intervalnumber", type=int,
+                              help="Number of intervals over which to average")
+    parser_water.add_argument("intervallength", type=int, help="Interval length")
     args = parser.parse_args()
 
     pbc = np.array(args.pbc)
+    atom_box = AtomBoxCubic(pbc)
 
     if type(args.timestep) != ureg.Quantity:
         raise ValueError("You forgot to assign a unit to timestep!")
 
-    if os.path.splitext(args.filename)[1] == "npz":
-        if args.atom == "AH":
-            trajectory = xyz_parser.load_trajectory_from_npz(args.filename, verbose=args.verbose)
-        else:
-            trajectory, = xyz_parser.load_trajectory_from_npz(args.filename, args.atom,
-                                                              verbose=args.verbose)
+    if args.subparser_name == "water":
+        trajectory = np.loadtxt(args.filename, usecols=args.columns)[:, None, :]
     else:
-        if args.atom == "AH":
-            trajectory = xyz_parser.load_atoms(args.filename, verbose=args.verbose,
-                                                clip=args.trajectory_cut)
+        if os.path.splitext(args.filename)[1] == "npz":
+            if args.atom == "AH":
+                trajectory = xyz_parser.load_trajectory_from_npz(args.filename, verbose=args.verbose)
+            else:
+                trajectory, = xyz_parser.load_trajectory_from_npz(args.filename, args.atom,
+                                                                  verbose=args.verbose)
         else:
-            trajectory, = xyz_parser.load_atoms(args.filename, args.atom, verbose=args.verbose,
-                                                clip=args.trajectory_cut)
-
-    atom_box = AtomBoxCubic(pbc)
-
-    if args.atom == "AH":
-        trajectory = npa.get_acidic_protons(trajectory, atom_box, verbose=args.verbose)
+            if args.atom == "AH":
+                trajectory = xyz_parser.load_atoms(args.filename, verbose=args.verbose,
+                                                    clip=args.trajectory_cut)
+            else:
+                trajectory, = xyz_parser.load_atoms(args.filename, args.atom, verbose=args.verbose,
+                                                    clip=args.trajectory_cut)
+        if args.atom == "AH":
+            trajectory = npa.get_acidic_protons(trajectory, atom_box, verbose=args.verbose)
 
     if args.subparser_name == "multi":
         # -------------------------------------
@@ -218,8 +225,8 @@ def main(*args):
         m, y_0 = params
         m_err, y_0_err = np.sqrt(cov_mat[0, 0]), np.sqrt(cov_mat[1, 1])
 
-        m, m_err = m * args.length_unit**2 / args.timestep, \
-                   m_err * args.length_unit**2 / args.timestep
+        m = m * args.length_unit**2 / args.timestep
+        m_err = m_err * args.length_unit**2 / args.timestep
 
         print("\nSlope in {}:".format(args.output_unit))
         print("({:.2e} ± {:.2e}) {}".format(m.to(args.output_unit).magnitude,
@@ -234,8 +241,8 @@ def main(*args):
             fit = m * np.arange(msd_mean.shape[0]) * args.timestep + y_0 * args.length_unit**2
             t = np.arange(msd_mean.shape[0]) * args.timestep
             plt.plot(t.to(output_time_unit), fit.to(output_length_unit**2))
-
-    plt.show()
+    if args.plot:
+        plt.show()
 
 if __name__ == "__main__":
     main()
