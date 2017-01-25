@@ -8,11 +8,15 @@ from collections import Counter
 
 import numpy as np
 import matplotlib.pylab as plt
+import pint
 
 from mdlmc.IO import xyz_parser
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxMonoclinic, AtomBoxCubic
 from mdlmc.misc.tools import argparse_compatible, online_variance_generator
+
+
+ureg = pint.UnitRegistry()
 
 
 def determine_phosphorus_oxygen_pairs(oxygen_frame, phosphorus_frame, atom_box):
@@ -179,7 +183,7 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
 @argparse_compatible
 def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
                                            nonorthorhombic_box=False, water=False, plot=False,
-                                           no_shuttling=False, verbose=False):
+                                           no_shuttling=False, verbose=False, time_unit=None):
 
     atoms = xyz_parser.load_atoms(filename)
 
@@ -221,21 +225,22 @@ def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
             else:
                 donor_indices = protonated_oxygens_before[proton_indices]
                 acceptor_indices = protonated_oxygens_after[proton_indices]
+
             oxygen_dists = atombox.length(
                 oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
                         donor_indices],
                 oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
-                        acceptor_indices])
+                        acceptor_indices]).reshape(time_window, -1)
             donor_proton_dists = atombox.length(
                 oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
                         donor_indices],
                 protons[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
-                        proton_indices])
+                        proton_indices]).reshape(time_window, -1)
             proton_acceptor_dists = atombox.length(
                 protons[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
                         proton_indices],
                 oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
-                        acceptor_indices])
+                        acceptor_indices]).reshape(time_window, -1)
 
             if not no_shuttling or (proton_acceptor_dists[time_window // 2:] < donor_proton_dists[
                     time_window // 2:]).all():
@@ -247,7 +252,7 @@ def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
                     proton_acceptor_distances.append(dists)
 
         if frame % 1000 == 0:
-            print(frame, end="\r")
+            print(frame, end="\r", flush=True)
 
     proton_acceptor_distances_mean = np.array(proton_acceptor_distances).mean(axis=0)
     proton_acceptor_distances_sigma = np.sqrt(np.array(proton_acceptor_distances).var(axis=0))
@@ -257,6 +262,13 @@ def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
     oxygen_distances_sigma = np.sqrt(np.array(oxygen_distances).var(axis=0))
 
     time = np.arange(int(np.ceil(-time_window / 2)), int(np.ceil(time_window / 2)))
+
+    if time_unit:
+        time = time * ureg.parse_expression(time_unit)
+        unit = time.u
+        time = time.m
+    else:
+        unit = "Frames"
 
     if plot:
 
@@ -284,19 +296,16 @@ def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
                          alpha=0.5)
         ax3.set_title("Donor - Acceptor Distances")
         ax3.set_ylabel("Distance / \AA")
-        plt.xlabel("Frames")
+        plt.xlabel(unit)
         plt.show()
 
-    else:
-        print(
-            "#",
-            (" ".join(7 * ["{:>12}"])).format("Time", "d_OH", "d_OH sigma", "d_HO", "d_HO sigma",
-                                              "d_OO", "d_OO sigma"))
+    print("#", (" ".join(7 * ["{:>12}"])).format("Time", "d_OH", "d_OH sigma", "d_HO", "d_HO sigma",
+                                                 "d_OO", "d_OO sigma"))
 
-        for values in zip(time, donor_proton_distances_mean, donor_proton_distances_sigma,
-                          proton_acceptor_distances_mean, proton_acceptor_distances_sigma,
-                          oxygen_distances_mean, oxygen_distances_sigma):
-            print(" ", ("{:12d} " + " ".join(6 * ["{:>12.8f}"])).format(*values))
+    for values in zip(time, donor_proton_distances_mean, donor_proton_distances_sigma,
+                      proton_acceptor_distances_mean, proton_acceptor_distances_sigma,
+                      oxygen_distances_mean, oxygen_distances_sigma):
+        print(" ", ("{:12} " + " ".join(6 * ["{:>12.8f}"])).format(*values))
 
 
 def main(*args):
@@ -309,7 +318,8 @@ def main(*args):
 
     subparsers = parser.add_subparsers(dest="subparser_name")
 
-    parser_jumpprob = subparsers.add_parser("jumpprobs")
+    parser_jumpprob = subparsers.add_parser("jumpprobs",
+                                            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser_jumpprob.add_argument("filename", help="trajectory")
     parser_jumpprob.add_argument("pbc", type=float, nargs="+",
                                  help="Periodic boundaries. If 3 values are given, an orthorhombic "
@@ -325,7 +335,8 @@ def main(*args):
                                       "distances")
     parser_jumpprob.set_defaults(func=proton_jump_probability_at_oxygen_distance)
 
-    parser_jumpmotion = subparsers.add_parser("jumpmotion")
+    parser_jumpmotion = subparsers.add_parser("jumpmotion",
+                                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser_jumpmotion.add_argument("filename", help="trajectory")
     parser_jumpmotion.add_argument("pbc", type=float, nargs="+",
                                    help="Periodic boundaries. If 3 values are given, an "
@@ -336,6 +347,7 @@ def main(*args):
                                         " motion are averaged")
     parser_jumpmotion.add_argument("--plot", action="store_true", help="Plot result")
     parser_jumpmotion.add_argument("--no_shuttling", action="store_true", help="Plot result")
+    parser_jumpmotion.add_argument("--time_unit", help="Unit of one time step, e.g. 0.5fs")
     parser_jumpmotion.set_defaults(func=oxygen_and_proton_motion_during_a_jump)
 
     args = parser.parse_args()
