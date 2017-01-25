@@ -436,6 +436,16 @@ CONFIG_DICT = {
                      "between"
                      "a hydronium ion and an uncharged water molecule."
          }),
+        ("no_rescaling",
+         {
+             "parse_fct": parse_bool,
+             "default": False,
+             "help": "If True, distances are not rescaled"
+
+
+
+
+         }),
         ("xyz_output",
          {
              "parse_fct": parse_bool,

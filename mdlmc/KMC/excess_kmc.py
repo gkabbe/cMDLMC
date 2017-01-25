@@ -230,6 +230,9 @@ def kmc_main(settings):
             kmc_rescale.determine_distances, chunk_size, dtype=(float, int),
             overwrite=settings.overwrite_jumprates)
 
+    if settings.no_rescaling:
+        distances_rescaled = distances
+
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:8.2f} fps"
 
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, fermi, (a, b, c))
