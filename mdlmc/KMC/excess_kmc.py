@@ -118,7 +118,6 @@ class KMCGen:
         self.distances_rescaled = distances_rescaled
         self.jumprate_fct = jumprate_fct
         self.jumprate_params = jumprate_params
-        self.current_frame = 0
 
     def distance_generator(self):
         distance_gen = trajectory_generator(self.distances)
@@ -132,13 +131,11 @@ class KMCGen:
                     counter, dist_rescaled = next(distance_rescaled_gen)
                     dist_rescaled = dist_rescaled[self.oxy_idx]
                     yield dist + i / self.relaxation_time * (dist_rescaled - dist)
-                    self.current_frame = counter
                 self.relaxation_time = 0
             else:
                 counter, dist = next(distance_rescaled_gen)
                 dist = dist[self.oxy_idx]
                 yield dist
-                self.current_frame = counter
 
     def jumprate_generator(self):
         distance_gen = self.distance_generator()
