@@ -411,6 +411,13 @@ CONFIG_DICT = {
                      "to the unrelaxed distances and will decrease within <relaxation_time> to"
                      "the relaxed distances."
          }),
+        ("waiting_time",
+         {
+             "parse_fct": parse_int,
+             "default": 0,
+             "help": "Waiting time after a proton jump. Is supposed to account for the fact that "
+                     "a proton needs some time to travel from donor to acceptor."
+         }),
         ("pbc",
          {
             "parse_fct": get_pbc,
@@ -441,10 +448,6 @@ CONFIG_DICT = {
              "parse_fct": parse_bool,
              "default": False,
              "help": "If True, distances are not rescaled"
-
-
-
-
          }),
         ("xyz_output",
          {

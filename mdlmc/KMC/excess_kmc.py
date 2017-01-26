@@ -114,6 +114,7 @@ class KMCGen:
     def __init__(self, oxy_idx, distances, distances_rescaled, jumprate_fct, jumprate_params):
         self.oxy_idx = oxy_idx
         self.relaxation_time = 0
+        self.waiting_time = 0  # Don't jump while waiting time > 0
         self.distances = distances
         self.distances_rescaled = distances_rescaled
         self.jumprate_fct = jumprate_fct
@@ -141,7 +142,10 @@ class KMCGen:
         distance_gen = self.distance_generator()
         while True:
             for dists in distance_gen:
-                prob = self.jumprate_fct(dists, *self.jumprate_params)
+                if self.waiting_time > 0:
+                    prob = np.zeros(3)
+                else:
+                    prob = self.jumprate_fct(dists, *self.jumprate_params)
                 self.prob = prob
                 yield prob.sum()
 
