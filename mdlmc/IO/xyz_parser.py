@@ -24,7 +24,7 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
                 if (i + 1) // frame_len == no_of_frames:
                     break
 
-    if selection:
+    if selection is not None:
         def filter_selection(f, s):
             for i, line in enumerate(f):
                 if i % (frame_len - 2) in s:
@@ -40,25 +40,43 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
     return data.reshape(output_shape)
 
 
+def get_selection_from_atomname(xyz_filename, *atomnames):
+    with open(xyz_filename, "r") as f:
+        frame_len = int(f.readline())
+        selection = []
+        f.readline()
+        for i, line in enumerate(f):
+            if line.split()[0] in atomnames:
+                selection.append(i)
+            if i == frame_len:
+                break
+    return np.array(selection)
+
+
 @argparse_compatible
 def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movement=False,
-                            verbose=False, file=sys.stdout):
+                            verbose=False, file=sys.stdout, dataset_name="trajectory",
+                            selection=None):
 
     with open(xyz_fname, "rb") as f:
         frame_len = int(f.readline()) + 2
         f.seek(0)
-        first_frame, = parse_xyz(f, frame_len, no_of_frames=1)
+        first_frame, = parse_xyz(f, frame_len, no_of_frames=1, selection=selection)
         atom_names = first_frame["name"]
         frame_shape = first_frame["pos"].shape
 
     if not hdf5_fname:
         hdf5_fname = os.path.splitext(xyz_fname)[0] + ".hdf5"
 
+    # Use a set as a data structure to optimize selection speed
+    if selection is not None:
+        selection = set(selection)
+
     with h5py.File(hdf5_fname, "w") as hdf5_file:
         # Use blosc compression (needs tables import and code 32001)
         traj_atomnames = hdf5_file.create_dataset("atom_names", atom_names.shape, dtype="2S")
         traj_atomnames[:] = atom_names
-        traj = hdf5_file.create_dataset("trajectory", shape=(10 * chunk, *frame_shape),
+        traj = hdf5_file.create_dataset(dataset_name, shape=(10 * chunk, *frame_shape),
                                         dtype=float, maxshape=(None, *frame_shape),
                                         compression=32001)
 
@@ -66,7 +84,8 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
             counter = 0
             start_time = time.time()
             while True:
-                frames = parse_xyz(f, frame_len, no_of_frames=chunk).astype(dtype_xyz)
+                frames = parse_xyz(f, frame_len, no_of_frames=chunk,
+                                   selection=selection).astype(dtype_xyz)
 
                 if frames.shape[0] == 0:
                     break
@@ -140,7 +159,7 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
     chunk_size: int
         The size of the data processed in one step
 
-    verbose: bool
+        verbose: bool
         Verbosity
 
     file: file_like
@@ -230,7 +249,7 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
 
 
 def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
-                           verbose=False):
+                           verbose=False, selection=None):
     with open(xyz_fname, "rb") as f:
         frame_length = int(f.readline()) + 2
         f.seek(0)
@@ -245,7 +264,7 @@ def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
             fps = counter / (time.time() - start_time)
             print("# {:6d} ({:.2f} fps)".format(counter, fps), end="\r", flush=True)
             trajectory.append(data)
-            data = parse_xyz(f, frame_length, no_of_frames=chunk_size)
+            data = parse_xyz(f, frame_length, no_of_frames=chunk_size, selection=selection)
         print("")
         trajectory = np.vstack(trajectory)
 

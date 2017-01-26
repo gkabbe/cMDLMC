@@ -6,9 +6,10 @@ import tables
 import h5py
 import numpy as np
 
-from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory
-from mdlmc.IO.config_parser import load_configfile, print_settings, print_config_template, \
-        print_confighelp
+from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory, \
+    get_selection_from_atomname
+from mdlmc.IO.config_parser import load_configfile, print_settings, print_config_template,\
+    print_confighelp
 from mdlmc.misc.tools import chunk
 from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, FermiFunction
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWaterLinearConversion, \
@@ -163,27 +164,13 @@ def kmc_main(settings):
     if not os.path.exists(hdf5_fname):
         if verbose:
             print("# Could not find HDF5 file. Will create it now.")
+        oxygen_selection = get_selection_from_atomname(trajectory_fname, "O")
         save_trajectory_to_hdf5(trajectory_fname, hdf5_fname, remove_com_movement=True,
-                                verbose=verbose)
+                                verbose=verbose, dataset_name="oxygen_trajectory",
+                                selection=oxygen_selection)
 
     hdf5_file = h5py.File(hdf5_fname, "a")
-    trajectory = hdf5_file["trajectory"]
-
-    atom_names = hdf5_file["atom_names"][:].astype("U")
-
-    oxygen_indices, = np.where(atom_names == "O")
-    if verbose:
-        print("# Loading oxygen trajectory", file=settings.output)
-    oxygen_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory,
-                                                            "oxygen_trajectory",
-                                                            oxygen_indices, chunk_size)
-
-    proton_indices = np.where(atom_names == "H")
-    if verbose:
-        print("# Loading proton trajectory", file=settings.output)
-    proton_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, trajectory,
-                                                            "proton_trajectory",
-                                                            proton_indices, chunk_size)
+    oxygen_trajectory = hdf5_file["oxygen_trajectory"]
 
     trajectory_length = oxygen_trajectory.shape[0]
     timestep_md = settings.md_timestep_fs
@@ -192,7 +179,7 @@ def kmc_main(settings):
     print_frequency = settings.print_frequency
     relaxation_time = settings.relaxation_time
 
-    oxygen_number = len(oxygen_indices)
+    oxygen_number = oxygen_trajectory.shape[1]
     # Initialize with one excess proton
     oxygen_lattice = initialize_oxygen_lattice(oxygen_number, 1)
     proton_position, = np.where(oxygen_lattice)[0]
@@ -248,14 +235,9 @@ def kmc_main(settings):
 
         for i in range(sweep, next_sweep):
             if i % print_frequency == 0:
-                if xyz_output:
-                    kmc_state_to_xyz(oxygen_trajectory[i % trajectory_length],
-                                     proton_trajectory[i % trajectory_length], oxygen_lattice)
-                else:
-                    print(output_format.format(i, i * timestep_md,
-                                               *oxygen_trajectory[i % trajectory_length, proton_position],
-                                               jumps, i / (time.time() - start_time)),
-                          flush=True, file=settings.output)
+                print(output_format.format(i, i * timestep_md, *oxygen_trajectory[
+                    i % trajectory_length, proton_position], jumps, i / (time.time() - start_time)),
+                      flush=True, file=settings.output)
 
         jumps += 1
         sweep = next_sweep
