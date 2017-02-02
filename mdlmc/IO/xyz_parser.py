@@ -77,7 +77,7 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
         traj_atomnames = hdf5_file.create_dataset("atom_names", atom_names.shape, dtype="2S")
         traj_atomnames[:] = atom_names
         traj = hdf5_file.create_dataset(dataset_name, shape=(10 * chunk, *frame_shape),
-                                        dtype=float, maxshape=(None, *frame_shape),
+                                        dtype=np.float32, maxshape=(None, *frame_shape),
                                         compression=32001)
 
         with open(xyz_fname, "rb") as f:

@@ -427,12 +427,13 @@ cdef class KMCRoutine:
         self.proton_position = proton_positions[0]
 
     @cython.wraparound(True)
-    def determine_distances(self, double [:, :, ::1] oxygen_trajectory, double upper_bound=1e8):
+    def determine_distances(self, oxygen_trajectory, double upper_bound=1e8):
         """Save probabilities for the closest 3 oxygens.
         This corresponds to the first solvation shell of H2O."""
         cdef:
             int f, i, j, k
             np.ndarray[np.float32_t, ndim=3] dist_array
+            np.ndarray[double, ndim=3] oxy_traj
             np.ndarray[np.int32_t, ndim=3] all_indices
             vector[double] distances
             vector[size_t] neighbor_indices
@@ -442,17 +443,19 @@ cdef class KMCRoutine:
         dist_array = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3),
                          dtype=np.float32)
 
+        oxy_traj = np.array(oxygen_trajectory, dtype=float)
+
         # indices stores the indices of the three closest oxygen neighbors
         neighbor_indices.resize(3)
 
         with nogil:
-            for f in range(oxygen_trajectory.shape[0]):
-                for i in range(oxygen_trajectory.shape[1]):
+            for f in range(oxy_traj.shape[0]):
+                for i in range(oxy_traj.shape[1]):
                     distances.clear()
-                    for j in range(oxygen_trajectory.shape[1]):
+                    for j in range(oxy_traj.shape[1]):
                         # Collect all distances
-                        dist = self.atombox.length_ptr(&oxygen_trajectory[f, j, 0],
-                                                       &oxygen_trajectory[f, i, 0])
+                        dist = self.atombox.length_ptr(&oxy_traj[f, j, 0],
+                                                       &oxy_traj[f, i, 0])
                         if i != j:
                             distances.push_back(dist)
                         else:
