@@ -186,6 +186,9 @@ def kmc_main(settings):
 
     atombox_cubic = AtomBoxCubic(settings.pbc)
 
+    if settings.seed is not None:
+        np.random.seed(settings.seed)
+
     if settings.rescale_parameters:
         if settings.rescale_function == "linear":
             atombox_rescale = AtomBoxWaterLinearConversion(settings.pbc,

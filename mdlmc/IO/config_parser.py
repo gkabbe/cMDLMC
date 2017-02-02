@@ -491,5 +491,11 @@ CONFIG_DICT = {
              "default": sys.stdout,
              "help": "Name of the output file"
          }),
+        ("seed",
+         {
+             "parse_fct": parse_int,
+             "default": None,
+             "help": "Seed for random number generator"
+         }),
     ])
 }
