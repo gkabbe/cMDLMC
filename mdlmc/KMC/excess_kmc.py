@@ -221,7 +221,7 @@ def kmc_main(settings):
             kmc_rescale.determine_distances, chunk_size, dtype=(np.float32, np.int32),
             overwrite=settings.overwrite_jumprates)
 
-    if settings.no_rescaling:
+    if settings.no_rescaling or not settings.rescale_parameters:
         distances_rescaled = distances
 
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:8.2f} fps"
