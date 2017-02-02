@@ -210,7 +210,7 @@ def kmc_main(settings):
     distances, indices = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
                                                              ("distances", "indices"),
                                                              kmc.determine_distances,
-                                                             chunk_size, dtype=(float, int),
+                                                             chunk_size, dtype=(np.float32, np.int32),
                                                              overwrite=settings.overwrite_jumprates)
 
     if settings.rescale_parameters:
@@ -218,7 +218,7 @@ def kmc_main(settings):
             print("# Creating array of rescaled distances")
         distances_rescaled, indices = create_dataset_from_hdf5_trajectory(
             hdf5_file, oxygen_trajectory, ("distances_rescaled", "indices"),
-            kmc_rescale.determine_distances, chunk_size, dtype=(float, int),
+            kmc_rescale.determine_distances, chunk_size, dtype=(np.float32, np.int32),
             overwrite=settings.overwrite_jumprates)
 
     if settings.no_rescaling:
