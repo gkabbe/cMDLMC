@@ -295,7 +295,8 @@ def load_trajectory_from_npz(npz_fname, *atom_names, clip=None, verbose=False):
     if len(atom_names) > 0:
         single_atom_trajs = []
         for atom in atom_names:
-            atom_traj = trajectory[:, trajectory[0]["name"] == atom]
+            selection_indices, = np.where(trajectory[0]["name"].astype(str) == atom)
+            atom_traj = trajectory[:, selection_indices]
             atom_traj = np.array(atom_traj["pos"], order="C")
             single_atom_trajs.append(atom_traj)
         return single_atom_trajs
