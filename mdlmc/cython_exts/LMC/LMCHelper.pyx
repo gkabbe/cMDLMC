@@ -60,11 +60,11 @@ cdef class ExponentialFunction(JumprateFunction):
         f(x) = a * exp(b*x)"""
     cdef:
         double a, b
-        
+
     def __cinit__(self, double a, double b):
         self.a = a
         self.b = b
-        
+
     cdef double _evaluate(self, double distance) nogil:
         return self.a * exp(self.b * distance)
 
@@ -150,8 +150,8 @@ cdef class LMCRoutine:
         bool calculate_jumpmatrix
 
     def __cinit__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
-                  AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
-                  double angle_threshold, double neighbor_search_radius, jumprate_type, *,
+                  AtomBox atom_box, JumprateFunction jumprate_fct, double cutoff_radius,
+                  double angle_threshold, double neighbor_search_radius, *,
                   neighbor_list=True, seed=None, bool calculate_jumpmatrix=False, verbose=False,
                   angle_dependency=True):
         cdef:
@@ -178,30 +178,7 @@ cdef class LMCRoutine:
         if verbose:
             print("# Using seed", seed)
 
-        # Jump rates determined via jumpstat
-        if jumprate_type == "MD_rates":
-            a = jumprate_parameter_dict["a"]
-            b = jumprate_parameter_dict["b"]
-            c = jumprate_parameter_dict["c"]
-            self.jumprate_fct = FermiFunction(a, b, c)
-
-        # Jump rates determined via energy surface scans
-        elif jumprate_type == "AE_rates":
-            A = jumprate_parameter_dict["A"]
-            a = jumprate_parameter_dict["a"]
-            b = jumprate_parameter_dict["b"]
-            d0 = jumprate_parameter_dict["d0"]
-            T = jumprate_parameter_dict["T"]
-            self.jumprate_fct = ActivationEnergyFunction(A, a, b, d0, T)
-
-        elif jumprate_type == "Exponential_rates":
-            a = jumprate_parameter_dict["a"]
-            b = jumprate_parameter_dict["b"]
-            self.jumprate_fct = ExponentialFunction(a, b)
-
-        else:
-            raise Exception("Jump rate type unknown. Please choose between "
-                            "MD_rates, Exponential_rates and AE_rates")
+        self.jumprate_fct = jumprate_fct
 
         if angle_dependency:
             self.angle_fct = AngleCutoff(angle_threshold)
@@ -209,10 +186,10 @@ cdef class LMCRoutine:
             self.angle_fct = AngleDummy()
 
     def __init__(self, double [:, :, ::1] oxygen_trajectory, double [:, :, ::1] phosphorus_trajectory,
-                 AtomBox atom_box, jumprate_parameter_dict, double cutoff_radius,
-                 double angle_threshold, double neighbor_search_radius, jumprate_type, *,
-                 neighbor_list=True, seed=None, bool calculate_jumpmatrix=False, verbose=False,
-                 angle_dependency=True):
+                  AtomBox atom_box, JumprateFunction jumprate_fct, double cutoff_radius,
+                  double angle_threshold, double neighbor_search_radius, *,
+                  neighbor_list=True, seed=None, bool calculate_jumpmatrix=False, verbose=False,
+                  angle_dependency=True):
 
         self.phosphorus_neighbors = self.atom_box.determine_phosphorus_oxygen_pairs(
             self.oxygen_trajectory[0], self.phosphorus_trajectory[0])

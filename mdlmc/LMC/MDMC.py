@@ -9,6 +9,8 @@ from mdlmc.IO.config_parser import print_confighelp, load_configfile, print_conf
 from mdlmc.IO.xyz_parser import load_atoms
 from mdlmc.cython_exts.LMC import LMCHelper
 from mdlmc.cython_exts.LMC import PBCHelper
+from mdlmc.cython_exts.LMC.LMCHelper import ActivationEnergyFunction, FermiFunction, \
+    ExponentialFunction
 
 
 def get_git_version():
@@ -67,7 +69,7 @@ class ObservableManager:
 
     def calculate_msd_standard(self):
         self.mean_square_displacement[:] = (self.displacement**2).sum(axis=0) / \
-                                           self.displacement.shape[0]
+            self.displacement.shape[0]
         return self.mean_square_displacement
 
     def calculate_msd_higher_orders(self):
@@ -155,10 +157,8 @@ class ObservableManager:
                                                    autocorrelation, helper.get_jumps(), speed,
                                                    remaining_time, msd_higher=msd_higher),
               file=self.output)
-        self.averaged_results[(sweep % self.reset_freq) / self.print_freq, 2:] += MSD[0], MSD[1], \
-                                                                                  MSD[2], \
-                                                                                  autocorrelation, \
-                                                                                  helper.get_jumps()
+        self.averaged_results[(sweep % self.reset_freq) / self.print_freq, 2:] += \
+            MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
     def print_xyz(self, Os, oxygen_lattice, sweep, timestep_fs):
         proton_indices = np.where(oxygen_lattice > 0)[0]
@@ -214,7 +214,7 @@ def prepare_lmc(settings):
     np.random.seed(settings.seed)
     settings.oxygen_number = oxygen_trajectory.shape[1]
     settings.oxygen_number_extended = oxygen_trajectory.shape[1] * settings.box_multiplier[0] * \
-                                      settings.box_multiplier[1] * settings.box_multiplier[2]
+        settings.box_multiplier[1] * settings.box_multiplier[2]
     # Multiply Arrhenius prefactor (unit 1/fs) with MD time step (unit fs), to get the
     # correct rates per time step
     if "A" in list(settings.jumprate_params_fs.keys()):
@@ -243,15 +243,41 @@ def prepare_lmc(settings):
     msd_mode = "higher_msd" if settings.higher_msd else "standard_msd"
     if verbose:
         print("# Sweeps:", settings.sweeps, file=settings.output)
+
+    # Jump rates determined via jumpstat
+    if settings.jumprate_type == "MD_rates":
+        a = settings.jumprate_params_fs["a"]
+        b = settings.jumprate_params_fs["b"]
+        c = settings.jumprate_params_fs["c"]
+        jumprate_fct = FermiFunction(a, b, c)
+
+    # Jump rates determined via energy surface scans
+    elif settings.jumprate_type == "AE_rates":
+        A = settings.jumprate_parameter_dict["A"]
+        a = settings.jumprate_parameter_dict["a"]
+        b = settings.jumprate_parameter_dict["b"]
+        d0 = settings.jumprate_parameter_dict["d0"]
+        T = settings.jumprate_parameter_dict["T"]
+        jumprate_fct = ActivationEnergyFunction(A, a, b, d0, T)
+
+    elif settings.jumprate_type == "Exponential_rates":
+        a = settings.jumprate_parameter_dict["a"]
+        b = settings.jumprate_parameter_dict["b"]
+        jumprate_fct = ExponentialFunction(a, b)
+
+    else:
+        raise Exception("Jump rate type unknown. Please choose between "
+                        "MD_rates, Exponential_rates and AE_rates")
+
     helper = LMCHelper.LMCRoutine(oxygen_trajectory, phosphorus_trajectory,
                                   atom_box=atom_box,
-                                  jumprate_parameter_dict=settings.jumprate_params_fs,
+                                  jumprate_fct=jumprate_fct,
                                   cutoff_radius=settings.cutoff_radius,
                                   angle_threshold=settings.angle_threshold,
                                   neighbor_list=settings.neighbor_list,
                                   neighbor_search_radius=settings.neighbor_search_radius,
-                                  jumprate_type=settings.jumprate_type, verbose=settings.verbose,
-                                  seed=settings.seed, angle_dependency=settings.angle_dependency)
+                                  verbose=settings.verbose, seed=settings.seed,
+                                  angle_dependency=settings.angle_dependency)
     helper.store_jumprates(verbose=verbose)
     observable_manager = ObservableManager(helper, oxygen_trajectory, atom_box,
                                            oxygen_lattice, settings.proton_number,
