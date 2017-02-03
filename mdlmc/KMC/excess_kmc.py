@@ -246,9 +246,10 @@ def kmc_main(settings):
         sweep = next_sweep
 
         probs = kmc_gen.prob
+        cumsum = np.cumsum(probs)
         neighbor_indices = indices[frame, proton_position]
-        random_draw = np.random.uniform(0, probs[-1])
-        ix = np.searchsorted(probs, random_draw)
+        random_draw = np.random.uniform(0, cumsum[-1])
+        ix = np.searchsorted(cumsum, random_draw)
         proton_position = neighbor_indices[ix]
         kmc_gen.oxy_idx = proton_position
         # After a jump, the relaxation time is increased
