@@ -232,28 +232,28 @@ cdef class LMCRoutine:
         destination_indices_tmp.clear()
         jump_probability_tmp.clear()
         for start_index in range(self.oxygen_number):
-            for destination_index in range(start_index):
+            for destination_index in range(self.oxygen_number):
+                if start_index != destination_index:
+                    dist = self.atom_box.length_extended_box_ptr(
+                        start_index, &self.oxygen_trajectory[frame_number, 0, 0],
+                        oxygen_number_unextended, destination_index,
+                        &self.oxygen_trajectory[frame_number, 0, 0], oxygen_number_unextended)
 
-                dist = self.atom_box.length_extended_box_ptr(
-                    start_index, &self.oxygen_trajectory[frame_number, 0, 0],
-                    oxygen_number_unextended, destination_index,
-                    &self.oxygen_trajectory[frame_number, 0, 0], oxygen_number_unextended)
-
-                if dist < r_cut:
-                    poo_angle = self.atom_box.angle_extended_box(
-                        self.phosphorus_neighbors[start_index],
-                        &self.phosphorus_trajectory[frame_number, 0, 0],
-                        phosphorus_number_unextended,
-                        start_index,
-                        &self.oxygen_trajectory[frame_number, 0, 0],
-                        oxygen_number_unextended,
-                        destination_index,
-                        &self.oxygen_trajectory[frame_number, 0, 0],
-                        oxygen_number_unextended)
-                    start_indices_tmp.push_back(start_index)
-                    destination_indices_tmp.push_back(destination_index)
-                    jump_probability_tmp.push_back(
-                        self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle))
+                    if dist < r_cut:
+                        poo_angle = self.atom_box.angle_extended_box(
+                            self.phosphorus_neighbors[start_index],
+                            &self.phosphorus_trajectory[frame_number, 0, 0],
+                            phosphorus_number_unextended,
+                            start_index,
+                            &self.oxygen_trajectory[frame_number, 0, 0],
+                            oxygen_number_unextended,
+                            destination_index,
+                            &self.oxygen_trajectory[frame_number, 0, 0],
+                            oxygen_number_unextended)
+                        start_indices_tmp.push_back(start_index)
+                        destination_indices_tmp.push_back(destination_index)
+                        jump_probability_tmp.push_back(
+                            self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle))
 
         self.start_indices.push_back(start_indices_tmp)
         self.destination_indices.push_back(destination_indices_tmp)
