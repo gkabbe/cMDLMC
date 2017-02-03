@@ -112,16 +112,17 @@ cdef class AtomBox:
                                               frame_2_len, dist)
         return sqrt(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2])
 
-    cdef double angle_extended_box(self, int index_1, double *frame_1, int frame_1_len,
-                                    int index_2, double *frame_2, int frame_2_len, int index_3,
-                                    double *frame_3, int frame_3_len) nogil:
+    cdef double angle_extended_box(self,
+                                   int index_1, double *frame_1, int frame_1_len,
+                                   int index_2, double *frame_2, int frame_2_len,
+                                   int index_3, double *frame_3, int frame_3_len) nogil:
         """Calculates the angle ∠ index_1 index_2 index_3"""
         cdef:
             double diff_2_1[3]
             double diff_2_3[3]
 
         self.distance_vector_extended_box_ptr(index_2, frame_2, frame_2_len, index_1, frame_1,
-                                             frame_1_len, diff_2_1)
+                                              frame_1_len, diff_2_1)
         self.distance_vector_extended_box_ptr(index_2, frame_2, frame_2_len, index_3, frame_3,
                                               frame_3_len, diff_2_3)
 
