@@ -472,27 +472,27 @@ cdef class KMCRoutine:
                         all_indices[f, i, k] = neighbor_indices[k]
         return dist_array, all_indices
 
-    def determine_transition(self, double[:, ::1] oxygen_frame):
-        cdef:
-            int i
-            double dist
-            double rand
-
-            vector[int] destination
-            vector[double] probability
-
-        for i in range(oxygen_frame.shape[0]):
-            if i != self.proton_position:
-                destination.push_back(i)
-                dist = self.atombox.length_ptr(&oxygen_frame[self.proton_position, 0],
-                                               &oxygen_frame[i, 0])
-                probability.push_back(self.jumprate_fct.evaluate(dist))
-
-        while True:
-            i = gsl_rng_uniform_int(self.r, oxygen_frame.shape[0] - 1)
-            rand = gsl_rng_uniform(self.r)
-            if rand < probability[i]:
-                self.oxygen_lattice[destination[i]] = self.oxygen_lattice[self.proton_position]
-                self.oxygen_lattice[self.proton_position] = 0
-                self.proton_position = destination[i]
-                return destination[i]
+#    def determine_transition(self, double[:, ::1] oxygen_frame):
+#        cdef:
+#            int i
+#            double dist
+#            double rand
+#
+#            vector[int] destination
+#            vector[double] probability
+#
+#        for i in range(oxygen_frame.shape[0]):
+#            if i != self.proton_position:
+#                destination.push_back(i)
+#                dist = self.atombox.length_ptr(&oxygen_frame[self.proton_position, 0],
+#                                               &oxygen_frame[i, 0])
+#                probability.push_back(self.jumprate_fct.evaluate(dist))
+#
+#        while True:
+#            i = gsl_rng_uniform_int(self.r, oxygen_frame.shape[0] - 1)
+#            rand = gsl_rng_uniform(self.r)
+#            if rand < probability[i]:
+#                self.oxygen_lattice[destination[i]] = self.oxygen_lattice[self.proton_position]
+#                self.oxygen_lattice[self.proton_position] = 0
+#                self.proton_position = destination[i]
+#                return destination[i]
