@@ -21,7 +21,7 @@ DEBUG = False
 
 
 def fermi(x, a, b, c):
-    return a / (1 + np.exp(-(x - b) / c))
+    return a / (1 + np.exp((x - b) / c))
 
 
 def get_hdf5_filename(trajectory_fname):
