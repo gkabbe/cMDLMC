@@ -46,7 +46,7 @@ def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, b
     return dists, edges, histogram
 
 
-def calculate_rdf(trajectory, selection1, selection2, atombox, dmin, dmax, bins, *, chunk_size=None,
+def calculate_rdf(trajectory, selection1, selection2, atombox, dmin, dmax, bins, *, chunk_size=1,
                   clip=None, verbose=False):
 
     traj_gen1 = chunk_trajectory(trajectory, chunk_size, length=clip, selection=selection1)
@@ -97,7 +97,7 @@ def radial_distribution_function(trajectory, selection1, selection2, atombox, dm
 
 def calculate_distance_histogram(trajectory, selection1, selection2, atombox, dmin, dmax, bins, *,
                                  clip=None, plot=False, normalized=False, verbose=False,
-                                 chunk_size=None, single_element=False):
+                                 chunk_size=1, single_element=False):
     traj_gen1 = chunk_trajectory(trajectory, chunk_size, length=clip, selection=selection1)
     traj_gen2 = chunk_trajectory(trajectory, chunk_size, length=clip, selection=selection2)
 

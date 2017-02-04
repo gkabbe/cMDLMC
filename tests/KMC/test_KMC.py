@@ -51,7 +51,7 @@ class TestVariableJumpRateKMC(unittest.TestCase):
                 self.assertEqual(int(t1 // dt), s)
 
     def test_variable_rates_average(self):
-        """Make sinus-like jump rates and check average."""
+        """Make sinus-like jump rates and check average jump rate."""
         timesteps = np.linspace(0, 200 * np.pi, 10000)[:, None]
         jump_rates = 0.06 + 0.02 * np.sin(timesteps)
         average = np.mean(jump_rates)
@@ -111,7 +111,7 @@ class TestGenerators(unittest.TestCase):
             self.assertEqual(i, dist[0, 0])
 
     def test_distance_generator(self):
-        """Assert t"""
+        """Assert that the distances are correctly generated"""
         distances = np.zeros((5, 1, 3))
         distances[:, 0, 0] = 10
         distances_rescaled = np.zeros((5, 1, 3))
@@ -137,8 +137,8 @@ class TestGenerators(unittest.TestCase):
         kmcgen.relaxation_time = 6
         for i in range(6):
             dist = next(distance_gen)
-            self.assertGreater(dist[0], distances_rescaled[0, 0, 0], "The distance should be "
-                                                                     "greater than the rescaled "
+            self.assertGreater(dist[0], distances_rescaled[0, 0, 0], "The unrescaled distance should "
+                                                                     "be greater than the rescaled "
                                                                      "distance")
 
         # Assert that after the delay has passed, the distances are equal to the rescaled
