@@ -17,6 +17,9 @@ from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWaterLinearConv
 from mdlmc.LMC.MDMC import initialize_oxygen_lattice
 
 
+DEBUG = False
+
+
 def fermi(x, a, b, c):
     return a / (1 + np.exp(-(x - b) / c))
 
@@ -127,6 +130,8 @@ class KMCGen:
 
         while True:
             if self.relaxation_time:
+                if DEBUG:
+                    print("Relaxing distances:")
                 for i in range(self.relaxation_time):
                     _, dist = next(distance_gen)
                     dist = dist[self.oxy_idx]
@@ -229,6 +234,10 @@ def kmc_main(settings):
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, fermi, (a, b, c))
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
 
+    if DEBUG:
+        distance_debug = trajectory_generator(distances)
+        distance_rescaled_debug = trajectory_generator(distances_rescaled)
+
     kmc_time, frame, sweep, jumps = 0, 0, 0, 0
 
     start_time = time.time()
@@ -241,19 +250,33 @@ def kmc_main(settings):
                 print(output_format.format(i, i * timestep_md, *oxygen_trajectory[
                     i % trajectory_length, proton_position], jumps, i / (time.time() - start_time)),
                       flush=True, file=settings.output)
+                if DEBUG:
+                    print(next(distance_debug)[1][proton_position])
+                    print(next(distance_rescaled_debug)[1][proton_position])
 
         jumps += 1
         sweep = next_sweep
+        if DEBUG:
+            print("Jumping")
+            print("Old proton position:", proton_position)
 
         probs = kmc_gen.prob
         cumsum = np.cumsum(probs)
         neighbor_indices = indices[frame, proton_position]
+
+        if DEBUG:
+            print("Choose between", neighbor_indices)
+            print("With probabilities", probs)
+
         random_draw = np.random.uniform(0, cumsum[-1])
         ix = np.searchsorted(cumsum, random_draw)
         proton_position = neighbor_indices[ix]
         kmc_gen.oxy_idx = proton_position
         # After a jump, the relaxation time is increased
         kmc_gen.relaxation_time = relaxation_time
+
+        if DEBUG:
+            print("New proton position:", proton_position)
 
 
 def main(*args):
