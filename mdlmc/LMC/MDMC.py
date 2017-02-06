@@ -253,16 +253,16 @@ def prepare_lmc(settings):
 
     # Jump rates determined via energy surface scans
     elif settings.jumprate_type == "AE_rates":
-        A = settings.jumprate_parameter_dict["A"]
-        a = settings.jumprate_parameter_dict["a"]
-        b = settings.jumprate_parameter_dict["b"]
-        d0 = settings.jumprate_parameter_dict["d0"]
-        T = settings.jumprate_parameter_dict["T"]
+        A = settings.jumprate_params_fs["A"]
+        a = settings.jumprate_params_fs["a"]
+        b = settings.jumprate_params_fs["b"]
+        d0 = settings.jumprate_params_fs["d0"]
+        T = settings.jumprate_params_fs["T"]
         jumprate_fct = ActivationEnergyFunction(A, a, b, d0, T)
 
     elif settings.jumprate_type == "Exponential_rates":
-        a = settings.jumprate_parameter_dict["a"]
-        b = settings.jumprate_parameter_dict["b"]
+        a = settings.jumprate_params_fs["a"]
+        b = settings.jumprate_params_fs["b"]
         jumprate_fct = ExponentialFunction(a, b)
 
     else:
