@@ -152,6 +152,7 @@ class KMCGen:
             for dists in distance_gen:
                 if self.waiting_time > 0:
                     prob = np.zeros(3)
+                    self.waiting_time -= 1
                 else:
                     prob = self.jumprate_fct(dists, *self.jumprate_params)
                 self.prob = prob
