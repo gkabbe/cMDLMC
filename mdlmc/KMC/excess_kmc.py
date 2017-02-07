@@ -123,6 +123,8 @@ class KMCGen:
         self.distances_rescaled = distances_rescaled
         self.jumprate_fct = jumprate_fct
         self.jumprate_params = jumprate_params
+        # Attribute prob is set while yielding from self.jumprate_generator
+        self.prob = None
 
     def distance_generator(self):
         distance_gen = trajectory_generator(self.distances)
