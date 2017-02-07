@@ -159,6 +159,11 @@ class KMCGen:
 def kmc_main(settings):
     print_settings(settings)
 
+    # If debug is set, set global variable DEBUG = True
+    if settings.debug:
+        global DEBUG
+        DEBUG = True
+
     trajectory_fname = settings.filename
     verbose = settings.verbose
     chunk_size = settings.chunk_size

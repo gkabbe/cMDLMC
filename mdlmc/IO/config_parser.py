@@ -467,6 +467,12 @@ CONFIG_DICT = {
              "default": False,
              "help": "Turn verbosity on or off."
          }),
+        ("debug",
+         {
+             "parse_fct": parse_bool,
+             "default": False,
+             "help": "Enable debug information."
+         }),
         ("overwrite_jumprates",
          {
              "parse_fct": parse_bool,
