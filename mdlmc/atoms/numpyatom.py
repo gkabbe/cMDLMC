@@ -20,10 +20,11 @@ def get_acidic_proton_indices(frame, atom_box, verbose=False):
     if len(frame.shape) > 1:
         raise ValueError("Argument frame should be a one dimensional numpy array of type dtype_xyz")
     acidic_indices = []
-    H_atoms = np.array(frame["pos"][frame["name"] == "H"])
-    H_indices = np.where(frame["name"] == "H")[0]
-    not_H_atoms = np.array(frame["pos"][frame["name"] != "H"])
-    not_H_atoms_names = frame["name"][frame["name"] != "H"]
+    atom_names = np.array(frame["name"], dtype=str)
+    H_atoms = np.array(frame["pos"][atom_names == "H"])
+    H_indices = np.where(atom_names == "H")[0]
+    not_H_atoms = np.array(frame["pos"][atom_names != "H"])
+    not_H_atoms_names = atom_names[atom_names != "H"]
     for i, H in enumerate(H_atoms):
         nn_index, next_neighbor = atom_box.next_neighbor(H, not_H_atoms)
         if not_H_atoms_names[nn_index] == "O":
@@ -45,6 +46,8 @@ def select_atoms(xyzatom_traj, *atomnames):
     selections = []
     frames = xyzatom_traj.shape[0]
     for atomname in atomnames:
+        if type(atomname) is str:
+            atomname = atomname.encode()
         traj = xyzatom_traj[xyzatom_traj["name"] == atomname]["pos"]
         atomnumber = xyzatom_traj[0][xyzatom_traj[0]["name"] == atomname].size
         selections.append(np.array(traj.reshape((frames, atomnumber, 3)), order="C"))
