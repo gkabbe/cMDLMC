@@ -135,6 +135,8 @@ class KMCGen:
                 if DEBUG:
                     print("Relaxing distances:")
                 for i in range(self.relaxation_time):
+                    if DEBUG:
+                        print(i)
                     _, dist = next(distance_gen)
                     dist = dist[self.oxy_idx]
                     counter, dist_rescaled = next(distance_rescaled_gen)
@@ -151,6 +153,8 @@ class KMCGen:
         while True:
             for dists in distance_gen:
                 if self.waiting_time > 0:
+                    if DEBUG:
+                        print("Waiting time:", self.waiting_time)
                     prob = np.zeros(3)
                     self.waiting_time -= 1
                 else:
