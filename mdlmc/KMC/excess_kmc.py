@@ -241,7 +241,7 @@ def kmc_main(settings):
     if settings.no_rescaling or not settings.rescale_parameters:
         distances_rescaled = distances
 
-    output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:8.2f} fps"
+    output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:8.2f}"
 
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, fermi, (a, b, c))
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
