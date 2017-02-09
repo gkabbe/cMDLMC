@@ -131,7 +131,7 @@ class KMCGen:
         distance_rescaled_gen = trajectory_generator(self.distances_rescaled)
 
         while True:
-            if self.relaxation_time:
+            if self.relaxation_time and not self.waiting_time:
                 if DEBUG:
                     print("Relaxing distances:")
                 for i in range(self.relaxation_time):
@@ -195,6 +195,7 @@ def kmc_main(settings):
     xyz_output = settings.xyz_output
     print_frequency = settings.print_frequency
     relaxation_time = settings.relaxation_time
+    waiting_time = settings.waiting_time
 
     oxygen_number = oxygen_trajectory.shape[1]
     # Initialize with one excess proton
@@ -286,6 +287,7 @@ def kmc_main(settings):
         kmc_gen.oxy_idx = proton_position
         # After a jump, the relaxation time is increased
         kmc_gen.relaxation_time = relaxation_time
+        kmc_gen.waiting_time = waiting_time
 
         if DEBUG:
             print("New proton position:", proton_position)
