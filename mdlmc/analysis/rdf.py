@@ -127,7 +127,7 @@ def prepare_trajectory(file, pbc, bins, dmin, dmax, clip, elements, acidic_proto
         atom_names, trajectory = xyz_parser.load_trajectory_from_hdf5(file)
     else:
         trajectory = xyz_parser.load_atoms(file, clip=clip)
-        atom_names = trajectory[0]["name"]
+        atom_names = trajectory[0]["name"].astype(str)
         trajectory = np.array(trajectory["pos"], order="C")
 
     pbc = np.array(pbc)
