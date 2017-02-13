@@ -473,12 +473,6 @@ CONFIG_DICT = {
              "default": False,
              "help": "Overwrite jump rates in HDF5 file if True"
          }),
-       # ("cutoff_radius",
-       #  {
-       #      "parse_fct": parse_float,
-       #      "default": 4.0,
-       #      "help": "Cutoff radius for jump rate determination"
-       #  }),
         ("md_timestep_fs",
          {
              "parse_fct": parse_float,
