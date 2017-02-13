@@ -390,12 +390,6 @@ CONFIG_DICT = {
              "default": 1,
              "help": "Print frequency. 1 means every frame, 2 every second and so on."
          }),
-        ("equilibration_sweeps",
-         {
-             "parse_fct": parse_int,
-             "default": None,
-             "help": "Equilibration sweeps"
-         }),
         ("chunk_size",
          {
              "parse_fct": parse_int,
