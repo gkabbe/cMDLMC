@@ -174,3 +174,28 @@ class TestGenerators(unittest.TestCase):
             print(frame, probsum)
             if frame == 20:
                 break
+
+
+class TestPositionTracker(unittest.TestCase):
+    def test_linear_chain(self):
+        class MockAtomBox:
+            def distance(self, pos1, pos2):
+                return np.array([-2.6, 0, 0])
+
+        d_oo = 2.6
+        d_oh = 0.95  # unit: angstrom
+        proton_idx = 0
+        chain_length = 20
+        trajectory = np.zeros((1, chain_length, 3))
+        trajectory[0, :, 0] = np.linspace(0, (chain_length - 1) * d_oo, chain_length)
+        position_tracker = excess_kmc.PositionTracker(trajectory, MockAtomBox(), proton_idx, d_oh)
+
+        for i in range(1, chain_length):
+            # Proton walks from left to right through trajectory
+            new_proton_idx = (proton_idx + 1) % trajectory.shape[1]
+            position_tracker.update_correction_vector(0, new_proton_idx)
+            print("Correction vector:", position_tracker.correction_vector)
+            proton_pos = position_tracker.get_position(0)
+            proton_idx = new_proton_idx
+            desired = np.array([i * (d_oo - 2 * d_oh), 0, 0])
+            np.testing.assert_allclose(proton_pos, desired)

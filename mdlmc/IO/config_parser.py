@@ -491,5 +491,12 @@ CONFIG_DICT = {
              "default": None,
              "help": "Seed for random number generator"
          }),
+        ("d_oh",
+         {
+             "parse_fct": parse_float,
+             "default": None,
+             "help": "Fix jump distance by substracting 2*d_oh along the jump vector during each "
+                     "jump. If d_oh is None, the fix will not be applied."
+         })
     ])
 }

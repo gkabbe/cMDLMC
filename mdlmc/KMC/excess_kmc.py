@@ -163,6 +163,34 @@ class KMCGen:
                 yield prob.sum()
 
 
+class PositionTracker:
+    """Keeps track of the proton position and applies a distance correction
+    if d_oh is specified."""
+    def __init__(self, oxygen_trajectory, atombox, proton_position, d_oh=None):
+        self.oxygen_trajectory = oxygen_trajectory
+        self.d_oh = d_oh
+        self.correction_vector = 0
+        self.atombox = atombox
+        self.proton_position = proton_position
+
+    def get_position(self, frame_idx):
+        return self.oxygen_trajectory[frame_idx, self.proton_position] + self.correction_vector
+
+    def update_correction_vector(self, frame_idx, new_proton_position):
+        # Calculate correction vector that takes into account that a proton does not really travel
+        # the full O-O distance by substracting 2 * d_OH from the connection vector of the two
+        # oxygen atoms between which the proton jumps
+        correction_vector = self.atombox.distance(
+            self.oxygen_trajectory[frame_idx, new_proton_position],
+            self.oxygen_trajectory[frame_idx, self.proton_position])
+        correction_vector /= np.sqrt(correction_vector @ correction_vector)
+        correction_vector *= 2 * self.d_oh
+        self.correction_vector += correction_vector
+        self.proton_position = new_proton_position
+        if DEBUG:
+            print("Correction vector:", self.correction_vector)
+
+
 def kmc_main(settings):
     print_settings(settings)
 
@@ -196,6 +224,7 @@ def kmc_main(settings):
     print_frequency = settings.print_frequency
     relaxation_time = settings.relaxation_time
     waiting_time = settings.waiting_time
+    d_oh = settings.d_oh
 
     oxygen_number = oxygen_trajectory.shape[1]
     # Initialize with one excess proton
@@ -203,6 +232,8 @@ def kmc_main(settings):
     proton_position, = np.where(oxygen_lattice)[0]
 
     atombox_cubic = AtomBoxCubic(settings.pbc)
+
+    pos_tracker = PositionTracker(oxygen_trajectory, atombox_cubic, proton_position, d_oh)
 
     if settings.seed is not None:
         np.random.seed(settings.seed)
@@ -260,8 +291,9 @@ def kmc_main(settings):
 
         for i in range(sweep, next_sweep):
             if i % print_frequency == 0:
-                print(output_format.format(i, i * timestep_md, *oxygen_trajectory[
-                    i % trajectory_length, proton_position], jumps, i / (time.time() - start_time)),
+                proton_coords = pos_tracker.get_position(i % trajectory_length)
+                print(output_format.format(i, i * timestep_md, *proton_coords, jumps,
+                                           i / (time.time() - start_time)),
                       flush=True, file=settings.output)
                 if DEBUG:
                     print(next(distance_debug)[1][proton_position])
@@ -291,6 +323,9 @@ def kmc_main(settings):
 
         if DEBUG:
             print("New proton position:", proton_position)
+
+        if d_oh:
+            pos_tracker.update_correction_vector(sweep % trajectory_length, proton_position)
 
 
 def main(*args):
