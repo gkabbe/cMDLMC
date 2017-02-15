@@ -27,7 +27,7 @@ def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, b
     start_time = time.time()
     for (_, end, chk1), (_, _, chk2) in zip(traj_generator1, traj_generator2):
         chk1 = np.array(chk1, order="C")
-        chk2 = np.array(chk1, order="C")
+        chk2 = np.array(chk2, order="C")
         for frame_1, frame_2 in zip(chk1, chk2):
             dists = atombox.length_all_to_all(frame_1, frame_2)
             histo, edges = np.histogram(dists[mask], bins=max_bins, range=range_)
@@ -133,21 +133,28 @@ def prepare_trajectory(file, pbc, bins, dmin, dmax, clip, elements, acidic_proto
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
 
-    if acidic_protons and "H" in elements:
-        elements.remove("H")
+    if acidic_protons:
+        if "H" in elements:
+            elements.remove("H")
         acid_indices = npa.get_acidic_proton_indices(trajectory[0], atombox, verbose=verbose)
         selection1 = np.zeros(trajectory.shape[1], dtype=bool)
         selection1[acid_indices] = 1
+        if elements:
+            selection2 = atom_names == elements[0]
+            single_element = False
+        else:
+            selection2 = selection1
+            single_element = True
     else:
         selection1 = atom_names == elements[0]
         elements.pop(0)
 
-    if elements and elements[0] != "H":
-        selection2 = atom_names == elements[0]
-        single_element = False
-    else:
-        selection2 = selection1
-        single_element = True
+        if elements:
+            selection2 = atom_names == elements[0]
+            single_element = False
+        else:
+            selection2 = selection1
+            single_element = True
 
     if subparser_name == "rdf":
         radial_distribution_function(trajectory, selection1, selection2, atombox, dmin,
