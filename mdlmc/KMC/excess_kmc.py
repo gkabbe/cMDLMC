@@ -181,8 +181,8 @@ class PositionTracker:
         # the full O-O distance by substracting 2 * d_OH from the connection vector of the two
         # oxygen atoms between which the proton jumps
         correction_vector = self.atombox.distance(
-            self.oxygen_trajectory[frame_idx, new_proton_position],
-            self.oxygen_trajectory[frame_idx, self.proton_position])
+            self.oxygen_trajectory[frame_idx, new_proton_position].astype(float),
+            self.oxygen_trajectory[frame_idx, self.proton_position].astype(float))
         correction_vector /= np.sqrt(correction_vector @ correction_vector)
         correction_vector *= 2 * self.d_oh
         self.correction_vector += correction_vector
