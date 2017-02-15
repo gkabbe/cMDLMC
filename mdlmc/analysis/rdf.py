@@ -13,7 +13,6 @@ from mdlmc.misc.tools import argparse_compatible, chunk, chunk_trajectory
 
 def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, bins, *,
                         normalized=False, verbose=False, mask=None):
-
     if normalized:
         pbc = np.array(atombox.periodic_boundaries)
         maxlen = np.sqrt(((pbc / 2)**2).sum())
@@ -48,7 +47,6 @@ def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, b
 
 def calculate_rdf(trajectory, selection1, selection2, atombox, dmin, dmax, bins, *, chunk_size=1,
                   clip=None, verbose=False):
-
     traj_gen1 = chunk_trajectory(trajectory, chunk_size, length=clip, selection=selection1)
     traj_gen2 = chunk_trajectory(trajectory, chunk_size, length=clip, selection=selection2)
 
@@ -65,7 +63,7 @@ def calculate_rdf(trajectory, selection1, selection2, atombox, dmin, dmax, bins,
         print("# n2 =", n2)
 
     volume = atombox.periodic_boundaries[0] * atombox.periodic_boundaries[1] * \
-        atombox.periodic_boundaries[2]
+             atombox.periodic_boundaries[2]
     rho = n2 / volume
     trajectory_length = trajectory.shape[0] if not clip else clip
 
@@ -81,8 +79,7 @@ def calculate_rdf(trajectory, selection1, selection2, atombox, dmin, dmax, bins,
 
 
 def radial_distribution_function(trajectory, selection1, selection2, atombox, dmin, dmax,
-                                 bins, *, clip=None, plot=False, verbose=False, chunk_size=None):
-
+                                 bins, *, clip=None, plot=False, verbose=False, chunk_size=1):
     rdf, dists = calculate_rdf(trajectory, selection1, selection2, atombox, dmin, dmax, bins,
                                chunk_size=chunk_size, clip=clip, verbose=verbose)
 
@@ -170,7 +167,8 @@ def prepare_trajectory(file, pbc, bins, dmin, dmax, clip, elements, acidic_proto
 
 
 def main(*args):
-    parser = argparse.ArgumentParser(description="Calculates distance histograms and RDF")
+    parser = argparse.ArgumentParser(description="Calculates distance histograms and RDF",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("file", help="trajectory")
     parser.add_argument("pbc", nargs=3, type=float, help="Periodic boundaries")
     parser.add_argument("--bins", type=int, default=50, help="Number of bins")
@@ -179,11 +177,11 @@ def main(*args):
     parser.add_argument("--clip", type=int, help="Clip trajectory after frame")
     parser.add_argument("-e", "--elements", nargs="+", default=["O"], help="Elements")
     parser.add_argument("-a", "--acidic_protons", action="store_true",
-                            help="Only select acidic protons")
+                        help="Only select acidic protons")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--plot", action="store_true", help="Plot result")
-    parser.add_argument("--chunk_size", "-c", type=int, help="Read trajectory in chunks of"
-                                                             "size <chunk_size>")
+    parser.add_argument("--chunk_size", "-c", type=int, default=1,
+                        help="Read trajectory in chunks ofsize <chunk_size>")
 
     subparsers = parser.add_subparsers(dest="subparser_name")
 
@@ -192,7 +190,7 @@ def main(*args):
 
     parser_histo = subparsers.add_parser("histo", help="Determine distance histogram")
     parser_histo.add_argument("--normalized", "-n", action="store_true",
-                                 help="Normalize histogram")
+                              help="Normalize histogram")
     parser_histo.set_defaults(func=prepare_trajectory)
 
     args = parser.parse_args()
