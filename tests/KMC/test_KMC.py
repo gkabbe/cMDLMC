@@ -177,10 +177,13 @@ class TestGenerators(unittest.TestCase):
 
 
 class TestPositionTracker(unittest.TestCase):
-    def test_linear_chain(self):
+    def setUp(self):
         class MockAtomBox:
             def distance(self, pos1, pos2):
-                return np.array([-2.6, 0, 0])
+                return pos2 - pos1
+        self.atombox = MockAtomBox()
+
+    def test_linear_chain(self):
 
         d_oo = 2.6
         d_oh = 0.95  # unit: angstrom
@@ -188,14 +191,55 @@ class TestPositionTracker(unittest.TestCase):
         chain_length = 20
         trajectory = np.zeros((1, chain_length, 3))
         trajectory[0, :, 0] = np.linspace(0, (chain_length - 1) * d_oo, chain_length)
-        position_tracker = excess_kmc.PositionTracker(trajectory, MockAtomBox(), proton_idx, d_oh)
+        position_tracker = excess_kmc.PositionTracker(trajectory, self.atombox, proton_idx, d_oh)
 
         for i in range(1, chain_length):
             # Proton walks from left to right through trajectory
             new_proton_idx = (proton_idx + 1) % trajectory.shape[1]
-            position_tracker.update_correction_vector(0, new_proton_idx)
+            position_tracker.update_correction_vector(frame_idx=0, new_proton_position=new_proton_idx)
             print("Correction vector:", position_tracker.correction_vector)
             proton_pos = position_tracker.get_position(0)
             proton_idx = new_proton_idx
             desired = np.array([i * (d_oo - 2 * d_oh), 0, 0])
+            print("Position:", proton_pos)
+            print("Desired:", desired)
             np.testing.assert_allclose(proton_pos, desired)
+
+    def test_water_chain(self):
+        """Make a chain of perfectly arranged water molecules.
+        One OH vector of each water molecule points to the "back" of the next water.
+        In contrast to the linear chain, this introduces an additional y-component.
+        """
+        # Construct the water chain
+        chain_length = 20
+        angle_oho = 104.45
+        angle_horizontal = angle_oho / 4
+        dist_oh = 0.95
+        dist_oh_horizontal = dist_oh * np.cos(np.radians(angle_horizontal))
+        dist_oh_vertical = dist_oh * np.sin(np.radians(angle_horizontal))
+        dist_oo = 2.6
+        dist_oo_horizontal = dist_oo * np.cos(np.radians(angle_horizontal))
+        dist_oo_vertical = dist_oo * np.sin(np.radians(angle_horizontal))
+        oxygens = np.zeros((1, 20, 3))
+        oxygens[0, :, 0] = np.linspace(0, dist_oo_horizontal * (chain_length - 1), chain_length)
+        oxygens[0, 1::2, 1] = dist_oo_vertical
+
+        desired = np.zeros(3)
+
+        proton_idx = 0
+        position_tracker = excess_kmc.PositionTracker(oxygens, self.atombox, proton_idx, dist_oh)
+
+        for i in range(1, chain_length):
+            new_proton_idx = (proton_idx + 1) % oxygens.shape[1]
+            position_tracker.update_correction_vector(0, new_proton_idx)
+            print("Correction vector:", position_tracker.correction_vector)
+            proton_pos = position_tracker.get_position(0)
+            proton_idx = new_proton_idx
+            desired += [dist_oo_horizontal - 2 * dist_oh_horizontal, 0, 0]
+            if i % 2 == 1:
+                desired[1] = dist_oo_vertical - 2 * dist_oh_vertical
+            else:
+                desired[1] = 0
+            print("Position:", proton_pos)
+            print("Desired:", desired)
+            np.testing.assert_allclose(proton_pos, desired, atol=1e-7)
