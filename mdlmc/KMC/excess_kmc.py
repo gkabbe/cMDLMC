@@ -117,6 +117,7 @@ class KMCGen:
 
     def __init__(self, oxy_idx, distances, distances_rescaled, jumprate_fct, jumprate_params):
         self.oxy_idx = oxy_idx
+        self.relaxation_counter = 0
         self.relaxation_time = 0
         self.waiting_time = 0  # Don't jump while waiting time > 0
         self.distances = distances
@@ -134,19 +135,28 @@ class KMCGen:
             if self.relaxation_time and not self.waiting_time:
                 if DEBUG:
                     print("Relaxing distances:")
-                for i in range(self.relaxation_time):
+                while self.relaxation_counter < self.relaxation_time:
                     if DEBUG:
-                        print(i)
+                        print(self.relaxation_counter)
                     _, dist = next(distance_gen)
                     dist = dist[self.oxy_idx]
                     counter, dist_rescaled = next(distance_rescaled_gen)
                     dist_rescaled = dist_rescaled[self.oxy_idx]
-                    yield dist + i / self.relaxation_time * (dist_rescaled - dist)
+                    dist_result = dist + self.relaxation_counter / self.relaxation_time * (dist_rescaled - dist)
+                    self.relaxation_counter += 1
+                    yield dist_result
+                self.relaxation_counter = 0
                 self.relaxation_time = 0
             else:
+                # yield new distance to keep it in sync with distance_rescaled
+                next(distance_gen)
                 counter, dist = next(distance_rescaled_gen)
                 dist = dist[self.oxy_idx]
                 yield dist
+
+    def reset_relaxationtime(self, relaxation_time):
+        self.relaxation_time = relaxation_time
+        self.relaxation_counter = 0
 
     def jumprate_generator(self):
         distance_gen = self.distance_generator()
@@ -318,7 +328,7 @@ def kmc_main(settings):
         proton_position = neighbor_indices[ix]
         kmc_gen.oxy_idx = proton_position
         # After a jump, the relaxation time is increased
-        kmc_gen.relaxation_time = relaxation_time
+        kmc_gen.reset_relaxationtime(relaxation_time)
         kmc_gen.waiting_time = waiting_time
 
         if DEBUG:
