@@ -118,7 +118,7 @@ class TestGenerators(unittest.TestCase):
         distances_rescaled[:, 0, 0] = 5
 
         def some_fct(x):
-            return np.where(x < 7, -11, 12)
+            return None
 
         params = ()
 
@@ -146,6 +146,30 @@ class TestGenerators(unittest.TestCase):
         for i in range(20):
             dist = next(distance_gen)
             self.assertEqual(dist[0], distances_rescaled[0, 0, 0])
+
+    def test_distance_generator_reset(self):
+        distances = np.zeros((5, 1, 3))
+        distances[:, 0, 0] = 10
+        distances_rescaled = np.zeros((5, 1, 3))
+        distances_rescaled[:, 0, 0] = 5
+
+        def some_fct(x):
+            return None
+
+        params = ()
+
+        kmcgen = excess_kmc.KMCGen(oxy_idx=0, distances=distances,
+                                   distances_rescaled=distances_rescaled, jumprate_fct=some_fct,
+                                   jumprate_params=params)
+
+        distance_gen = kmcgen.distance_generator()
+
+        kmcgen.relaxation_time = 10
+        for i in range(6):
+            print(next(distance_gen))
+        kmcgen.reset_relaxationtime(10)
+        for i in range(6):
+            print(next(distance_gen))
 
     def test_jumprate_generator(self):
         distances = np.zeros((5, 1, 3))
