@@ -96,12 +96,11 @@ def distance_histogram_between_hydronium_and_closest_oxygen(trajectory, pbc, dmi
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
         if i % 1000 == 0:
             print(i, end="\r", flush=True)
-        hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame,
-                                                                        proton_frame, atombox)
+        hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame, proton_frame,
+                                                                     atombox)
+        not_hydronium_index = np.arange(oxygen_frame.shape[0]) != hydronium_index
         closest_oxygen_index, distance = atombox.next_neighbor(oxygen_frame[hydronium_index],
-                                                               oxygen_frame[np.arange(
-                                                                   oxygen_frame.shape[
-                                                                       0]) != hydronium_index])
+                                                               oxygen_frame[not_hydronium_index])
 
         distances.append(distance)
 
