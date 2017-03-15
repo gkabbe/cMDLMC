@@ -178,7 +178,10 @@ class PositionTracker:
     if d_oh is specified."""
     def __init__(self, oxygen_trajectory, atombox, proton_position, d_oh=None):
         self.oxygen_trajectory = oxygen_trajectory
-        self.d_oh = d_oh
+        if d_oh is not None:
+            self.d_oh = d_oh
+        else:
+            self.d_oh = 0
         self.correction_vector = 0
         self.atombox = atombox
         self.proton_position = proton_position
@@ -339,8 +342,7 @@ def kmc_main(settings):
         if DEBUG:
             print("New proton position:", proton_position)
 
-        if d_oh:
-            pos_tracker.update_correction_vector(sweep % trajectory_length, proton_position)
+        pos_tracker.update_correction_vector(sweep % trajectory_length, proton_position)
 
 
 def main(*args):
