@@ -186,7 +186,7 @@ def main(*args):
         # use only first 60% of the calculated interval because of statistic
         msd_mean, msd_var = msd_mean[:int(msd_mean.shape[0] * 0.6)], \
                             msd_var[:int(msd_var.shape[0] * 0.6)]
-        for i  in range(msd_mean.shape[0]):
+        for i in range(msd_mean.shape[0]):
             print(i, msd_mean[i].sum(), msd_var[i].sum())
 
     else:
