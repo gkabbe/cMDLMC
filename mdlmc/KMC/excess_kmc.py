@@ -238,8 +238,13 @@ def kmc_main(settings):
 
     oxygen_number = oxygen_trajectory.shape[1]
     # Initialize with one excess proton
-    oxygen_lattice = initialize_oxygen_lattice(oxygen_number, 1)
-    proton_position, = np.where(oxygen_lattice)[0]
+    if settings.start_position is not None:
+        proton_position = settings.start_position
+        oxygen_lattice = np.zeros(oxygen_number, np.uint8)
+        oxygen_lattice[proton_position] = 1
+    else:
+        oxygen_lattice = initialize_oxygen_lattice(oxygen_number, 1)
+        proton_position, = np.where(oxygen_lattice)[0]
 
     atombox_cubic = AtomBoxCubic(settings.pbc)
 

@@ -497,6 +497,12 @@ CONFIG_DICT = {
              "default": None,
              "help": "Fix jump distance by substracting 2*d_oh along the jump vector during each "
                      "jump. If d_oh is None, the fix will not be applied."
+         }),
+        ("start_position",
+         {
+             "parse_fct": parse_int,
+             "default": None,
+             "help": "Set excess proton start position. If not specified, it will be set randomly"
          })
     ])
 }
