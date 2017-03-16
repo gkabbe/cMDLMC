@@ -308,8 +308,55 @@ def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
         print(" ", ("{:12} " + " ".join(6 * ["{:>12.8f}"])).format(*values))
 
 
-def main(*args):
+@argparse_compatible
+def oxygen_relaxation(filename, pbc, time_window):
+    """After an excess proton transfer, determine the relaxation of the H3O+ neighbors"""
 
+    atoms = xyz_parser.load_atoms(filename)
+    oxygen_distances = []
+
+    protonated_oxygens_filename = re.sub("\..{3}$", "", filename) + "_cbo.npy"
+    if not os.path.exists(protonated_oxygens_filename):
+        print("# Creating array of nearest oxygen neighbor over time for all protons")
+        protonated_oxygens = determine_protonated_oxygens(atoms, pbc,
+                                                          nonorthorhombic_box=nonorthorhombic_box,
+                                                          verbose=verbose)
+        np.save(protonated_oxygens_filename, protonated_oxygens)
+    else:
+        print("# Found array with nearest oxygen neighbor over time:", protonated_oxygens_filename)
+        protonated_oxygens = np.load(protonated_oxygens_filename)
+
+    atombox = AtomBoxCubic(pbc)
+
+    oxygens, = npa.select_atoms(atoms, "O")
+    protons = npa.get_acidic_protons(atoms, atombox)
+
+    for frame, (protonated_oxygens_before, protonated_oxygens_after) in enumerate(
+            zip(protonated_oxygens[time_window // 2 - 1: -time_window // 2 - 1],
+                protonated_oxygens[time_window // 2: -time_window // 2]), start=time_window // 2):
+        protonation_change = protonated_oxygens_before != protonated_oxygens_after
+        if protonation_change.any():
+            proton_indices, = np.where(protonation_change)
+            donor_indices = find_oxonium_ions(protonated_oxygens_before)
+            acceptor_indices = find_oxonium_ions(protonated_oxygens_after)
+            if donor_indices.size != acceptor_indices.size:
+                # If accidentally a neutral hydrogen dissociates, ignore this frame altogether
+                continue
+
+            oxygen_dists = atombox.length_all_to_all(
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
+                acceptor_indices],
+                oxygens[frame - time_window // 2: frame + int(np.ceil(time_window / 2)),
+                :]).reshape(time_window, -1)
+
+            for dists in oxygen_dists.T:
+                oxygen_distances.append(dists)
+
+        if frame % 1000 == 0:
+            print(frame, end="\r", flush=True)
+
+
+def main(*args):
     parser = argparse.ArgumentParser(description="Proton jump statistics",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--verbose", "-v", action="store_true", default=False, help="Verbosity")
@@ -340,15 +387,25 @@ def main(*args):
     parser_jumpmotion.add_argument("filename", help="trajectory")
     parser_jumpmotion.add_argument("pbc", type=float, nargs="+",
                                    help="Periodic boundaries. If 3 values are given, an "
-                                   "orthorhombic cell is assumed. If 9 values are given,"
-                                   " the pbc vectors are constructed from them")
+                                        "orthorhombic cell is assumed. If 9 values are given,"
+                                        " the pbc vectors are constructed from them")
     parser_jumpmotion.add_argument("--time_window", "-t", type=int, default=200,
                                    help="Length of the time window over which the proton and oxygen"
                                         " motion are averaged")
+
     parser_jumpmotion.add_argument("--plot", action="store_true", help="Plot result")
     parser_jumpmotion.add_argument("--no_shuttling", action="store_true", help="Plot result")
     parser_jumpmotion.add_argument("--time_unit", help="Unit of one time step, e.g. 0.5fs")
     parser_jumpmotion.set_defaults(func=oxygen_and_proton_motion_during_a_jump)
+
+    parser_relaxation = subparsers.add_parser("relaxation",
+                                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser_relaxation.add_argument("filename", help="Trajectory file name")
+    parser_relaxation.add_argument("pbc", type=float, nargs=3, help="Periodic boundaries")
+    parser_relaxation.add_argument("--time_window", "-t", type=int, default=200,
+                                   help="Length of the time window over which relaxation time is "
+                                        "averaged.")
+    parser_relaxation.set_defaults(func=oxygen_relaxation)
 
     args = parser.parse_args()
     args.func(args)
