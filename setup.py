@@ -100,7 +100,8 @@ setup(name='mdlmc',
                               'trajread=mdlmc.misc.trajread:main',
                               'save_hdf5=mdlmc.IO.xyz_parser:save_to_hdf5_cmd',
                               'print_hdf5=mdlmc.IO.xyz_parser:print_hdf5',
-                              'kmc=mdlmc.KMC.excess_kmc:main'
+                              'kmc=mdlmc.KMC.excess_kmc:main',
+                              'neighbors=mdlmc.analysis.geometry:determine_neighbors'
                               ],
       },
       include_package_data=True,
