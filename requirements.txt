@@ -1,0 +1,15 @@
+Cython
+CythonGSL
+gitdb
+GitPython
+h5py
+ipdb
+llvmlite
+matplotlib
+nose
+numba
+numexpr
+numpy
+Pint
+scipy
+tables
