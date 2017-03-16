@@ -117,6 +117,27 @@ def argparse_compatible(func):
     return wrapper
 
 
+def auto_argparse(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        docstring = inspect.getdoc(func)
+        parser = argparse.ArgumentParser(description=docstring,
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parameters = inspect.signature(func)
+        for parameter_name, properties in parameters:
+            if properties.default is not inspect._empty:
+                default = properties.default
+            else:
+                default = None
+
+            if properties.annotation is not inspect._empty and type(properties.annotation) is type:
+                annotation = properties.annotation
+            else:
+                annotation = None
+
+            parser.add_argument()
+
+
 def remember_results(overwrite=False, nobackup=False):
     def decorator(func):
         @wraps(func)
