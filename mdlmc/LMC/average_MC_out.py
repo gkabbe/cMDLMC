@@ -47,8 +47,8 @@ def load_intervals_intelligently(filename, var_prot_single, verbose=False):
             elif len(settings) == 3:
                 break
         try:
-            interval_length = settings["reset_freq"] / settings["print_freq"]
-            interval_number = settings["sweeps"] / settings["reset_freq"]
+            interval_length = settings["reset_freq"] // settings["print_freq"]
+            interval_number = settings["sweeps"] // settings["reset_freq"]
             return interval_length, interval_number
         except KeyError:
             return None
@@ -73,7 +73,7 @@ def load_intervals_intelligently(filename, var_prot_single, verbose=False):
         if interval_length != 0:
             # The two comments are counted as well, therefore we substract them here
             interval_length -= 2
-            return interval_length, total_lines / interval_length
+            return interval_length, total_lines // interval_length
         else:
             return None
 
