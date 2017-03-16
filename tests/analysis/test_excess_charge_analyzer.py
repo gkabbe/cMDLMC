@@ -45,3 +45,6 @@ class TestExcessChargeAnalyzer(unittest.TestCase):
             cv_diff = cv - colvars[0]
             ec_diff = ec - excess_charge_positions[0]
             np.testing.assert_allclose(cv_diff, ec_diff)
+
+    def test_covered_distance(self):
+        raise NotImplementedError("Test still missing")
