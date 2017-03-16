@@ -1,0 +1,7 @@
+Install all necessary packages via
+
+bash install.sh
+
+Afterwards, type
+
+python setup.py install
