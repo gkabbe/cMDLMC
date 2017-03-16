@@ -160,14 +160,14 @@ class ObservableManager:
         self.averaged_results[(sweep % self.reset_freq) / self.print_freq, 2:] += \
             MSD[0], MSD[1], MSD[2], autocorrelation, helper.get_jumps()
 
-    def print_xyz(self, Os, oxygen_lattice, sweep, timestep_fs):
+    def print_xyz(self, Os, oxygen_lattice, sweep):
         proton_indices = np.where(oxygen_lattice > 0)[0]
-        print(Os.shape[0] + self.proton_number, output=self.output)
-        print("Time:", sweep * timestep_fs, output=self.output)
+        print(Os.shape[0] + self.proton_number, file=self.output)
+        print("Time:", sweep * self.md_timestep, file=self.output)
         for i in range(Os.shape[0]):
-            print("O        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[i]), output=self.output)
+            print("O        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[i]), file=self.output)
         for index in proton_indices:
-            print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]), output=self.output)
+            print("H        {:20.8f}   {:20.8f}   {:20.8f}".format(*Os[index]), file=self.output)
 
 
 def initialize_oxygen_lattice(oxygen_number, proton_number):
@@ -321,7 +321,7 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
 
         if sweep % settings.print_freq == 0:
             if settings.xyz_output:
-                observable_manager.print_xyz(oxygen_trajectory[frame], oxygen_lattice)
+                observable_manager.print_xyz(oxygen_trajectory[frame], oxygen_lattice, sweep)
             else:
                 observable_manager.calculate_displacement(frame)
                 observable_manager.calculate_msd()
