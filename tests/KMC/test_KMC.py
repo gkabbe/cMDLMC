@@ -21,6 +21,7 @@ class TestVariableJumpRateKMC(unittest.TestCase):
             def probsum_gen(omega):
                 while True:
                     yield omega
+
             jump_rates = probsum_gen(omega)
             fastforward_gen = excess_kmc.fastforward_to_next_jump(jump_rates, dt)
             sweep, frame, time = 0, 0, 0
@@ -112,10 +113,13 @@ class TestGenerators(unittest.TestCase):
 
     def test_distance_generator(self):
         """Assert that the distances are correctly generated"""
+        x = 10
+        x_rescaled = 5
         distances = np.zeros((5, 1, 3))
-        distances[:, 0, 0] = 10
+        distances[:, 0, 0] = x
         distances_rescaled = np.zeros((5, 1, 3))
-        distances_rescaled[:, 0, 0] = 5
+        distances_rescaled[:, 0, 0] = x_rescaled
+        relaxation_time = 6
 
         def some_fct(x):
             return None
@@ -130,28 +134,32 @@ class TestGenerators(unittest.TestCase):
 
         # Assert that distance_gen returns the rescaled distances if delay is not set
         dist = next(distance_gen)
-        self.assertTrue(np.allclose(dist, [5, 0, 0]))
+        self.assertTrue(np.allclose(dist, [x_rescaled, 0, 0]))
 
         # Assert that the delay results in larger distances, which will be scaled linearly down
         # to the scaled distances
-        kmcgen.relaxation_time = 6
+        kmcgen.relaxation_time = relaxation_time
         for i in range(6):
-            dist = next(distance_gen)
-            self.assertGreater(dist[0], distances_rescaled[0, 0, 0], "The unrescaled distance should "
-                                                                     "be greater than the rescaled "
-                                                                     "distance")
+            x_generated, *_ = next(distance_gen)
+            self.assertAlmostEqual(x_generated, x - i / relaxation_time * (x - x_rescaled),
+                               "The unrescaled distance should be greater than the rescaled distance")
 
         # Assert that after the delay has passed, the distances are equal to the rescaled
         # distances
         for i in range(20):
-            dist = next(distance_gen)
-            self.assertEqual(dist[0], distances_rescaled[0, 0, 0])
+            x_generated, *_ = next(distance_gen)
+            self.assertEqual(x_generated, x_rescaled)
 
     def test_distance_generator_reset(self):
+        """Assert bla"""
+        x = 10
+        x_rescaled = 5
+
         distances = np.zeros((5, 1, 3))
-        distances[:, 0, 0] = 10
+        distances[:, 0, 0] = x
         distances_rescaled = np.zeros((5, 1, 3))
-        distances_rescaled[:, 0, 0] = 5
+        distances_rescaled[:, 0, 0] = x_rescaled
+        relaxation_time = 10
 
         def some_fct(x):
             return None
@@ -164,21 +172,35 @@ class TestGenerators(unittest.TestCase):
 
         distance_gen = kmcgen.distance_generator()
 
-        kmcgen.relaxation_time = 10
+        # Generate some distances without relaxation time set
+        for i in range(5):
+            next(distance_gen)
+
+        # Set relaxation time
+        kmcgen.relaxation_time = relaxation_time
         for i in range(6):
-            print(next(distance_gen))
+            next(distance_gen)
+
+        # Now reset the relaxation time and make sure everything works as expected
         kmcgen.reset_relaxationtime(10)
         for i in range(6):
-            print(next(distance_gen))
+            x_generated, *_ = next(distance_gen)
+            print(x_generated, x - i / relaxation_time * (x - x_rescaled))
+            self.assertEqual(x_generated, x - i / relaxation_time * (x - x_rescaled))
 
     def test_jumprate_generator(self):
+
+        x = 10
+        x_rescaled = 5
+        relaxation_time = 20
+
         distances = np.zeros((5, 1, 3))
-        distances[:, 0, 0] = 10
+        distances[:, 0, 0] = x
         distances_rescaled = np.zeros((5, 1, 3))
-        distances_rescaled[:, 0, 0] = 5
+        distances_rescaled[:, 0, 0] = x_rescaled
 
         def some_fct(x):
-            return np.where(x < 7, -11, 12)
+            return x
 
         params = ()
 
@@ -188,13 +210,14 @@ class TestGenerators(unittest.TestCase):
 
         probsum_gen = kmcgen.jumprate_generator()
         for frame, probsum in enumerate(probsum_gen):
-            print(frame, probsum)
+            self.assertEqual(probsum, x_rescaled)
             if frame == 20:
                 break
 
         probsum_gen = kmcgen.jumprate_generator()
-        kmcgen.relaxation_time = 20
+        kmcgen.relaxation_time = relaxation_time
         for frame, probsum in enumerate(probsum_gen):
+            self.assertEqual(probsum, x - frame / relaxation_time * (x - x_rescaled))
             print(frame, probsum)
             if frame == 20:
                 break
