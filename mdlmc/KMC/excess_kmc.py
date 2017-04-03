@@ -291,7 +291,10 @@ def kmc_main(settings):
     if settings.no_rescaling or not settings.rescale_parameters:
         distances_rescaled = distances
 
-    output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:8.2f}"
+    print("# {:16} {:18} {:15} {:15} {:15} {:10} {:10} {:8}".format(
+        "Step", "Time", "x", "y", "z", "O-Neighbor", "Jumps", "fps"))
+
+    output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:10d} {:8.2f}"
 
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, fermi, (a, b, c))
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
@@ -310,8 +313,8 @@ def kmc_main(settings):
         for i in range(sweep, next_sweep):
             if i % print_frequency == 0:
                 proton_coords = pos_tracker.get_position(i % trajectory_length)
-                print(output_format.format(i, i * timestep_md, *proton_coords, jumps,
-                                           i / (time.time() - start_time)),
+                print(output_format.format(i, i * timestep_md, *proton_coords, proton_position,
+                                           jumps, i / (time.time() - start_time)),
                       flush=True, file=settings.output)
                 if DEBUG:
                     print(next(distance_debug)[1][proton_position])
