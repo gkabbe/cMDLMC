@@ -137,7 +137,7 @@ class KMCGen:
                     print("Relaxing distances:")
                 while self.relaxation_counter < self.relaxation_time:
                     if DEBUG:
-                        print(self.relaxation_counter)
+                        print("Relaxation time:", self.relaxation_counter)
                     _, dist = next(distance_gen)
                     dist = dist[self.oxy_idx]
                     counter, dist_rescaled = next(distance_rescaled_gen)
