@@ -132,7 +132,7 @@ class KMCGen:
         distance_rescaled_gen = trajectory_generator(self.distances_rescaled)
 
         while True:
-            if self.relaxation_time and not self.waiting_time:
+            if self.relaxation_time:
                 if DEBUG:
                     print("Relaxing distances:")
                 while self.relaxation_counter < self.relaxation_time:
