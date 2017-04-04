@@ -21,13 +21,62 @@ def determine_hydronium_indices(covevo):
     return h3o_indices
 
 
+def oh_bond_array_filename(trajectory_filename):
+    oh_bond_filename = re.sub("\..{3}$", "", trajectory_filename) + "_cbo.npy"
+    return oh_bond_filename
+
+
+def load_oh_bonds(filename, pbc, *, verbose=False):
+    oh_bond_filename = oh_bond_array_filename(filename)
+    if not os.path.exists(oh_bond_filename):
+        if verbose:
+            print("# OH-bond file not existing. Creating...")
+        oxygens, hydrogens = BinDump.npload_atoms(filename, atomnames_list=["O", "H"],
+                                                  return_tuple=True, verbose=verbose)
+        oxygens = np.array(oxygens["pos"], order="C")
+        hydrogens = np.array(hydrogens["pos"], order="C")
+        oh_bonds = determine_protonated_oxygens(filename, pbc, verbose=verbose)
+        np.save(oh_bond_filename, oh_bonds)
+    if verbose:
+        print("# Loading Covevo File...")
+    oh_bonds = np.load(oh_bond_filename)
+    return oh_bonds
+
+
+def autocorrelate(oh_vector: np.ndarray, interval_number: int, interval_length: int,
+                  *, verbose=False):
+    oh_bonds_avg = np.zeros((interval_number, interval_length), int)
+    total_length = oh_vector.shape[0]
+
+    if interval_number * interval_length <= total_length:
+        interval_distance = interval_length
+    else:
+        diff = interval_number * interval_length - total_length
+        interval_distance = interval_length - int(ceil(diff / float(interval_number - 1)))
+
+    if verbose:
+        print("# Averaging over", interval_number, "intervals of length", interval_length,
+              "with distance", interval_distance, "to each other")
+
+    for i in range(interval_number):
+        if verbose:
+            print("# {} / {}".format(i, interval_number), end="\r")
+        oh_bonds_avg[i] = (
+        oh_vector[i * interval_distance:i * interval_distance + interval_length] == oh_vector[i * interval_distance]).sum(axis=1)
+    if verbose:
+        print("")
+
+    result = oh_bonds_avg.mean(axis=0)
+    return result
+
+
 def main(*args):
     parser = argparse.ArgumentParser(
-        description="Determine covalent bond autocorrelation function of MD trajectory")
+        description="Determine covalent OH bond autocorrelation function of MD trajectory")
     parser.add_argument("filename", help="Trajectory from which to load the oxygen topologies")
-    parser.add_argument("intervalnumber", type=int,
+    parser.add_argument("interval_number", type=int,
                         help="Number of intervals over which to average")
-    parser.add_argument("intervallength", type=int, help="Interval length")
+    parser.add_argument("interval_length", type=int, help="Interval length")
     parser.add_argument("--pbc", nargs=3, type=float,
                         help="Periodic boundaries")
     parser.add_argument("--water", "-w", action="store_true",
@@ -35,53 +84,21 @@ def main(*args):
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose")
     args = parser.parse_args()
 
-    intervalnumber = args.intervalnumber
-    intervallength = args.intervallength
+    interval_number = args.interval_number
+    interval_length = args.interval_length
     pbc = np.array(args.pbc)
-    covevo_filename = re.sub("\..{3}$", "", args.filename) + "_cbo.npy"
-    if not os.path.exists(covevo_filename):
-        if args.verbose:
-            print("# Covevo file not existing. Creating...")
-        oxygens, hydrogens = BinDump.npload_atoms(args.filename, atomnames_list=["O", "H"],
-                                                  return_tuple=True, verbose=args.verbose)
-        oxygens, hydrogens = np.array(oxygens["pos"], order="C"), np.array(
-            hydrogens["pos"], order="C")
-        covevo = determine_protonated_oxygens(covevo_filename, oxygens, hydrogens, pbc,
-                                              verbose=args.verbose)
-        np.save(covevo_filename, covevo)
-    if args.verbose:
-        print("# Loading Covevo File...")
-    covevo = np.load(covevo_filename)
+
+    oh_bonds = load_oh_bonds(args.filename, pbc, verbose=args.verbose)
 
     if args.water:
         if args.verbose:
             print("# Determining array of hydronium indices")
-        covevo = determine_hydronium_indices(covevo)
+        oh_bonds = determine_hydronium_indices(oh_bonds)
 
-    covevo_avg = np.zeros((args.intervalnumber, args.intervallength), int)
+    result = autocorrelate(oh_bonds, interval_number, interval_length)
 
-    totallength = covevo.shape[0]
-    if intervalnumber * intervallength <= totallength:
-        startdist = intervallength
-    else:
-        diff = intervalnumber * intervallength - totallength
-        startdist = intervallength - int(ceil(diff / float(intervalnumber - 1)))
-
-    if args.verbose:
-        print("# Averaging over", intervalnumber, "intervals of length", intervallength,
-              "with distance", startdist, "to each other")
-
-    for i in range(intervalnumber):
-        if args.verbose:
-            print("# {} / {}".format(i, intervalnumber), end="\r")
-        covevo_avg[i] = (
-        covevo[i * startdist:i * startdist + intervallength] == covevo[i * startdist]).sum(axis=1)
-    print("")
-
-    result = covevo_avg.mean(axis=0)
-
-    for i in range(result.shape[0]):
-        print(result[i])
+    for val in result:
+        print(val)
 
 
 if __name__ == "__main__":
