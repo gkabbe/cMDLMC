@@ -1,6 +1,5 @@
 *.c
 *.cpp
-*.html
 *.ipynb
 *.log
 *.o
@@ -9,13 +8,15 @@
 *.so
 *.swp
 
-.idea/
 build/
+cover
 cython_debug/
 dist/
 doxy/
 htmlcov/
+.idea/
 mdkmc.egg-info/
 mdlmc.egg-info/
+sphinx
 stats/
 version_hash.py
