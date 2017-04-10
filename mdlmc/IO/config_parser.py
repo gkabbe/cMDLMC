@@ -409,8 +409,7 @@ CONFIG_DICT = {
          {
              "parse_fct": parse_int,
              "default": 0,
-             "help": "Waiting time after a proton jump. Is supposed to account for the fact that "
-                     "a proton needs some time to travel from donor to acceptor."
+             "help": "Waiting time after a proton jump."
          }),
         ("pbc",
          {
