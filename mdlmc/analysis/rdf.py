@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import time
 
@@ -9,6 +10,10 @@ import mdlmc.atoms.numpyatom as npa
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from mdlmc.IO import xyz_parser
 from mdlmc.misc.tools import argparse_compatible, chunk, chunk_trajectory
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, bins, *,
@@ -87,9 +92,7 @@ def radial_distribution_function(trajectory, selection1, selection2, atombox, dm
         plt.plot(dists, rdf)
         plt.show()
 
-    print("{:10} {:10}".format("Distance", "RDF"))
-    for d, r in zip(dists, rdf):
-        print("{:10.8f} {:10.8f}".format(d, r))
+    return dists, rdf
 
 
 def calculate_distance_histogram(trajectory, selection1, selection2, atombox, dmin, dmax, bins, *,
@@ -111,24 +114,65 @@ def calculate_distance_histogram(trajectory, selection1, selection2, atombox, dm
         plt.plot(dists[mask], histogram[mask])
         plt.show()
 
-    print("{:12} {:12}".format("Distance", "Probability"))
-    for d, h in zip(dists, histogram):
-        print("{:12.8f} {:12.8f}".format(d, h))
+    return dists, histogram
 
 
 @argparse_compatible
-def prepare_trajectory(file, pbc, bins, dmin, dmax, clip, elements, acidic_protons, chunk_size,
-                       subparser_name, normalized=False, verbose=False, plot=False):
-    _, ext = os.path.splitext(file)
+def prepare_trajectory(filename, pbc, bins, dmin, dmax, clip, elements, acidic_protons, chunk_size,
+                       method, hdf5_key="trajectory", normalized=False, verbose=False, plot=False):
+    """
+    Parameters
+    ----------
+    filename: str
+        Trajectory filename
+    pbc: array_like
+        Periodic boundaries
+    bins: int
+        Number of histogram bins
+    dmin: float
+        Lower histogram boundary
+    dmax: float
+        Upper histogram boundary
+    clip: int
+        Limit evaluation of trajectory to <clip> frames
+    elements: List of strings
+        Elements between which the histogram/RDF will be calculated
+    acidic_protons: bool
+        Whether to use all protons (acidic_protons = False) or only those whose next neighbor
+        is an oxygen atom
+    chunk_size: int
+    method: str
+        Choose between "rdf" and "histo"
+    normalized: bool
+        Normalize histogram
+    verbose: bool
+        Verbosity
+    plot: bool
+        Plot result
+
+    Returns
+    -------
+
+    """
+    _, ext = os.path.splitext(filename)
     if ext == ".hdf5":
-        atom_names, trajectory = xyz_parser.load_trajectory_from_hdf5(file)
+        atom_names, trajectory = xyz_parser.load_trajectory_from_hdf5(filename, hdf5_key=hdf5_key)
     else:
-        trajectory = xyz_parser.load_atoms(file, clip=clip)
+        trajectory = xyz_parser.load_atoms(filename, clip=clip)
         atom_names = trajectory[0]["name"].astype(str)
         trajectory = np.array(trajectory["pos"], order="C")
 
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
+
+    # Check if elements are actually contained in trajectory
+    for element in elements:
+        if element not in atom_names:
+            raise ValueError("Element {} was not found in trajectory".format(element))
+
+    if verbose:
+        logger.info("Determining the {} between {} and {}".format(
+            "RDF" if method == "rdf" else "distance histogram", elements[0], elements[-1]))
 
     if acidic_protons:
         if "H" in elements:
@@ -153,23 +197,30 @@ def prepare_trajectory(file, pbc, bins, dmin, dmax, clip, elements, acidic_proto
             selection2 = selection1
             single_element = True
 
-    if subparser_name == "rdf":
-        radial_distribution_function(trajectory, selection1, selection2, atombox, dmin,
-                                     dmax, bins, clip=clip, plot=plot,
-                                     verbose=verbose, chunk_size=chunk_size)
-    elif subparser_name == "histo":
-        calculate_distance_histogram(trajectory, selection1, selection2, atombox, dmin,
-                                     dmax, bins, clip=clip, plot=plot,
-                                     verbose=verbose, chunk_size=chunk_size,
-                                     normalized=normalized, single_element=single_element)
+    if method == "rdf":
+        dists, hist = radial_distribution_function(trajectory, selection1, selection2, atombox,
+                                                   dmin, dmax, bins, clip=clip, plot=plot,
+                                                   verbose=verbose, chunk_size=chunk_size)
+    elif method == "histo":
+        dists, hist = calculate_distance_histogram(trajectory, selection1, selection2, atombox,
+                                                   dmin, dmax, bins, clip=clip, plot=plot,
+                                                   verbose=verbose, chunk_size=chunk_size,
+                                                   normalized=normalized,
+                                                   single_element=single_element)
     else:
-        raise RuntimeError("What is", subparser_name, "?")
+        raise RuntimeError("What is", method, "?")
+
+    print("# {:>10} {:>12}".format("Distance", "Probability"))
+    for d, h in zip(dists, hist):
+        print("{:12.8f} {:12.8f}".format(d, h))
+
+    return dists, hist
 
 
 def main(*args):
     parser = argparse.ArgumentParser(description="Calculates distance histograms and RDF",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("file", help="trajectory")
+    parser.add_argument("filename", help="Trajectory filename")
     parser.add_argument("pbc", nargs=3, type=float, help="Periodic boundaries")
     parser.add_argument("--bins", type=int, default=50, help="Number of bins")
     parser.add_argument("--dmin", type=float, default=2.0, help="Minimal value")
@@ -183,7 +234,7 @@ def main(*args):
     parser.add_argument("--chunk_size", "-c", type=int, default=1,
                         help="Read trajectory in chunks ofsize <chunk_size>")
 
-    subparsers = parser.add_subparsers(dest="subparser_name")
+    subparsers = parser.add_subparsers(dest="method")
 
     parser_rdf = subparsers.add_parser("rdf", help="Determine radial distribution function")
     parser_rdf.set_defaults(func=prepare_trajectory)
