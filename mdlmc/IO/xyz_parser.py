@@ -106,7 +106,8 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
         traj.resize(counter, axis=0)
 
 
-def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False, file=sys.stdout):
+def load_trajectory_from_hdf5(hdf5_fname, *atom_names, hdf5_key="trajectory", clip=None,
+                              verbose=False, file=sys.stdout):
     """Loads hdf5 trajectory.
     Be careful when specifying clip or atom_names! In this case, the trajectory slice will be loaded
     into memory.
@@ -122,11 +123,15 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, clip=None, verbose=False,
 
     slice_ = slice(0, clip)
 
-    if clip or atom_names:
-        print("np array!!!!")
-        trajectories = f["trajectory"][slice_, selection]
-    else:
-        trajectories = f["trajectory"]
+    try:
+        if clip or atom_names:
+            print("np array!!!!")
+            trajectories = f[hdf5_key][slice_, selection]
+        else:
+            trajectories = f[hdf5_key]
+    except KeyError as e:
+        raise KeyError("Could not find key {} in hdf5 file. "
+                       "Available keys: {}".format(hdf5_key, list(f.keys()))) from e
     return traj_atom_names[selection], trajectories
 
 
