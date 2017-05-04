@@ -102,7 +102,8 @@ setup(name='mdlmc',
                               'print_hdf5=mdlmc.IO.xyz_parser:print_hdf5',
                               'kmc=mdlmc.KMC.excess_kmc:main',
                               'neighbors=mdlmc.analysis.geometry:determine_neighbors',
-                              'lifetime=mdlmc.KMC.output_analyzer:main'
+                              'lifetime=mdlmc.KMC.output_analyzer:main',
+                              'rdf_converter=mdlmc.KMC.oxygen_distribution_converter:main'
                               ],
       },
       include_package_data=True,
