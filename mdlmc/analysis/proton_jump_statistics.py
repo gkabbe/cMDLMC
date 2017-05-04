@@ -178,6 +178,7 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
                                                           counter):
         print("  {:>15.8f}  {:>16.8f}  {:>16.8f} {:>25} {:>25}".format(ox_dist, jump_prob, jp_var,
                                                                        oxy_histo, ctr))
+    print("# Total number of jumps:", np.sum(oxygen_distance_histo))
 
 
 @argparse_compatible
