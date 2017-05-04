@@ -1,11 +1,26 @@
+import argparse
 from functools import reduce
 from inspect import signature
+import logging
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import argrelmax, argrelmin
 from scipy.optimize import curve_fit
 from scipy.integrate import quad
 import matplotlib.pylab as plt
+import tables  # needed for hdf5 compression
+import h5py
+
+from mdlmc.analysis import rdf, excess_charge_analyzer
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
+def linear_w_cutoff(x, a, b, d0):
+    return np.where(x < d0, b, a * (x - d0) + b)
 
 
 def normalize(OO_dist_interpolator, right_limit):
@@ -92,3 +107,79 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, number_of_atoms, 
     }
 
     return parameter_dict, array_dict
+
+
+def find_first_solvation_shell_end(dists, dist_prob, dists2, rdf, number_of_atoms,
+                                   noa_in_first_solvation_shell):
+    xmin, xmax = 2.2, 3.5
+    delta_d = dists[1] - dists[0]
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+
+    dist_prob_integrated = delta_d * np.cumsum(dist_prob) * number_of_atoms
+    solvation_shell_end_index = \
+        np.where(dist_prob_integrated >= noa_in_first_solvation_shell)[0].min()
+
+    idx2 = np.where(dists2 >= dists[solvation_shell_end_index])[0][0]
+
+    ax1.plot(dists, dist_prob_integrated, label="O--O AIMD")
+    ax1.vlines(dists[solvation_shell_end_index], 0, dist_prob_integrated[solvation_shell_end_index],
+               colors="g", linestyles="--")
+    ax1.hlines(noa_in_first_solvation_shell, xmin, dists[solvation_shell_end_index], colors="g",
+               linestyles="--")
+    ax1.set_ylim((0, 5))
+    ax1.set_ylabel("Integrated RDF")
+    ax2.plot(dists2[dists2 < dists[solvation_shell_end_index] + 1],
+             rdf[dists2 < dists[solvation_shell_end_index] + 1])
+    ax2.vlines(dists[solvation_shell_end_index], 0, rdf.max(), colors="g", linestyles="--")
+    ax2.set_ylabel("RDF")
+    plt.xlabel("$d$ / \AA")
+    plt.xlim((xmin, xmax))
+
+    return dists[solvation_shell_end_index], fig
+
+
+def main():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("neutral_trajectory", help="File name of neutral water trajectory")
+    parser.add_argument("neutral_pbc", nargs=3, type=float,
+                        help="Periodic boundaries of neutral trajectory")
+    parser.add_argument("reference_trajectory", help="File name of protonated reference water "
+                                                     "trajectory")
+    parser.add_argument("reference_pbc", nargs=3, type=float,
+                        help="Periodic boundaries of reference trajectory")
+    parser.add_argument("--hdf5_key", default="oxygen_trajectory", help="Array key in hdf5 file")
+    args = parser.parse_args()
+
+    neutral_pbc = np.array(args.neutral_pbc)
+    atombox_neutral = AtomBoxCubic(neutral_pbc)
+    reference_pbc = np.array(args.reference_pbc)
+
+    f = h5py.File(args.neutral_trajectory, "r")
+    neutral_traj = f[args.hdf5_key]
+
+    # select all atoms (assuming that the trajectory only contains oxygens)
+    selection = np.ones(neutral_traj.shape[1], dtype=bool)
+
+    dists_neut, histo_neut = rdf.calculate_distance_histogram(neutral_traj, selection, selection,
+                                                              atombox_neutral, dmin=2.0, dmax=4.0,
+                                                              bins=100)
+
+    dists_ref, histo_ref = rdf.prepare_trajectory(args.reference_trajectory, reference_pbc, bins=100,
+                                                  dmin=2.0, dmax=4.0, clip=100000, elements=["O"],
+                                                  acidic_protons=False, verbose=True, plot=True,
+                                                  chunk_size=40000, normalized=True,
+                                                  method="histo")
+
+    results = excess_charge_analyzer.distance_histogram_between_hydronium_and_all_oxygens(
+        args.reference_trajectory, reference_pbc, dmin=2.0, dmax=4, bins=100, plot=True,
+        normalized=True, print_=True, clip=None)
+
+    parameter_dict_md, plot_dict2 = construct_conversion_fct(
+        histo_neut,
+        histo_ref,
+        number_of_atoms=(215, 99),
+        fit_fct=linear_w_cutoff,
+        p0=(1, 2.2, 2.5))
+
+if __name__ == "__main__":
+    main()
