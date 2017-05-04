@@ -64,6 +64,7 @@ def map_indices(frame, atomname):
 
 
 def numpy_print(atoms, names=None, outfile=None):
+    format_string = "{:4} {:20.10f} {:20.10f} {:20.10f}"
     if names is not None:
         atoms = atoms[atoms["name"] == name]
         print(sum([len(atoms[atoms["name"] == name]) for name in names]), file=outfile)
@@ -73,9 +74,8 @@ def numpy_print(atoms, names=None, outfile=None):
         outfile = sys.stdout
     print("", file=outfile)
     for x in atoms:
-        print(
-            "{:4} {: 20} {: 20} {: 20}".format("H" if x["name"] == "AH" else x["name"], x["pos"][0],
-                                               x["pos"][1], x["pos"][2]), file=outfile)
+        print(format_string.format("H" if x["name"] == "AH" else x["name"].decode("utf-8"),
+                                   x["pos"][0], x["pos"][1], x["pos"][2]), file=outfile)
 
 
 def print_npz(*args):
