@@ -3,6 +3,7 @@
 # cython: language_level = 3
 
 import cython
+cimport cython
 import numpy as np
 
 cimport numpy as np
@@ -60,8 +61,8 @@ cdef class AtomBox:
         """Calculates for two arrays of positions an array of vector distances"""
         cdef:
             int i, j
-        arr1 = arr1.reshape((-1, 3))
-        arr2 = arr2.reshape((-1, 3))
+        arr1 = arr1.reshape((-1, 3)).astype(float)
+        arr2 = arr2.reshape((-1, 3)).astype(float)
 
         cdef:
             double [:, ::1] arr1_view = arr1
@@ -78,8 +79,8 @@ cdef class AtomBox:
         """Calculates for two arrays of positions an array of scalar distances"""
         cdef:
             int i
-            double [:, ::1] arr1_view = arr1.reshape((-1, 3))
-            double [:, ::1] arr2_view = arr2.reshape((-1, 3))
+            double [:, ::1] arr1_view = arr1.reshape((-1, 3)).astype(float)
+            double [:, ::1] arr2_view = arr2.reshape((-1, 3)).astype(float)
         result = np.zeros(arr1_view.shape[0])
 
         for i in range(arr1_view.shape[0]):
@@ -93,8 +94,8 @@ cdef class AtomBox:
         if len(arr1.shape) > 2 or len(arr2.shape) > 2:
             raise ValueError("shape needs to be <= 2")
 
-        cdef double [:, ::1] arr1b = arr1.reshape((-1, 3))
-        cdef double [:, ::1] arr2b = arr2.reshape((-1, 3))
+        cdef double [:, ::1] arr1b = arr1.reshape((-1, 3)).astype(float)
+        cdef double [:, ::1] arr2b = arr2.reshape((-1, 3)).astype(float)
 
         result = np.zeros((arr1.shape[0], arr2.shape[0]))
 
