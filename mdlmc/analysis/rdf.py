@@ -13,7 +13,6 @@ from mdlmc.misc.tools import argparse_compatible, chunk, chunk_trajectory
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, bins, *,
@@ -170,9 +169,8 @@ def prepare_trajectory(filename, pbc, bins, dmin, dmax, clip, elements, acidic_p
         if element not in atom_names:
             raise ValueError("Element {} was not found in trajectory".format(element))
 
-    if verbose:
-        logger.info("Determining the {} between {} and {}".format(
-            "RDF" if method == "rdf" else "distance histogram", elements[0], elements[-1]))
+    logger.info("Determining the {} between {} and {}".format(
+        "RDF" if method == "rdf" else "distance histogram", elements[0], elements[-1]))
 
     if acidic_protons:
         if "H" in elements:
@@ -233,6 +231,7 @@ def main(*args):
     parser.add_argument("--plot", action="store_true", help="Plot result")
     parser.add_argument("--chunk_size", "-c", type=int, default=1,
                         help="Read trajectory in chunks ofsize <chunk_size>")
+    parser.add_argument("--log", "-l", default="info", help="Set log level")
 
     subparsers = parser.add_subparsers(dest="method")
 
@@ -243,7 +242,8 @@ def main(*args):
     parser_histo.add_argument("--normalized", "-n", action="store_true",
                               help="Normalize histogram")
     parser_histo.set_defaults(func=prepare_trajectory)
-
     args = parser.parse_args()
+
+    logging.basicConfig(level=getattr(logging, args.log.upper()))
 
     args.func(args)
