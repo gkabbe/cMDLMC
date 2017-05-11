@@ -15,8 +15,8 @@ from mdlmc.analysis import rdf, excess_charge_analyzer
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 
 
+# Setup logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 def linear_w_cutoff(x, a, b, d0):
@@ -38,7 +38,6 @@ def integrate_rdf(OO_dist_interpolator, up_to, number_of_atoms):
     return dist_fine[idx]
 
 
-# noinspection PyTupleAssignmentBalance
 def construct_conversion_fct(dist_histo, dist_histo_reference, number_of_atoms, fit_fct, p0=None):
     number_of_atoms_in_1st_solvation_shell = 3
     noa_1, noa_2 = number_of_atoms
@@ -53,16 +52,19 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, number_of_atoms, 
     dist_histo_reference_right_limit = integrate_rdf(dist_histo_reference_interpolator,
                                                      up_to=number_of_atoms_in_1st_solvation_shell,
                                                      number_of_atoms=noa_2)
-    print(dist_histo_reference_right_limit, dist_histo_reference_right_limit)
 
-    dist_fine = np.linspace(2.0, max(dist_histo_right_limit, dist_histo_reference_right_limit), 1000)
+    logger.debug("Right edge of reference histogram: {}".format(dist_histo_reference_right_limit))
+    logger.debug("Right edge of neutral system histogram: {}".format(dist_histo_right_limit))
+
+    left_limit = max(dist_histo[0, 0], dist_histo_reference[0, 0])
+    right_limit = max(dist_histo_right_limit, dist_histo_reference_right_limit)
+    dist_fine = np.linspace(left_limit, right_limit, 1000)
 
     delta_d = dist_fine[1] - dist_fine[0]
 
     cumsum = np.cumsum(dist_histo_interpolator(dist_fine)) * noa_1 * delta_d
     cumsum_reference = np.cumsum(dist_histo_reference_interpolator(dist_fine)) * noa_2 * delta_d
 
-    right_limit = max(dist_histo_right_limit, dist_histo_reference_right_limit)
     # mask = reduce(np.logical_and, [dist_fine <= right_limit, cumsum > 10e-8])
     mask = cumsum > 1e-8
 
@@ -74,6 +76,10 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, number_of_atoms, 
     # The result is a conversion function, which maps distances
     # of one distribution to distances of the other distribution
     convert = np.searchsorted(cumsum_reference[mask], cumsum[mask])
+    convert = np.where(convert < dist_fine[mask].size, convert, -1)
+
+    plt.plot(dist_fine[mask], dist_fine[mask][convert], "x")
+    plt.show()
 
     # Now fit the result
     popt, pcov = curve_fit(fit_fct, dist_fine[mask], dist_fine[mask][convert], p0=p0)
@@ -148,7 +154,11 @@ def main():
     parser.add_argument("reference_pbc", nargs=3, type=float,
                         help="Periodic boundaries of reference trajectory")
     parser.add_argument("--hdf5_key", default="oxygen_trajectory", help="Array key in hdf5 file")
+    parser.add_argument("--clip", type=int, default=None, help="Stop after <clip> frames")
+    parser.add_argument("--log", "-l", default="info", help="Set log level")
     args = parser.parse_args()
+
+    logging.basicConfig(level=getattr(logging, args.log.upper()))
 
     neutral_pbc = np.array(args.neutral_pbc)
     atombox_neutral = AtomBoxCubic(neutral_pbc)
@@ -160,19 +170,23 @@ def main():
     # select all atoms (assuming that the trajectory only contains oxygens)
     selection = np.ones(neutral_traj.shape[1], dtype=bool)
 
+    logger.info("Calculate distance histogram of neutral trajectory {}".format(args.neutral_trajectory))
     dists_neut, histo_neut = rdf.calculate_distance_histogram(neutral_traj, selection, selection,
                                                               atombox_neutral, dmin=2.0, dmax=4.0,
-                                                              bins=100)
+                                                              bins=100, clip=args.clip, verbose=True,
+                                                              chunk_size=1000, plot=False,
+                                                              normalized=True)
 
-    dists_ref, histo_ref = rdf.prepare_trajectory(args.reference_trajectory, reference_pbc, bins=100,
-                                                  dmin=2.0, dmax=4.0, clip=100000, elements=["O"],
-                                                  acidic_protons=False, verbose=True, plot=True,
-                                                  chunk_size=40000, normalized=True,
-                                                  method="histo")
-
+    logger.info("Calculate H3O+ H2O distance histogram of reference trajectory {}".format(
+        args.reference_trajectory))
     results = excess_charge_analyzer.distance_histogram_between_hydronium_and_all_oxygens(
-        args.reference_trajectory, reference_pbc, dmin=2.0, dmax=4, bins=100, plot=True,
-        normalized=True, print_=True, clip=None)
+        args.reference_trajectory, reference_pbc, dmin=2.0, dmax=4, bins=100, plot=False,
+        normalized=True, print_=True, clip=args.clip)
+
+    dists_ref, histo_ref = results["distance"], results["histogram"]
+
+    histo_neut = np.vstack([dists_neut, histo_neut]).T
+    histo_ref = np.vstack([dists_ref, histo_ref]).T
 
     parameter_dict_md, plot_dict2 = construct_conversion_fct(
         histo_neut,
