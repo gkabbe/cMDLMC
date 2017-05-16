@@ -33,7 +33,44 @@ def integrate_rdf(OO_dist_interpolator, up_to, number_of_atoms):
 
 
 def construct_conversion_fct(dist_histo, dist_histo_reference, *, number_of_atoms, fit_fct,
-                             noa_in_1st_solvationshell, p0=None):
+                             noa_in_1st_solvationshell, p0=None, plot=False):
+    """
+    Determine the conversion function, which maps the H2O - H2O distance distribution (measured
+    as the oxygen - oxygen distance) of an uncharged system to the H3O+ - H2O distance of a
+    protonated target system.
+    For this, the integrated H2O-H2O (H2O-H3O+) RDFs of the neutral (protonated) system are
+    calculated.
+    For each value of the integrated RDF of the neutral system, the distance is determined, at
+    which the integrated RDF of the protonated system has the same value.
+    The result is a conversion function, which maps the distance distribution of the neutral
+    system to the distance distribution of the protonated system.
+
+    Parameters
+    ----------
+    dist_histo: array_like
+        Histogram of the H2O-H2O distances in the neutral system
+    dist_histo_reference: array_like
+        Histogram of the H2O-H3O+ distances in the protonated system
+    number_of_atoms: tuple of int
+        Total number of oxygens for neutral and protonated system
+    fit_fct: Function
+        Function which will be used to fit the resulting conversion function
+    noa_in_1st_solvationshell: int
+        Number of atoms in first solvation shell
+    p0: tuple of Union[int, float]
+        Initial fit parameters
+    plot: bool
+        Plots the resulting conversion function if set to True
+
+    Returns
+    -------
+    parameter_dict: Dict
+        Dictionary containing fit parameters and range of the fit function
+    array_dict: Dict
+        Dictionary containing the integrated RDFs, the conversion function, and the
+        conversion fit
+    """
+
     noa_1, noa_2 = number_of_atoms
     # Interpolate the distributions
     dist_histo_interpolator = interp1d(dist_histo[:, 0], dist_histo[:, 1], kind="cubic")
@@ -65,15 +102,14 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, *, number_of_atom
     left_limit = dist_fine[mask][0]
 
     # Define the conversion function.
-    # For this, we search for each value in cumsum, where
-    # its location in cumsum_reference would be
-    # The result is a conversion function, which maps distances
-    # of one distribution to distances of the other distribution
     convert = np.searchsorted(cumsum_reference[mask], cumsum[mask])
     convert = np.where(convert < dist_fine[mask].size, convert, -1)
 
-    plt.plot(dist_fine[mask], dist_fine[mask][convert], "x")
-    plt.show()
+    if plot:
+        plt.plot(dist_fine[mask], dist_fine[mask][convert], "x")
+        plt.plot(dist_fine[mask], dist_fine[mask])
+        plt.xlim(2, 3)
+        plt.show()
 
     # Now fit the result
     popt, pcov = curve_fit(fit_fct, dist_fine[mask], dist_fine[mask][convert], p0=p0)
@@ -87,16 +123,6 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, *, number_of_atom
     parameter_dict["left_bound"] = left_limit
     parameter_dict["right_bound"] = right_limit
     print("{} < d < {}".format(left_limit, right_limit))
-
-    # fig, (ax1, ax2) = plt.subplots(2, 1, sharex="col")
-    # ax1.plot(dist_fine[mask], cumsum[mask], label="Classical MD")
-    # ax1.plot(dist_fine[mask], cumsum_reference[mask], label="Hydronium - Oxygen AIMD")
-    # # ax1.hlines(3, dist_fine[mask][0], dist_fine[-1])
-    # ax1.legend(loc="upper left")
-    # ax2.plot(dist_fine[mask], dist_fine[mask][convert], label="Conversion data")
-    # ax2.plot(dist_fine, dist_fine, "g--")
-    # ax2.plot(dist_fine[mask], fit_fct(dist_fine[mask], *popt), "r-", label="Fit")
-    # ax2.legend(loc="upper left")
 
     array_dict = {
         "distance": dist_fine[mask],
