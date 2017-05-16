@@ -23,12 +23,6 @@ def linear_w_cutoff(x, a, b, d0):
     return np.where(x < d0, b, a * (x - d0) + b)
 
 
-def normalize(OO_dist_interpolator, right_limit):
-    xmin, xmax = OO_dist_interpolator.x[0], right_limit
-    normalization_constant = quad(OO_dist_interpolator, xmin, right_limit, limit=100)
-    return normalization_constant
-
-
 def integrate_rdf(OO_dist_interpolator, up_to, number_of_atoms):
     xmin, xmax = OO_dist_interpolator.x[0], OO_dist_interpolator.x[-1]
     dist_fine = np.linspace(xmin, xmax, 1000)
