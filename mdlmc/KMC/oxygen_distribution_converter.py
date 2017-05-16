@@ -32,8 +32,8 @@ def integrate_rdf(OO_dist_interpolator, up_to, number_of_atoms):
     return dist_fine[idx]
 
 
-def construct_conversion_fct(dist_histo, dist_histo_reference, number_of_atoms, fit_fct, p0=None):
-    number_of_atoms_in_1st_solvation_shell = 3
+def construct_conversion_fct(dist_histo, dist_histo_reference, *, number_of_atoms, fit_fct,
+                             noa_in_1st_solvationshell, p0=None):
     noa_1, noa_2 = number_of_atoms
     # Interpolate the distributions
     dist_histo_interpolator = interp1d(dist_histo[:, 0], dist_histo[:, 1], kind="cubic")
@@ -41,10 +41,10 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, number_of_atoms, 
                                                  dist_histo_reference[:, 1], kind="cubic")
 
     dist_histo_right_limit = integrate_rdf(dist_histo_interpolator,
-                                           up_to=number_of_atoms_in_1st_solvation_shell,
+                                           up_to=noa_in_1st_solvationshell,
                                            number_of_atoms=noa_1)
     dist_histo_reference_right_limit = integrate_rdf(dist_histo_reference_interpolator,
-                                                     up_to=number_of_atoms_in_1st_solvation_shell,
+                                                     up_to=noa_in_1st_solvationshell,
                                                      number_of_atoms=noa_2)
 
     logger.debug("Right edge of reference histogram: {}".format(dist_histo_reference_right_limit))
