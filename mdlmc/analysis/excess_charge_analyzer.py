@@ -172,7 +172,7 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
 
 @argparse_compatible
 def rdf_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, dmax, bins, *, plot=False,
-                                          clip=None):
+                                          clip=None, print_=True):
     """Calculate the RDF between hydronium and neutral water molecules"""
     results = distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, dmax,
                                                                    bins, clip=clip)
@@ -188,10 +188,11 @@ def rdf_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, dmax, bins, *, 
         plt.plot(distance, rdf)
         plt.show()
 
-    print("# Rho =", rho)
-    print("# Distance, RDF")
-    for d, r in zip(distance, rdf):
-        print(d, r)
+    if print_:
+        print("# Rho =", rho)
+        print("# Distance, RDF")
+        for d, r in zip(distance, rdf):
+            print(d, r)
 
     return {"distance": distance,
             "edges": edges,
