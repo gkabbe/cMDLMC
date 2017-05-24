@@ -37,7 +37,7 @@ def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, b
             if counter % 1000 == 0 and verbose:
                 print("{:8d} ({:8.2f} fps)".format(counter,
                                                    float(counter) / (time.time() - start_time)),
-                      end="\r", flush=True)
+                      end="\r", flush=True, file=sys.stderr)
             histogram += histo
             counter += 1
 

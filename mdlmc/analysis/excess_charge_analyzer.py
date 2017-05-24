@@ -1,4 +1,6 @@
 import argparse
+import sys
+
 import matplotlib.pylab as plt
 import numpy as np
 
@@ -137,7 +139,7 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
         if clip and i == clip:
             break
         if i % 1000 == 0:
-            print(i, end="\r", flush=True)
+            print(i, end="\r", flush=True, file=sys.stderr)
         hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame, proton_frame,
                                                                      atombox)
         distances = atombox.length_all_to_all(oxygen_frame[[hydronium_index]], oxygen_frame[
