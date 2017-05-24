@@ -1,18 +1,18 @@
 import argparse
-from functools import reduce
 from inspect import signature
 import logging
+import os
+
+import matplotlib.pylab as plt
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.signal import argrelmax, argrelmin
 from scipy.optimize import curve_fit
-from scipy.integrate import quad
-import matplotlib.pylab as plt
 import tables  # needed for hdf5 compression
 import h5py
 
 from mdlmc.analysis import rdf, excess_charge_analyzer
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
+from mdlmc.IO.xyz_parser import get_selection_from_atomname, save_trajectory_to_hdf5
 
 
 # Setup logger
@@ -105,12 +105,6 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, *, number_of_atom
     convert = np.searchsorted(cumsum_reference[mask], cumsum[mask])
     convert = np.where(convert < dist_fine[mask].size, convert, -1)
 
-    if plot:
-        plt.plot(dist_fine[mask], dist_fine[mask][convert], "x")
-        plt.plot(dist_fine[mask], dist_fine[mask])
-        plt.xlim(2, 3)
-        plt.show()
-
     # Now fit the result
     popt, pcov = curve_fit(fit_fct, dist_fine[mask], dist_fine[mask][convert], p0=p0)
 
@@ -126,10 +120,10 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, *, number_of_atom
 
     array_dict = {
         "distance": dist_fine[mask],
-        "RDFInt": cumsum[mask],
-        "RDFIntReference": cumsum_reference[mask],
-        "Conversion": dist_fine[mask][convert],
-        "ConversionFit": fit_fct(dist_fine[mask], *popt)
+        "rdf_integrated_neutral": cumsum[mask],
+        "rdf_integrated_reference": cumsum_reference[mask],
+        "conversion": dist_fine[mask][convert],
+        "conversion_fit": fit_fct(dist_fine[mask], *popt)
     }
 
     return parameter_dict, array_dict
@@ -173,9 +167,12 @@ def main():
                                                      "trajectory")
     parser.add_argument("reference_pbc", nargs=3, type=float,
                         help="Periodic boundaries of reference trajectory")
+    parser.add_argument("--atom_number", "-a", type=int, help="Number of atoms in first solvation "
+                                                              "shell of the charged system")
     parser.add_argument("--hdf5_key", default="oxygen_trajectory", help="Array key in hdf5 file")
     parser.add_argument("--clip", type=int, default=None, help="Stop after <clip> frames")
     parser.add_argument("--log", "-l", default="info", help="Set log level")
+    parser.add_argument("--plot", "-p", action="store_true", help="Plot results")
     args = parser.parse_args()
 
     logging.basicConfig(level=getattr(logging, args.log.upper()))
@@ -184,7 +181,24 @@ def main():
     atombox_neutral = AtomBoxCubic(neutral_pbc)
     reference_pbc = np.array(args.reference_pbc)
 
-    f = h5py.File(args.neutral_trajectory, "r")
+    traj_name, traj_ext = os.path.splitext(args.neutral_trajectory)
+    if traj_ext == ".hdf5":
+        hdf5_traj = traj_name + traj_ext
+        xyz_traj = traj_name + ".xyz"
+    elif traj_ext == ".xyz":
+        hdf5_traj = traj_name + ".hdf5"
+        xyz_traj = traj_name + traj_ext
+    else:
+        raise SystemError("Unknown file extension {}".format(traj_ext))
+
+    if not os.path.exists(hdf5_traj):
+        logger.info("Found no hdf5 file")
+        logger.info("Create it now")
+        oxygen_selection = get_selection_from_atomname(xyz_traj, "O")
+        save_trajectory_to_hdf5(xyz_traj, hdf5_traj, remove_com_movement=True,
+                                dataset_name="oxygen_trajectory", selection=oxygen_selection)
+    logger.info("Loading hdf5 file {}".format(hdf5_traj))
+    f = h5py.File(hdf5_traj, "r")
     neutral_traj = f[args.hdf5_key]
 
     # select all atoms (assuming that the trajectory only contains oxygens)
@@ -201,19 +215,35 @@ def main():
         args.reference_trajectory))
     results = excess_charge_analyzer.distance_histogram_between_hydronium_and_all_oxygens(
         args.reference_trajectory, reference_pbc, dmin=2.0, dmax=4, bins=100, plot=False,
-        normalized=True, print_=True, clip=args.clip)
+        normalized=True, print_=False, clip=args.clip)
 
     dists_ref, histo_ref = results["distance"], results["histogram"]
-
     histo_neut = np.vstack([dists_neut, histo_neut]).T
     histo_ref = np.vstack([dists_ref, histo_ref]).T
+
+    number_of_atoms = (neutral_traj.shape[1] - 1, results["oxygen_number"] - 1)
 
     parameter_dict_md, plot_dict2 = construct_conversion_fct(
         histo_neut,
         histo_ref,
-        number_of_atoms=(215, 99),
+        number_of_atoms=number_of_atoms,
         fit_fct=linear_w_cutoff,
-        p0=(1, 2.2, 2.5))
+        p0=(1, 2.2, 2.5),
+        noa_in_1st_solvationshell=3)
+
+    dist = plot_dict2["distance"]
+    rdf_neutral = plot_dict2["rdf_integrated_neutral"]
+    rdf_reference = plot_dict2["rdf_integrated_reference"]
+    conversion = plot_dict2["conversion"]
+
+    if args.plot:
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+        ax1.plot(dist, rdf_neutral, label="Neutral H$_2$O")
+        ax1.plot(dist, rdf_reference, label="H$_3$O$^+$ - H$_2$O")
+        ax2.plot(dist, conversion, "x")
+        ax2.plot(dist, dist)
+        plt.xlim(2, 3)
+        plt.show()
 
 if __name__ == "__main__":
     main()
