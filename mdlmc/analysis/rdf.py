@@ -118,7 +118,8 @@ def calculate_distance_histogram(trajectory, selection1, selection2, atombox, dm
 
 @argparse_compatible
 def prepare_trajectory(filename, pbc, bins, dmin, dmax, clip, elements, acidic_protons, chunk_size,
-                       method, hdf5_key="trajectory", normalized=False, verbose=False, plot=False):
+                       method, hdf5_key="trajectory", normalized=False, verbose=False, plot=False,
+                       print_=True):
     """
     Parameters
     ----------
@@ -232,6 +233,7 @@ def main(*args):
     parser.add_argument("--chunk_size", "-c", type=int, default=1,
                         help="Read trajectory in chunks ofsize <chunk_size>")
     parser.add_argument("--log", "-l", default="info", help="Set log level")
+    parser.add_argument("--hdf5_key", help="Key under which trajectory is stored in hdf5 file")
 
     subparsers = parser.add_subparsers(dest="method")
 
@@ -243,6 +245,10 @@ def main(*args):
                               help="Normalize histogram")
     parser_histo.set_defaults(func=prepare_trajectory)
     args = parser.parse_args()
+
+    # If no hdf5 key is specified, remove it from args
+    if args.hdf5_key is None:
+        del args.hdf5_key
 
     logging.basicConfig(level=getattr(logging, args.log.upper()))
 
