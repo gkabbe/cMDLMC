@@ -2,6 +2,7 @@
 
 import argparse
 from functools import reduce
+import logging
 import os
 import time
 import types
@@ -14,6 +15,9 @@ import h5py
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.atoms.numpyatom import dtype_xyz, dtype_xyz_bytes
 from mdlmc.misc.tools import argparse_compatible, chunk
+
+
+logger = logging.getLogger(__name__)
 
 
 def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
@@ -95,14 +99,13 @@ def save_trajectory_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_co
 
                 # Resize trajectory if necessary
                 if counter + frames.shape[0] > traj.shape[0]:
-                    if verbose:
-                        print("# Need to resize trajectory hdf5 dataset", file=file)
+                    logger.debug("Need to resize trajectory hdf5 dataset")
                     traj.resize(2 * traj.shape[0], axis=0)
 
                 traj[counter:counter + frames.shape[0]] = frames["pos"]
                 counter += frames.shape[0]
-                print("# Parsed frames: {: 6d}. {:.2f} fps".format(
-                    counter, counter / (time.time() - start_time)), end="\r", flush=True, file=file)
+                logger.info("Parsed frames: {: 6d}. {:.2f} fps".format(
+                    counter, counter / (time.time() - start_time)))
         traj.resize(counter, axis=0)
 
 
