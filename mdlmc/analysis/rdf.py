@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import sys
 import time
 
 import matplotlib.pylab as plt
@@ -20,7 +21,9 @@ def calculate_histogram(traj_generator1, traj_generator2, atombox, dmin, dmax, b
     if normalized:
         pbc = np.array(atombox.periodic_boundaries)
         maxlen = np.sqrt(((pbc / 2)**2).sum())
-        range_ = (0, maxlen)
+        # Start range_ slightly above zero to avoid zero-distances, which occur for rdfs of one
+        # single element
+        range_ = (1e-8, maxlen)
         max_bins = int(maxlen / (dmax - dmin) * bins)
     else:
         range_ = (dmin, dmax)
@@ -149,6 +152,8 @@ def prepare_trajectory(filename, pbc, bins, dmin, dmax, clip, elements, acidic_p
         Verbosity
     plot: bool
         Plot result
+    print_: bool
+        Print result in the end
 
     Returns
     -------
@@ -156,8 +161,10 @@ def prepare_trajectory(filename, pbc, bins, dmin, dmax, clip, elements, acidic_p
     """
     _, ext = os.path.splitext(filename)
     if ext == ".hdf5":
+        logger.info("Loading hdf5 file")
         atom_names, trajectory = xyz_parser.load_trajectory_from_hdf5(filename, hdf5_key=hdf5_key)
     else:
+        logger.info("Loading xyz file")
         trajectory = xyz_parser.load_atoms(filename, clip=clip)
         atom_names = trajectory[0]["name"].astype(str)
         trajectory = np.array(trajectory["pos"], order="C")
@@ -209,9 +216,10 @@ def prepare_trajectory(filename, pbc, bins, dmin, dmax, clip, elements, acidic_p
     else:
         raise RuntimeError("What is", method, "?")
 
-    print("# {:>10} {:>12}".format("Distance", "Probability"))
-    for d, h in zip(dists, hist):
-        print("{:12.8f} {:12.8f}".format(d, h))
+    if print_:
+        print("# {:>10} {:>12}".format("Distance", "Probability"))
+        for d, h in zip(dists, hist):
+            print("{:12.8f} {:12.8f}".format(d, h))
 
     return dists, hist
 
