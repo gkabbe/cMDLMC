@@ -11,6 +11,7 @@ import sys
 import numpy as np
 import tables
 import h5py
+import mdtraj
 
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.atoms.numpyatom import dtype_xyz, dtype_xyz_bytes
@@ -55,6 +56,14 @@ def get_selection_from_atomname(xyz_filename, *atomnames):
             if i == frame_len:
                 break
     return np.array(selection)
+
+
+def get_hdf5_selection_from_atomname(hdf5_filename, *atomnames):
+    """Expects a hdf5 trajectory created with mdconvert (from package mdtraj)"""
+    trajgen = mdtraj.iterload(hdf5_filename, chunk=1)
+    frame = next(trajgen)
+    selection = frame.topology.select(" or ".join(("type {}".format(elem) for elem in atomnames)))
+    return selection
 
 
 @argparse_compatible
