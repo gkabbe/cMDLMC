@@ -7,7 +7,7 @@ import h5py
 import numpy as np
 
 from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory, \
-    get_selection_from_atomname
+    get_xyz_selection_from_atomname, get_hdf5_selection_from_atomname
 from mdlmc.IO.config_parser import load_configfile, print_settings, print_config_template,\
     print_confighelp
 from mdlmc.misc.tools import chunk
@@ -26,7 +26,7 @@ def fermi(x, a, b, c):
 
 def get_hdf5_filename(trajectory_fname):
     root, ext = os.path.splitext(trajectory_fname)
-    if ext == ".hdf5":
+    if ext in (".h5", ".hdf5"):
         return trajectory_fname
     else:
         return root + "_nobackup.hdf5"
@@ -215,6 +215,8 @@ def kmc_main(settings):
     trajectory_fname = settings.filename
     verbose = settings.verbose
     chunk_size = settings.chunk_size
+    overwrite_oxygen_trajectory = settings.overwrite_oxygen_trajectory
+    trajectory_by_mdconvert = False
 
     hdf5_fname = get_hdf5_filename(trajectory_fname)
     if verbose:
@@ -222,13 +224,35 @@ def kmc_main(settings):
     if not os.path.exists(hdf5_fname):
         if verbose:
             print("# Could not find HDF5 file. Will create it now.")
-        oxygen_selection = get_selection_from_atomname(trajectory_fname, "O")
+        oxygen_selection = get_xyz_selection_from_atomname(trajectory_fname, "O")
         save_trajectory_to_hdf5(trajectory_fname, hdf5_fname, remove_com_movement=True,
                                 verbose=verbose, dataset_name="oxygen_trajectory",
                                 selection=oxygen_selection)
 
     hdf5_file = h5py.File(hdf5_fname, "a")
-    oxygen_trajectory = hdf5_file["oxygen_trajectory"]
+    try:
+        oxygen_trajectory = hdf5_file["oxygen_trajectory"]
+    except KeyError:
+        print("# Could not find dataset oxygen_trajectory in {}".format(hdf5_fname))
+        print("# Assuming that this hdf5 file was created by mdconvert")
+        print("# Try to load trajectory")
+        overwrite_oxygen_trajectory = True
+        trajectory_by_mdconvert = True
+
+    if overwrite_oxygen_trajectory:
+        selection = get_hdf5_selection_from_atomname(hdf5_fname, "O")
+        # Create selection function which selects the oxygen atom coordinates
+        # and converts them from nm to angstrom
+        if trajectory_by_mdconvert:
+            # If it is an mdconvert trajectory, units need to be converted from nm to angstrom
+            def selection_fct(arr):
+                return 10 * np.take(arr, selection, axis=1)
+        else:
+            def selection_fct(arr):
+                return np.take(arr, selection, axis=1)
+
+        create_dataset_from_hdf5_trajectory(hdf5_file, hdf5_file["coordinates"],
+                                            "oxygen_trajectory", selection_fct, chunk_size=1000)
 
     trajectory_length = oxygen_trajectory.shape[0]
     timestep_md = settings.md_timestep_fs

@@ -45,7 +45,7 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
     return data.reshape(output_shape)
 
 
-def get_selection_from_atomname(xyz_filename, *atomnames):
+def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
     with open(xyz_filename, "r") as f:
         frame_len = int(f.readline())
         selection = []
