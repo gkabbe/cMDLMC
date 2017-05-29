@@ -6,10 +6,11 @@ GitPython
 h5py
 ipdb
 llvmlite
-matplotlib
+matplotlib=1.5.1
 nose
 numba
 numexpr
 Pint
 scipy
 pytables
+pyqt=4.11.4
