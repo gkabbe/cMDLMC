@@ -502,6 +502,12 @@ CONFIG_DICT = {
              "parse_fct": parse_int,
              "default": None,
              "help": "Set excess proton start position. If not specified, it will be set randomly"
+         }),
+        ("overwrite_oxygen_trajectory",
+         {
+             "parse_fct": parse_bool,
+             "default": False,
+             "help": "Overwrite oxygen trajectory in hdf5 file"
          })
     ])
 }
