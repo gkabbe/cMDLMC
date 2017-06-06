@@ -65,19 +65,13 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength):
     Parameters
     ----------
     atom_traj: array_like
-        Trajectory in numpy format (only proton positions)
     pbc: array_like
-        Periodic box lenghts
     intervalnumber: int
-        Number of intervals
     intervallength: int
-        Interval length
-    verbose: bool
-        Verbosity
 
     Returns
     -------
-    Tuple of averaged MSD and MSD variance
+    Tuple of averaged msd and msd variance
     """
 
     msd_mean = np.zeros((intervallength, 3), float)
