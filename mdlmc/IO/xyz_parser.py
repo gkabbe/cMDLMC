@@ -62,8 +62,17 @@ def get_hdf5_selection_from_atomname(hdf5_filename, *atomnames):
     """Expects a hdf5 trajectory created with mdconvert (from package mdtraj)"""
     trajgen = mdtraj.iterload(hdf5_filename, chunk=1)
     frame = next(trajgen)
-    selection = frame.topology.select(" or ".join(("type {}".format(elem) for elem in atomnames)))
-    return selection
+    if atomnames:
+        selections = [frame.topology.select("type {}".format(atomname)) for atomname in atomnames]
+        selection = np.sort(np.hstack(selections))
+        name_array = np.zeros(frame.n_atoms, dtype=str)
+        for name, indices in zip(atomnames, selections):
+            name_array[indices] = name
+        name_array = name_array[name_array != ""]
+    else:
+        selection = frame.topology.select("all")
+        name_array = np.array([atom.name for r in frame.topology.residues for atom in r.atoms])
+    return selection, name_array
 
 
 @argparse_compatible
