@@ -2,8 +2,10 @@
 # -*- coding: utf-8
 
 import argparse
-import os
+import logging
 from math import ceil
+import os
+import sys
 
 import matplotlib.pylab as plt
 import numpy as np
@@ -16,6 +18,7 @@ from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from scipy.optimize import curve_fit
 
 ureg = pint.UnitRegistry()
+logger = logging.getLogger(__name__)
 
 
 @jit(nopython=True)
@@ -44,7 +47,6 @@ def squared_distance(a1_pos, a2_pos, pbc, axis_wise=False):
 def displacement(positions, pbc):
     displ = np.zeros(positions.shape)
     total_diff = np.zeros(3)
-    # total_diff = np.zeros(positions.shape[1:])
 
     for i in range(1, positions.shape[0]):
         for j in range(positions.shape[1]):
@@ -56,7 +58,7 @@ def displacement(positions, pbc):
     return displ
 
 
-def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False):
+def calculate_msd(atom_traj, pbc, intervalnumber, intervallength):
     """
     Method by Knuth https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
 
@@ -87,19 +89,19 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False)
     else:
         diff = intervalnumber * intervallength - totallength
         startdist = intervallength - int(ceil(diff / float(intervalnumber - 1)))
-    if verbose:
-        print("# Total length of trajectory:", totallength)
-        print("# Number of intervals:", intervalnumber)
-        print("# Interval distance:", startdist)
+
+    logger.info("Total length of trajectory: {}".format(totallength))
+    logger.info("Number of intervals: {}".format(intervalnumber))
+    logger.info("Interval distance: {}".format(startdist))
 
     for i in range(intervalnumber):
-        print("{: 8d} / {: 8d}".format(i, intervalnumber), end="\r", flush=True)
+        print("{: 8d} / {: 8d}".format(i, intervalnumber), end="\r", flush=True, file=sys.stderr)
         displ = displacement(atom_traj[i * startdist:i * startdist + intervallength, :, :], pbc)
         sqdist = (displ * displ).mean(axis=1)  # average over atom number
         delta = sqdist - msd_mean
         msd_mean += delta / (i + 1)
         msd_var += delta * (sqdist - msd_mean)
-    print()
+    print(file=sys.stderr)
     # average over particle number and number of intervals
     msd_var /= (intervalnumber - 1)
 
@@ -107,36 +109,50 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False)
 
 
 def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay):
-    """Uses intervals ranging between a length of 1 timestep up to the length of the whole trajectory.
-    subinterval_delay: the time delay between two successive intervals of the same length"""
+    """
+    Uses intervals ranging between a length of 1 timestep up to the length of the whole trajectory.
+
+    Parameters
+    ----------
+    atom_traj: array_like
+        Atom trajectory
+    pbc: array_like
+        Periodic boundaries
+    subinterval_delay:
+        The time delay between two successive intervals of the same length
+
+    Returns
+    -------
+
+    """
     total_length = atom_traj.shape[0]
-    occurrence_counter = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
-    msd_mean = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
-    msd_var = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
-    delta = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
-    for interval_length in range(0, total_length - subinterval_delay, subinterval_delay):
-        ind_helper = np.zeros((atom_traj.shape[0], atom_traj.shape[1], atom_traj.shape[2]))
-        sqdist = squared_distance(atom_traj[interval_length: total_length, :, :],
-                                        atom_traj[interval_length, :, :], pbc, axis_wise=True)
-        ind_helper[:total_length - interval_length, :, :] = sqdist
-        indices = np.where(ind_helper != 0)
-        occurrence_counter[indices] += 1
-        delta[indices] = sqdist[indices] - msd_mean[indices]
-        msd_mean[indices] += delta[indices] / (occurrence_counter[indices] + 1)
-        msd_var[indices] += delta[indices] * (sqdist[indices] - msd_mean[indices])
-    indices2 = np.where(occurrence_counter > 1)
-    indices3 = np.where(occurrence_counter == 0)
-    occurrence_counter[indices2] = occurrence_counter[indices2] - 1
-    occurrence_counter[indices3] = occurrence_counter[indices3] + 1
+    occurrence_counter = np.zeros(atom_traj.shape)
+    msd_mean = np.zeros(atom_traj.shape)
+    msd_var = np.zeros(atom_traj.shape)
+    delta = np.zeros(atom_traj.shape)
+    for starting_point in range(0, total_length - subinterval_delay, subinterval_delay):
+        ind_helper = np.zeros(atom_traj.shape)
+        displ = displacement(atom_traj[starting_point:, :, :], pbc)
+        sqdist = displ * displ
+        ind_helper[:total_length - starting_point, :, :] = sqdist
+        interval_mask = np.where(ind_helper != 0)
+        occurrence_counter[interval_mask] += 1
+        delta[interval_mask] = sqdist[interval_mask] - msd_mean[interval_mask]
+        msd_mean[interval_mask] += delta[interval_mask] / (occurrence_counter[interval_mask] + 1)
+        msd_var[interval_mask] += \
+            delta[interval_mask] * (sqdist[interval_mask] - msd_mean[interval_mask])
+    where_greater_one = occurrence_counter > 1
+    where_equals_zero = occurrence_counter == 0
+    occurrence_counter[where_greater_one] -= 1
+    occurrence_counter[where_equals_zero] += 1
     msd_var /= occurrence_counter
-    msd_var2 = msd_var.mean(axis=1)
-    msd_mean2 = msd_mean.mean(axis=1)
-    return msd_mean2, msd_var2
+    return msd_mean.mean(axis=1), msd_var.mean(axis=1)
 
 
 def main(*args):
     parser = argparse.ArgumentParser(
-        description="Determine Mean Square Displacement of MD trajectory")
+        description="Determine Mean Square Displacement of MD trajectory",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers(dest="subparser_name")
     parser.add_argument("filename", help="Trajectory filename")
     parser.add_argument("pbc", nargs=3, type=float, help="Periodic boundaries")
@@ -166,6 +182,11 @@ def main(*args):
                               help="Number of intervals over which to average")
     parser_water.add_argument("intervallength", type=int, help="Interval length")
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     pbc = np.array(args.pbc)
     atom_box = AtomBoxCubic(pbc)
@@ -209,6 +230,7 @@ def main(*args):
     else:
         intervalnumber = args.intervalnumber
         intervallength = args.intervallength
+
         msd_mean, msd_var = calculate_msd(trajectory, pbc, intervalnumber, intervallength)
 
     # sum over the three spatial coordinate axes

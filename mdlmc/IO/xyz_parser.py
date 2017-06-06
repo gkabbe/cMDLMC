@@ -295,8 +295,7 @@ def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
         trajectory = np.vstack(trajectory)
 
         if remove_com_movement:
-            if verbose:
-                print("# Removing center of mass movement...")
+            logger.info("Removing center of mass movement...")
             npa.remove_center_of_mass_movement(trajectory)
 
         if not npz_fname:
@@ -350,9 +349,8 @@ def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=N
 
     else:
 
-        if verbose:
-            logger.info("No auxiliary file found.")
-            logger.info("Will create it now...")
+        logger.info("No auxiliary file found.")
+        logger.info("Will create it now...")
         if hdf5:
             save_trajectory_to_hdf5(filename, hdf5_fname=auxiliary_file,
                                     remove_com_movement=True, verbose=verbose)
