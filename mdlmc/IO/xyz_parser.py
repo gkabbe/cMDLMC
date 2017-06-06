@@ -334,9 +334,8 @@ def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=N
 
     if auxiliary_file:
         # User explicitly specified auxiliary file
-        if verbose:
-            print("# Both xyz file and auxiliary npz/npy file specified.")
-            print("# Will try to load from auxiliary file", auxiliary_file)
+        logger.info("Both xyz file and auxiliary npz/npy file specified.")
+        logger.info("Will try to load from auxiliary file {}".format(auxiliary_file))
     else:
         # Look for auxiliary file with same name as xyz file, but different extension
         if hdf5:
@@ -344,18 +343,16 @@ def load_atoms(filename, *atom_names, auxiliary_file=None, verbose=False, clip=N
         else:
             auxiliary_file = os.path.splitext(filename)[0] + ".npz"
 
-    if verbose:
-        print("# Looking for auxiliary file", auxiliary_file, "...")
+    logger.info("Looking for auxiliary file {}".format(auxiliary_file))
 
     if os.path.exists(auxiliary_file):
-        if verbose:
-            print("# Found it!")
+        logger.info("Found it")
 
     else:
 
         if verbose:
-            print("# No auxiliary file found.")
-            print("# Will create it now...")
+            logger.info("No auxiliary file found.")
+            logger.info("Will create it now...")
         if hdf5:
             save_trajectory_to_hdf5(filename, hdf5_fname=auxiliary_file,
                                     remove_com_movement=True, verbose=verbose)
