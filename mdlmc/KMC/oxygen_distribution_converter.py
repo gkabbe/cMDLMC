@@ -12,7 +12,7 @@ import h5py
 
 from mdlmc.analysis import rdf, excess_charge_analyzer
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
-from mdlmc.IO.xyz_parser import get_selection_from_atomname, save_trajectory_to_hdf5
+from mdlmc.IO.xyz_parser import get_xyz_selection_from_atomname, save_trajectory_to_hdf5
 
 
 # Setup logger
@@ -194,7 +194,7 @@ def main():
     if not os.path.exists(hdf5_traj):
         logger.info("Found no hdf5 file")
         logger.info("Create it now")
-        oxygen_selection = get_selection_from_atomname(xyz_traj, "O")
+        oxygen_selection = get_xyz_selection_from_atomname(xyz_traj, "O")
         save_trajectory_to_hdf5(xyz_traj, hdf5_traj, remove_com_movement=True,
                                 dataset_name="oxygen_trajectory", selection=oxygen_selection)
     logger.info("Loading hdf5 file {}".format(hdf5_traj))
