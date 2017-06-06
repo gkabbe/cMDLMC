@@ -508,6 +508,12 @@ CONFIG_DICT = {
              "parse_fct": parse_bool,
              "default": False,
              "help": "Overwrite oxygen trajectory in hdf5 file"
+         }),
+        ("mdconvert_trajectory",
+         {
+             "parse_fct": parse_bool,
+             "default": False,
+             "help": "If trajectory is by mdconvert, it must be converted from nm to angstrom"
          })
     ])
 }

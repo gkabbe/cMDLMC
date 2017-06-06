@@ -216,7 +216,7 @@ def kmc_main(settings):
     verbose = settings.verbose
     chunk_size = settings.chunk_size
     overwrite_oxygen_trajectory = settings.overwrite_oxygen_trajectory
-    trajectory_by_mdconvert = False
+    trajectory_by_mdconvert = settings.mdconvert_trajectory
 
     hdf5_fname = get_hdf5_filename(trajectory_fname)
     if verbose:
@@ -239,20 +239,22 @@ def kmc_main(settings):
         overwrite_oxygen_trajectory = True
         trajectory_by_mdconvert = True
 
-    if overwrite_oxygen_trajectory:
-        selection = get_hdf5_selection_from_atomname(hdf5_fname, "O")
-        # Create selection function which selects the oxygen atom coordinates
-        # and converts them from nm to angstrom
-        if trajectory_by_mdconvert:
-            # If it is an mdconvert trajectory, units need to be converted from nm to angstrom
-            def selection_fct(arr):
-                return 10 * np.take(arr, selection, axis=1)
-        else:
-            def selection_fct(arr):
-                return np.take(arr, selection, axis=1)
+    selection, _ = get_hdf5_selection_from_atomname(hdf5_fname, "O")
+    # Create selection function which selects the oxygen atom coordinates
+    # and converts them from nm to angstrom
+    if trajectory_by_mdconvert:
+        # If it is an mdconvert trajectory, units need to be converted from nm to angstrom
+        def selection_fct(arr):
+            return 10 * np.take(arr, selection, axis=1)
+    else:
+        def selection_fct(arr):
+            return np.take(arr, selection, axis=1)
 
-        create_dataset_from_hdf5_trajectory(hdf5_file, hdf5_file["coordinates"],
-                                            "oxygen_trajectory", selection_fct, chunk_size=1000)
+    oxygen_trajectory = create_dataset_from_hdf5_trajectory(hdf5_file, hdf5_file["coordinates"],
+                                                            "oxygen_trajectory",
+                                                            selection_fct,
+                                                            overwrite=overwrite_oxygen_trajectory,
+                                                            chunk_size=1000)
 
     trajectory_length = oxygen_trajectory.shape[0]
     timestep_md = settings.md_timestep_fs
