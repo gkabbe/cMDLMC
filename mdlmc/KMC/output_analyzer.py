@@ -1,9 +1,13 @@
 import argparse
+import logging
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 from mdlmc.misc.tools import argparse_compatible
+
+
+logger = logging.getLogger(__name__)
 
 
 @argparse_compatible
@@ -51,7 +55,7 @@ def lifetime_histogram(filename: str, bins: int, plot: bool = False, save: bool 
 
 @argparse_compatible
 def lifetime_autocorrelation(filename: str, correlation_length: int, interval_distance: int):
-    print("# Loading data")
+    logger.debug("Loading data")
     data = np.genfromtxt(filename, usecols=(5,), dtype=int)
 
     correlated = np.zeros(correlation_length, dtype=int)
@@ -87,6 +91,8 @@ def main():
     autocorr.set_defaults(func=lifetime_autocorrelation)
 
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG)
 
     args.func(args)
 
