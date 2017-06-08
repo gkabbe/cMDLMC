@@ -410,7 +410,6 @@ def main(*args):
                                     help="Sort config parameters lexicographically")
     parser_cmdlmc = subparsers.add_parser("cmdlmc", help="Load config file and start cMD/LMC run")
     parser_cmdlmc.add_argument("config_file", help="Config file")
-    parser_kmc = subparsers.add_parser("kmc", help="Load config file and start kmc run")
     args = parser.parse_args()
 
     if args.subparser_name == "config_file":
