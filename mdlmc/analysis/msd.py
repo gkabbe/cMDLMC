@@ -57,10 +57,27 @@ def displacement(positions, pbc):
 
 
 def calculate_msd(atom_traj, pbc, intervalnumber, intervallength, verbose=False):
-    """Input: trajectory in numpy format (only proton positions), periodic boundaries,
-    number of intervals, interval length
-    Output: tuple of averaged msd and msd variance
-    Method by Knuth https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance"""
+    """
+    Method by Knuth https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+
+    Parameters
+    ----------
+    atom_traj: array_like
+        Trajectory in numpy format (only proton positions)
+    pbc: array_like
+        Periodic box lenghts
+    intervalnumber: int
+        Number of intervals
+    intervallength: int
+        Interval length
+    verbose: bool
+        Verbosity
+
+    Returns
+    -------
+    Tuple of averaged MSD and MSD variance
+    """
+
     msd_mean = np.zeros((intervallength, 3), float)
     msd_var = np.zeros((intervallength, 3), float)
     totallength = atom_traj.shape[0]
@@ -229,13 +246,13 @@ def main(*args):
         m_err = m_err * args.length_unit**2 / args.timestep
 
         print("\nSlope in {}:".format(args.output_unit))
-        print("({:.2e} ± {:.2e}) {}".format(m.to(args.output_unit).magnitude,
-                                            m_err.to(args.output_unit).magnitude, args.output_unit))
+        print("({:.2e} +/- {:.2e}) {}".format(m.to(args.output_unit).magnitude,
+                                              m_err.to(args.output_unit).magnitude, args.output_unit))
 
         print("\nDiffusion coefficient in {}:".format(args.output_unit))
-        print("({:.2e} ± {:.2e}) {}".format(m.to(args.output_unit).magnitude / 6,
-                                            m_err.to(args.output_unit).magnitude / 6,
-                                            args.output_unit))
+        print("({:.2e} +/- {:.2e}) {}".format(m.to(args.output_unit).magnitude / 6,
+                                              m_err.to(args.output_unit).magnitude / 6,
+                                              args.output_unit))
 
         if args.plot:
             fit = m * np.arange(msd_mean.shape[0]) * args.timestep + y_0 * args.length_unit**2
