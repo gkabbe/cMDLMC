@@ -397,3 +397,33 @@ def print_hdf5(*args):
         print()
         for name, pos in zip(atom_names, frame):
             print(name, " ".join(map(str, pos)))
+
+
+def print_hdf5_mdtraj():
+    parser = argparse.ArgumentParser(description="Print HDF5 trajectory to command line in xyz "
+                                                 "format",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("hdf5_fname", help="HDF5 file name")
+    parser.add_argument("--atom_names", "-a", nargs="*", default=[],
+                        help="Which atoms should be printed?")
+    parser.add_argument("--clip", "-c", type=int, help="Clip trajectory after number of frames")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbosity")
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    selection, names = get_hdf5_selection_from_atomname(args.hdf5_fname, *args.atom_names)
+    trajectory = mdtraj.iterload(args.hdf5_fname, atom_indices=selection)
+
+    total_number_of_frames = 0
+    for frames in trajectory:
+        logger.info("{: 8.2f} ps".format(frames.time[0]))
+        logger.debug("Frames: {}".format(total_number_of_frames))
+        for frame, time in zip(frames.xyz, frames.time):
+            print(frames.n_atoms)
+            print(time)
+            for name, coord in zip(names, frame):
+                print("{} {:>10.2f} {:>10.2f} {:>10.2f}".format(name, *(10 * coord)))
+        total_number_of_frames += frames.n_frames
+        if total_number_of_frames >= args.clip:
+            break
