@@ -182,7 +182,7 @@ def main():
     reference_pbc = np.array(args.reference_pbc)
 
     traj_name, traj_ext = os.path.splitext(args.neutral_trajectory)
-    if traj_ext == ".hdf5":
+    if traj_ext in (".hdf5", ".h5"):
         hdf5_traj = traj_name + traj_ext
         xyz_traj = traj_name + ".xyz"
     elif traj_ext == ".xyz":
@@ -235,6 +235,7 @@ def main():
     rdf_neutral = plot_dict2["rdf_integrated_neutral"]
     rdf_reference = plot_dict2["rdf_integrated_reference"]
     conversion = plot_dict2["conversion"]
+    fit_fct = plot_dict2["conversion_fit"]
 
     if args.plot:
         fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
@@ -242,6 +243,7 @@ def main():
         ax1.plot(dist, rdf_reference, label="H$_3$O$^+$ - H$_2$O")
         ax2.plot(dist, conversion, "x")
         ax2.plot(dist, dist)
+        ax2.plot(dist, fit_fct, label="Fit function")
         plt.xlim(2, 3)
         plt.show()
 
