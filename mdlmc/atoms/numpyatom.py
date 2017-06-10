@@ -89,6 +89,9 @@ def print_npz(*args):
 
 
 def remove_center_of_mass_movement(npa_traj):
+    for name in npa_traj[0]["name"]:
+        if name.astype(str) not in atom_masses:
+            raise NameError("No atom mass specified for element {}".format(name))
     mass_array = np.array([atom_masses[name] for name in npa_traj[0]["name"].astype(str)])[None, :, None]
     center_of_mass = (mass_array * npa_traj["pos"]).sum(axis=1)[:, None, :] / mass_array.sum()
     npa_traj["pos"] -= center_of_mass
