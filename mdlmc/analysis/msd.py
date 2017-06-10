@@ -169,6 +169,10 @@ def main(*args):
     parser_multi = subparsers.add_parser("multi", help="Intervals with variable size")
     parser_multi.add_argument("--variance_all_H", action="store_true",
                               help="If set, determine variance over every proton trajectory")
+    parser_multi.add_argument("--resolution", type=int, default=1, help="Use only every ith frame"
+                                                                        " of the trajectory")
+    parser_multi.add_argument("--subinterval_delay", type=int, default=1, help="Distance between"
+                                                                               " intervals")
     parser_water = subparsers.add_parser("water", help="MSD for single excess proton")
     parser_water.add_argument("--columns", "-c", type=int, nargs="+",
                               help="Which columns contain the position?")
@@ -210,8 +214,8 @@ def main(*args):
     if args.subparser_name == "multi":
         # -------------------------------------
         # settings for multi interval analysis
-        subinterval_delay = 20
-        resolution = 100
+        subinterval_delay = args.subinterval_delay
+        resolution = args.resolution
         # -------------------------------------
         msd_mean, msd_var = calculate_msd_multi_interval(trajectory[::resolution], pbc,
                                                          subinterval_delay)
