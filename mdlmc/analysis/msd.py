@@ -102,7 +102,7 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength):
     return msd_mean, msd_var
 
 
-def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay):
+def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay=1):
     """
     Uses intervals ranging between a length of 1 timestep up to the length of the whole trajectory.
 
@@ -120,16 +120,19 @@ def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay):
 
     """
     total_length = atom_traj.shape[0]
-    occurrence_counter = np.zeros(atom_traj.shape)
+    occurrence_counter = np.zeros(atom_traj.shape, dtype=int)
+    interval_mask = np.zeros(atom_traj.shape, dtype=bool)
     msd_mean = np.zeros(atom_traj.shape)
     msd_var = np.zeros(atom_traj.shape)
     delta = np.zeros(atom_traj.shape)
+
     for starting_point in range(0, total_length - subinterval_delay, subinterval_delay):
-        ind_helper = np.zeros(atom_traj.shape)
+        print(starting_point, end="\r", file=sys.stderr, flush=True)
         displ = displacement(atom_traj[starting_point:, :, :], pbc)
         sqdist = displ * displ
-        ind_helper[:total_length - starting_point, :, :] = sqdist
-        interval_mask = np.where(ind_helper != 0)
+        sqdist.resize(atom_traj.shape)
+        interval_mask[:] = 0
+        interval_mask[:-starting_point] = 1
         occurrence_counter[interval_mask] += 1
         delta[interval_mask] = sqdist[interval_mask] - msd_mean[interval_mask]
         msd_mean[interval_mask] += delta[interval_mask] / (occurrence_counter[interval_mask] + 1)
