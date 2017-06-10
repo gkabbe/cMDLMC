@@ -165,6 +165,8 @@ def main(*args):
     parser.add_argument("-u", "--output_unit", type=ureg.parse_expression,
                         default="angstrom**2/ps",
                         help="In which unit to output MSD and diffusion coefficient")
+    parser.add_argument("--columns", "-c", type=int, nargs="+",
+                        help="Which columns contain the position?")
     parser_fixed = subparsers.add_parser("single", help="Intervals with fixed size")
     parser_fixed.add_argument("intervalnumber", type=int,
                               help="Number of intervals over which to average")
@@ -177,8 +179,6 @@ def main(*args):
     parser_multi.add_argument("--subinterval_delay", type=int, default=1, help="Distance between"
                                                                                " intervals")
     parser_water = subparsers.add_parser("water", help="MSD for single excess proton")
-    parser_water.add_argument("--columns", "-c", type=int, nargs="+",
-                              help="Which columns contain the position?")
     parser_water.add_argument("intervalnumber", type=int,
                               help="Number of intervals over which to average")
     parser_water.add_argument("intervallength", type=int, help="Interval length")
@@ -195,8 +195,10 @@ def main(*args):
     if type(args.timestep) != ureg.Quantity:
         raise ValueError("You forgot to assign a unit to timestep!")
 
-    if args.subparser_name == "water":
+    if args.columns:
+        logger.debug("Reading text file {}".format(args.filename))
         trajectory = np.loadtxt(args.filename, usecols=args.columns)[:, None, :]
+        logger.debug("Done reading")
     else:
         if os.path.splitext(args.filename)[1] == "npz":
             if args.atom == "AH":
