@@ -280,6 +280,8 @@ def save_trajectory_to_npz(xyz_fname, npz_fname=None, remove_com_movement=False,
         frame_length = int(f.readline()) + 2
         f.seek(0)
 
+        logger.debug("Frame length: {}".format(frame_length))
+
         chunk_size = 1000
         counter = 0
         trajectory = []
