@@ -152,6 +152,10 @@ def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay=1):
 
     Returns
     -------
+    msd_mean: array
+        MSD Mean
+    msd_var: array
+        MSD Variance
 
     """
     total_length = atom_traj.shape[0]
