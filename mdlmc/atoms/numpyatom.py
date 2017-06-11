@@ -1,5 +1,9 @@
 import sys
 import numpy as np
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 dtype_xyz = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
@@ -89,6 +93,9 @@ def print_npz(*args):
 
 
 def remove_center_of_mass_movement(npa_traj):
+    if npa_traj.shape[1] == 1:
+        logger.info("Single atom trajectory. Will skip reduction of center of mass movement.")
+        return None
     for name in npa_traj[0]["name"]:
         if name.astype(str) not in atom_masses:
             raise NameError("No atom mass specified for element {}".format(name))
