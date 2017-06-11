@@ -108,6 +108,35 @@ def calculate_msd(atom_traj, pbc, intervalnumber, intervallength):
     return msd_mean, msd_var
 
 
+def calculate_diffusion_coefficient(atom_traj, pbc, intervalnumber, intervallength, fit_from):
+    def linear(x, m, y0):
+        return m * x + y0
+
+    totallength = atom_traj.shape[0]
+    time = np.arange(intervallength)
+
+    if intervalnumber * intervallength <= totallength:
+        startdist = intervallength
+    else:
+        diff = intervalnumber * intervallength - totallength
+        startdist = intervallength - int(ceil(diff / float(intervalnumber - 1)))
+
+    logger.info("Total length of trajectory: {}".format(totallength))
+    logger.info("Number of intervals: {}".format(intervalnumber))
+    logger.info("Interval distance: {}".format(startdist))
+
+    diffcoeffs = []
+
+    for i in range(intervalnumber):
+        print("{: 8d} / {: 8d}".format(i, intervalnumber), end="\r", flush=True, file=sys.stderr)
+        displ = displacement(atom_traj[i * startdist:i * startdist + intervallength, :, :], pbc)
+        sqdist = (displ * displ).mean(axis=1).sum(axis=-1)  # average over atom number
+        popt, pcov = curve_fit(linear, time[fit_from:], sqdist[fit_from:])
+        diffcoeffs.append(popt[0] / 6)
+    print(file=sys.stderr)
+    return np.mean(diffcoeffs), np.std(diffcoeffs)
+
+
 def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay=1):
     """
     Uses intervals ranging between a length of 1 timestep up to the length of the whole trajectory.
@@ -177,6 +206,8 @@ def main(*args):
     parser_fixed.add_argument("intervalnumber", type=int,
                               help="Number of intervals over which to average")
     parser_fixed.add_argument("intervallength", type=int, help="Interval length")
+    parser_fixed.add_argument("--diffcoeff", action="store_true", help="Calculate diffusion coefficient"
+                                                                       " for each interval")
     parser_multi = subparsers.add_parser("multi", help="Intervals with variable size")
     parser_multi.add_argument("--variance_all_H", action="store_true",
                               help="If set, determine variance over every proton trajectory")
@@ -240,7 +271,13 @@ def main(*args):
         intervalnumber = args.intervalnumber
         intervallength = args.intervallength
 
-        msd_mean, msd_var = calculate_msd(trajectory, pbc, intervalnumber, intervallength)
+        if args.diffcoeff:
+            diffcoeff, err = calculate_diffusion_coefficient(trajectory, pbc, intervalnumber,
+                                                             intervallength, args.fit_from)
+            print("Diffcoeff: {} +- {}".format(diffcoeff, err))
+            sys.exit(0)
+        else:
+            msd_mean, msd_var = calculate_msd(trajectory, pbc, intervalnumber, intervallength)
 
     # sum over the three spatial coordinate axes
     msd_mean, msd_var = msd_mean.sum(axis=1), msd_var.sum(axis=1)
