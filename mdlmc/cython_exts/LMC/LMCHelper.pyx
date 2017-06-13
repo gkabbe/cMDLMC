@@ -444,8 +444,6 @@ cdef class KMCRoutine:
 
                     for k in range(3):
                         dist_array[f, i, k] = distances[neighbor_indices[k]]
-                        dist_array[f, i, k] = distances[neighbor_indices[k]]
-                        dist_array[f, i, k] = distances[neighbor_indices[k]]
                         all_indices[f, i, k] = neighbor_indices[k]
         return dist_array, all_indices
 
