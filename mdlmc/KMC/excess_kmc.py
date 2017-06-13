@@ -151,6 +151,7 @@ class KMCGen:
             counter, distance_rescaled = next(distance_rescaled_gen)
             _, distance_unrescaled = next(distance_gen)
             _, indices = next(self.indices)
+            logger.debug("Counter: {}".format(counter))
 
             if self.relaxation_time:
                 logger.debug("Relaxing distances:")
@@ -175,7 +176,10 @@ class KMCGen:
                 logger.debug("Last oxygen index was {}".format(self.last_idx))
                 logger.debug("Current oxygen index is {}".format(self.oxy_idx))
                 logger.debug("Indices are {}".format(indices[self.oxy_idx]))
-                logger.debug("Distance to last oxy: {}".format(dist_to_last_oxygen))
+                if dist_to_last_oxygen:
+                    idx, = dist_to_last_oxygen
+                    dist_back = ...
+                    logger.debug("Distance to last oxy: {}".format(dist_to_last_oxygen))
 
     def reset_relaxationtime(self, relaxation_time):
         self.relaxation_time = relaxation_time
@@ -368,6 +372,7 @@ def kmc_main(settings):
 
         jumps += 1
         sweep = next_sweep
+        logger.debug("Sweep {}".format(sweep))
         logger.debug("Jumping")
         logger.debug("Old proton position: {}".format(proton_position))
 
