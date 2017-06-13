@@ -167,7 +167,7 @@ class KMCGen:
             else:
                 # yield new distance to keep it in sync with distance_rescaled
                 dist_result = distance_rescaled[self.oxy_idx]
-            yield dist
+            yield dist_result
             if logger.isEnabledFor(logging.DEBUG):
                 dist_to_last_oxygen = np.where(indices[self.last_idx] == self.oxy_idx)[0]
                 logger.debug(dist_to_last_oxygen)
