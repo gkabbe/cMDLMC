@@ -117,13 +117,14 @@ class KMCGen:
     If relaxation_time is set, distances will be larger after a proton jump,
     and linearly decrease to the rescaled distances within the set relaxation time."""
 
-    def __init__(self, oxy_idx, distances, distances_rescaled, jumprate_fct, jumprate_params):
-        self.oxy_idx = oxy_idx
+    def __init__(self, oxy_idx, distances, distances_rescaled, indices, jumprate_fct, jumprate_params, *,
+                 keep_last_neighbor_rescaled=False):
         self.relaxation_counter = 0
         self.relaxation_time = 0
         self.waiting_time = 0  # Don't jump while waiting time > 0
         self.distances = distances
         self.distances_rescaled = distances_rescaled
+        self.indices = trajectory_generator(indices)
         self.jumprate_fct = jumprate_fct
         self.jumprate_params = jumprate_params
         # Attribute prob is set while yielding from self.jumprate_generator
@@ -321,7 +322,7 @@ def kmc_main(settings):
 
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:10d} {:8.2f}"
 
-    kmc_gen = KMCGen(proton_position, distances, distances_rescaled, fermi, (a, b, c))
+    kmc_gen = KMCGen(proton_position, distances, distances_rescaled, indices, fermi, (a, b, c))
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
 
     if logger.isEnabledFor(logging.DEBUG):
