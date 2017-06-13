@@ -514,6 +514,13 @@ CONFIG_DICT = {
              "parse_fct": parse_bool,
              "default": False,
              "help": "If trajectory is by mdconvert, it must be converted from nm to angstrom"
+         }),
+        ("keep_last_neighbor_rescaled",
+         {
+             "parse_fct": parse_bool,
+             "default": False,
+             "help": "If True, the distance to the last donor stays rescaled after a jump. This way"
+                     "the probability for a jump back is not diminished."
          })
     ])
 }
