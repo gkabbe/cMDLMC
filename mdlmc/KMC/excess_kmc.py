@@ -147,6 +147,10 @@ class KMCGen:
         distance_rescaled_gen = trajectory_generator(self.distances_rescaled)
         keep_last_neighbor_rescaled = self.keep_last_neighbor_rescaled
 
+        # Contains distances of the closest three atoms, and the rescaled distance to the previous
+        # oxygen site
+        distances = np.zeros(4)
+
         while True:
             counter, distance_rescaled = next(distance_rescaled_gen)
             _, distance_unrescaled = next(distance_gen)
@@ -164,22 +168,34 @@ class KMCGen:
                 else:
                     self.relaxation_counter = 0
                     self.relaxation_time = 0
+                    dist_result = distance_rescaled[self.oxy_idx]
             else:
-                # yield new distance to keep it in sync with distance_rescaled
                 dist_result = distance_rescaled[self.oxy_idx]
-            yield dist_result
+
+            if keep_last_neighbor_rescaled:
+                distances[:3] = dist_result
+                dist_idx = np.where(indices[self.last_idx] == self.oxy_idx)[0]
+                if dist_idx:
+                    dist_back = distance_rescaled[dist_idx]
+                    distances[-1] = dist_idx[0]
+                else:
+                    # Set it to -1
+                    # TODO: jumprate_generator has to handle this case and return zero prob
+                    distances[-1] = -1
+            else:
+                yield dist_result
+
             if logger.isEnabledFor(logging.DEBUG):
-                dist_to_last_oxygen = np.where(indices[self.last_idx] == self.oxy_idx)[0]
-                logger.debug(dist_to_last_oxygen)
+                logger.debug(dist_idx)
                 logger.debug("Current rescaled distances {}".format(distance_rescaled[self.oxy_idx]))
                 logger.debug("Current unrescaled distances {}".format(distance_unrescaled[self.oxy_idx]))
                 logger.debug("Last oxygen index was {}".format(self.last_idx))
                 logger.debug("Current oxygen index is {}".format(self.oxy_idx))
                 logger.debug("Indices are {}".format(indices[self.oxy_idx]))
-                if dist_to_last_oxygen:
-                    idx, = dist_to_last_oxygen
-                    dist_back = ...
-                    logger.debug("Distance to last oxy: {}".format(dist_to_last_oxygen))
+                if dist_idx:
+                    idx, = dist_idx
+                    dist_back = distance_rescaled[idx]
+                    logger.debug("Distance to last oxy: {}".format(dist_back))
 
     def reset_relaxationtime(self, relaxation_time):
         self.relaxation_time = relaxation_time
