@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+import logging
 
 import tables
 import h5py
@@ -18,6 +19,7 @@ from mdlmc.LMC.MDMC import initialize_oxygen_lattice
 
 
 DEBUG = False
+logger = logging.getLogger(__name__)
 
 
 def fermi(x, a, b, c):
@@ -163,8 +165,7 @@ class KMCGen:
         while True:
             for dists in distance_gen:
                 if self.waiting_time > 0:
-                    if DEBUG:
-                        print("Waiting time:", self.waiting_time)
+                    logger.debug("Waiting time:", self.waiting_time)
                     prob = np.zeros(3)
                     self.waiting_time -= 1
                 else:
@@ -200,8 +201,7 @@ class PositionTracker:
         correction_vector *= 2 * self.d_oh
         self.correction_vector += correction_vector
         self.proton_position = new_proton_position
-        if DEBUG:
-            print("Correction vector:", self.correction_vector)
+        logger.debug("Correction vector: {}".format(self.correction_vector))
 
 
 def kmc_main(settings):
@@ -209,8 +209,9 @@ def kmc_main(settings):
 
     # If debug is set, set global variable DEBUG = True
     if settings.debug:
-        global DEBUG
-        DEBUG = True
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     trajectory_fname = settings.filename
     verbose = settings.verbose
@@ -219,11 +220,9 @@ def kmc_main(settings):
     trajectory_by_mdconvert = settings.mdconvert_trajectory
 
     hdf5_fname = get_hdf5_filename(trajectory_fname)
-    if verbose:
-        print("# Looking for HDF5 file", hdf5_fname)
+    logger.info("Looking for HDF5 file {}".format(hdf5_fname))
     if not os.path.exists(hdf5_fname):
-        if verbose:
-            print("# Could not find HDF5 file. Will create it now.")
+        logger.info("Could not find HDF5 file. Will create it now.")
         oxygen_selection = get_xyz_selection_from_atomname(trajectory_fname, "O")
         save_trajectory_to_hdf5(trajectory_fname, hdf5_fname, remove_com_movement=True,
                                 verbose=verbose, dataset_name="oxygen_trajectory",
@@ -233,9 +232,9 @@ def kmc_main(settings):
     try:
         oxygen_trajectory = hdf5_file["oxygen_trajectory"]
     except KeyError:
-        print("# Could not find dataset oxygen_trajectory in {}".format(hdf5_fname))
-        print("# Assuming that this hdf5 file was created by mdconvert")
-        print("# Try to load trajectory")
+        logger.info("Could not find dataset oxygen_trajectory in {}".format(hdf5_fname))
+        logger.info("Assuming that this hdf5 file was created by mdconvert")
+        logger.info("Try to load trajectory")
         overwrite_oxygen_trajectory = True
         trajectory_by_mdconvert = True
 
@@ -299,7 +298,7 @@ def kmc_main(settings):
     if settings.rescale_parameters:
         kmc_rescale = KMCRoutine(atombox_rescale, oxygen_lattice, jumprate_function)
 
-    print("# Creating array of distances", file=settings.output)
+    logger.info("# Creating array of distances")
     distances, indices = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
                                                              ("distances", "indices"),
                                                              kmc.determine_distances,
@@ -307,14 +306,14 @@ def kmc_main(settings):
                                                              overwrite=settings.overwrite_jumprates)
 
     if settings.rescale_parameters:
-        if verbose:
-            print("# Creating array of rescaled distances")
+        logger.info("Creating array of rescaled distances")
         distances_rescaled, indices = create_dataset_from_hdf5_trajectory(
             hdf5_file, oxygen_trajectory, ("distances_rescaled", "indices"),
             kmc_rescale.determine_distances, chunk_size, dtype=(np.float32, np.int32),
             overwrite=settings.overwrite_jumprates)
 
     if settings.no_rescaling or not settings.rescale_parameters:
+        logger.debug("No rescaling set.")
         distances_rescaled = distances
 
     print("# {:16} {:18} {:15} {:15} {:15} {:10} {:10} {:8}".format(
@@ -325,7 +324,7 @@ def kmc_main(settings):
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, fermi, (a, b, c))
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
 
-    if DEBUG:
+    if logger.isEnabledFor(logging.DEBUG):
         distance_debug = trajectory_generator(distances)
         distance_rescaled_debug = trajectory_generator(distances_rescaled)
 
@@ -342,23 +341,21 @@ def kmc_main(settings):
                 print(output_format.format(i, i * timestep_md, *proton_coords, proton_position,
                                            jumps, i / (time.time() - start_time)),
                       flush=True, file=settings.output)
-                if DEBUG:
-                    print(next(distance_debug)[1][proton_position])
-                    print(next(distance_rescaled_debug)[1][proton_position])
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(next(distance_debug)[1][proton_position])
+                    logger.debug(next(distance_rescaled_debug)[1][proton_position])
 
         jumps += 1
         sweep = next_sweep
-        if DEBUG:
-            print("Jumping")
-            print("Old proton position:", proton_position)
+        logger.debug("Jumping")
+        logger.debug("Old proton position: {}".format(proton_position))
 
         probs = kmc_gen.prob
         cumsum = np.cumsum(probs)
         neighbor_indices = indices[frame, proton_position]
 
-        if DEBUG:
-            print("Choose between", neighbor_indices)
-            print("With probabilities", probs)
+        logger.debug("Choose between {}".format(neighbor_indices))
+        logger.debug("With probabilities {}".format(probs))
 
         random_draw = np.random.uniform(0, cumsum[-1])
         ix = np.searchsorted(cumsum, random_draw)
@@ -368,8 +365,7 @@ def kmc_main(settings):
         kmc_gen.reset_relaxationtime(relaxation_time)
         kmc_gen.waiting_time = waiting_time
 
-        if DEBUG:
-            print("New proton position:", proton_position)
+        logger.debug("New proton position: {}".format(proton_position))
 
         pos_tracker.update_correction_vector(sweep % trajectory_length, proton_position)
 
