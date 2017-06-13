@@ -145,29 +145,37 @@ class KMCGen:
     def distance_generator(self):
         distance_gen = trajectory_generator(self.distances)
         distance_rescaled_gen = trajectory_generator(self.distances_rescaled)
+        keep_last_neighbor_rescaled = self.keep_last_neighbor_rescaled
 
         while True:
+            counter, distance_rescaled = next(distance_rescaled_gen)
+            _, distance_unrescaled = next(distance_gen)
+            _, indices = next(self.indices)
+
             if self.relaxation_time:
-                if DEBUG:
-                    print("Relaxing distances:")
-                while self.relaxation_counter < self.relaxation_time:
-                    if DEBUG:
-                        print("Relaxation time:", self.relaxation_counter)
-                    _, dist = next(distance_gen)
-                    dist = dist[self.oxy_idx]
-                    counter, dist_rescaled = next(distance_rescaled_gen)
-                    dist_rescaled = dist_rescaled[self.oxy_idx]
+                logger.debug("Relaxing distances:")
+                if self.relaxation_counter < self.relaxation_time:
+                    logger.debug("Relaxation time: {}".format(self.relaxation_counter))
+                    dist = distance_unrescaled[self.oxy_idx]
+                    dist_rescaled = distance_rescaled[self.oxy_idx]
                     dist_result = dist + self.relaxation_counter / self.relaxation_time * (dist_rescaled - dist)
                     self.relaxation_counter += 1
-                    yield dist_result
-                self.relaxation_counter = 0
-                self.relaxation_time = 0
+                else:
+                    self.relaxation_counter = 0
+                    self.relaxation_time = 0
             else:
                 # yield new distance to keep it in sync with distance_rescaled
-                next(distance_gen)
-                counter, dist = next(distance_rescaled_gen)
-                dist = dist[self.oxy_idx]
-                yield dist
+                dist_result = distance_rescaled[self.oxy_idx]
+            yield dist
+            if logger.isEnabledFor(logging.DEBUG):
+                dist_to_last_oxygen = np.where(indices[self.last_idx] == self.oxy_idx)[0]
+                logger.debug(dist_to_last_oxygen)
+                logger.debug("Current rescaled distances {}".format(distance_rescaled[self.oxy_idx]))
+                logger.debug("Current unrescaled distances {}".format(distance_unrescaled[self.oxy_idx]))
+                logger.debug("Last oxygen index was {}".format(self.last_idx))
+                logger.debug("Current oxygen index is {}".format(self.oxy_idx))
+                logger.debug("Indices are {}".format(indices[self.oxy_idx]))
+                logger.debug("Distance to last oxy: {}".format(dist_to_last_oxygen))
 
     def reset_relaxationtime(self, relaxation_time):
         self.relaxation_time = relaxation_time
