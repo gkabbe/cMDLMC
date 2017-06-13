@@ -119,6 +119,7 @@ class KMCGen:
 
     def __init__(self, oxy_idx, distances, distances_rescaled, indices, jumprate_fct, jumprate_params, *,
                  keep_last_neighbor_rescaled=False):
+        self._oxy_idx = oxy_idx
         self.relaxation_counter = 0
         self.relaxation_time = 0
         self.waiting_time = 0  # Don't jump while waiting time > 0
@@ -129,6 +130,17 @@ class KMCGen:
         self.jumprate_params = jumprate_params
         # Attribute prob is set while yielding from self.jumprate_generator
         self.prob = None
+        self.keep_last_neighbor_rescaled = keep_last_neighbor_rescaled
+        self.last_idx = None
+
+    @property
+    def oxy_idx(self):
+        return self._oxy_idx
+
+    @oxy_idx.setter
+    def oxy_idx(self, oxy_idx):
+        self.last_idx = self._oxy_idx
+        self._oxy_idx = oxy_idx
 
     def distance_generator(self):
         distance_gen = trajectory_generator(self.distances)
