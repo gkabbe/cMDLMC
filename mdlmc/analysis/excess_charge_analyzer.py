@@ -39,9 +39,8 @@ def track_collective_variable(trajectory, pbc, *, visualize=False):
     atombox = AtomBoxCubic(pbc)
     oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
-    excess_charge_start_index = hydronium_helper.determine_hydronium_index(oxygens[0],
-                                                                              protons[0],
-                                                                              atombox)
+    excess_charge_start_index = hydronium_helper.determine_hydronium_index(oxygens[0], protons[0],
+                                                                           atombox)
     excess_charge_start_position = oxygens[0, excess_charge_start_index]
     excess_charge_colvar_0 = excess_charge_collective_variable(oxygens[0], protons[0])
     if visualize:
