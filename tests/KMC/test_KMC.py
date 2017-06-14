@@ -1,5 +1,6 @@
 import unittest
 from itertools import product, cycle
+import logging
 
 import numpy as np
 
@@ -294,5 +295,48 @@ class TestPositionTracker(unittest.TestCase):
 
 class TestFunctions(unittest.TestCase):
     def test_last_neighbor_is_close(self):
-        dists_unrescaled = np.random.uniform(2.5, 4.0, size=(5, 3))
+        last_idx = 0
+        current_idx = 1
+
+        dist_result = np.zeros(3)
+        dists_unrescaled = np.array([[2.1, 2.2, 2.3],
+                                     [2.5, 2.6, 2.7]])
         dists_rescaled = dists_unrescaled - 0.2
+        indices = np.array([[current_idx, 5, 6],
+                            [2, 3, 4]], dtype=int)
+        dist_result[:] = dists_unrescaled[current_idx]
+
+        # Case 1: new oxy in old oxy's list, but not vice versa
+        # -----------------------------------------------------
+
+        print("Before:", dist_result)
+        excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result)
+        print("After:", dist_result)
+
+        self.assertEqual(dist_result[-1], dists_rescaled[last_idx, 0])
+
+        # Case 2: old oxy in new oxy's list
+        # ---------------------------------
+
+        indices = np.array([[4, 5, 6],
+                            [last_idx, 3, 4]])
+
+        dist_result[:] = dists_unrescaled[current_idx]
+
+        print("Before:", dist_result)
+        excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result)
+        print("After:", dist_result)
+
+        self.assertEqual(dist_result[0], dists_rescaled[current_idx, 0])
+
+        # Case 3: No more connection exists
+        # ---------------------------------
+        dist_result[:] = dists_unrescaled[current_idx]
+        indices = np.array([[4, 5, 6],
+                            [6, 3, 4]])
+
+        print("Before:", dist_result)
+        excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result)
+        print("After:", dist_result)
+
+        self.assertTrue((dist_result == dists_unrescaled[current_idx]).all())
