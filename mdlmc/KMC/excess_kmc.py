@@ -131,7 +131,7 @@ class KMCGen:
         # Attribute prob is set while yielding from self.jumprate_generator
         self.prob = None
         self.keep_last_neighbor_rescaled = keep_last_neighbor_rescaled
-        self.last_idx = None
+        self._last_idx = None
 
     @property
     def oxy_idx(self):
@@ -139,7 +139,7 @@ class KMCGen:
 
     @oxy_idx.setter
     def oxy_idx(self, oxy_idx):
-        self.last_idx = self._oxy_idx
+        self._last_idx = self._oxy_idx
         self._oxy_idx = oxy_idx
 
     def distance_generator(self):
@@ -174,7 +174,7 @@ class KMCGen:
 
             if keep_last_neighbor_rescaled:
                 distances[:3] = dist_result
-                dist_idx = np.where(indices[self.last_idx] == self.oxy_idx)[0]
+                dist_idx = np.where(indices[self._last_idx] == self.oxy_idx)[0]
                 if dist_idx:
                     dist_back = distance_rescaled[dist_idx]
                     distances[-1] = dist_idx[0]
@@ -189,7 +189,7 @@ class KMCGen:
                 logger.debug(dist_idx)
                 logger.debug("Current rescaled distances {}".format(distance_rescaled[self.oxy_idx]))
                 logger.debug("Current unrescaled distances {}".format(distance_unrescaled[self.oxy_idx]))
-                logger.debug("Last oxygen index was {}".format(self.last_idx))
+                logger.debug("Last oxygen index was {}".format(self._last_idx))
                 logger.debug("Current oxygen index is {}".format(self.oxy_idx))
                 logger.debug("Indices are {}".format(indices[self.oxy_idx]))
                 if dist_idx:
