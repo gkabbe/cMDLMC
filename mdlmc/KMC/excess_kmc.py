@@ -117,15 +117,22 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
     previous oxygen is in the neighbor list of the current oxygen. The corresponding distance
     is then replaced by the rescaled distance."""
 
+    logger.debug("Current idx: {}".format(current_idx))
+    logger.debug("Last idx: {}".format(last_idx))
+    logger.debug("Indices from current: {}".format(indices[current_idx]))
+    logger.debug("Indices from last: {}".format(indices[last_idx]))
+
     # Check if the last oxygen is actually still in the new oxygen's neighbor list
     idx_to_old = np.where(indices[current_idx] == last_idx)[0]
     if idx_to_old.size > 0:
+        logger.debug("Connection from new to old exists")
         # If it is, the connection will be set to the rescaled distance
         dist_result[idx_to_old[0]] = dists_rescaled[current_idx, idx_to_old[0]]
     else:
         # If not, check whether the new oxygen is in the old one's neighbor list
         idx_from_old = np.where(indices[last_idx] == current_idx)[0]
         if idx_from_old.size > 0:
+            logger.debug("Connection from old to new exists")
             # In that case, replace the connection with the largest distance with
             # the connection to the last neighbor
             old_neighbor_dist = dists_rescaled[last_idx, idx_from_old[0]]
@@ -133,6 +140,8 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
             dist_result[largest_dist_idx] = old_neighbor_dist
             indices[last_idx, largest_dist_idx] = last_idx
     # Otherwise, leave everything as it is
+        else:
+            logger.debug("No connection exists")
 
 
 class KMCGen:
