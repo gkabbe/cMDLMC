@@ -18,7 +18,6 @@ from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWaterLinearConv
 from mdlmc.LMC.MDMC import initialize_oxygen_lattice
 
 
-DEBUG = False
 logger = logging.getLogger(__name__)
 
 
@@ -177,12 +176,15 @@ class KMCGen:
         distances = np.zeros(4)
 
         while True:
+            # First, get both rescaled and unrescaled distances as well as the neighbor indices
             counter, distance_rescaled = next(distance_rescaled_gen)
             _, distance_unrescaled = next(distance_gen)
             _, indices = next(self.indices)
             logger.debug("Counter: {}".format(counter))
 
             if self.relaxation_time:
+                # If relaxation time is set, return a linear combination of rescaled and unrescaled
+                # distances
                 logger.debug("Relaxing distances:")
                 if self.relaxation_counter < self.relaxation_time:
                     logger.debug("Relaxation time: {}".format(self.relaxation_counter))
@@ -195,6 +197,7 @@ class KMCGen:
                     self.relaxation_time = 0
                     dist_result = distance_rescaled[self.oxy_idx]
             else:
+                # Otherwise, just get the rescaled distances
                 dist_result = distance_rescaled[self.oxy_idx]
 
             if keep_last_neighbor_rescaled:
