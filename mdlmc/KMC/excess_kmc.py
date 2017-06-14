@@ -111,6 +111,30 @@ def trajectory_generator(trajectory, chunk_size=10000):
                 counter += 1
 
 
+def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result):
+    """Checks whether a connection between the current and the last oxygen still exists (i.e.
+    that either the current oxygen is in the neighbor list of the previous oxygen, or the
+    previous oxygen is in the neighbor list of the current oxygen. The corresponding distance
+    is then replaced by the rescaled distance."""
+
+    # Check if the last oxygen is actually still in the new oxygen's neighbor list
+    idx_to_old = np.where(indices[current_idx] == last_idx)[0]
+    if idx_to_old:
+        # If it is, the connection will be set to the rescaled distance
+        dist_result[idx_to_old[0]] = dists_rescaled[current_idx, idx_to_old[0]]
+    else:
+        # If not, check whether the new oxygen is in the old one's neighbor list
+        idx_from_old = np.where(indices[last_idx] == current_idx)[0]
+        if idx_from_old:
+            # In that case, replace the connection with the largest distance with
+            # the connection to the last neighbor
+            old_neighbor_dist = dists_rescaled[last_idx, idx_from_old[0]]
+            largest_dist_idx = np.argmax(dist_result)
+            dist_result[largest_dist_idx] = old_neighbor_dist
+            indices[largest_dist_idx] = last_idx
+    # Otherwise, leave everything as it is
+
+
 class KMCGen:
     """Class responsible for the generation of distances and jump rates.
     If relaxation_time is set, distances will be larger after a proton jump,
@@ -140,31 +164,6 @@ class KMCGen:
     def oxy_idx(self, oxy_idx):
         self._last_idx = self._oxy_idx
         self._oxy_idx = oxy_idx
-
-    def _last_neighbor_is_close(self, indices, dists_rescaled, dist_result):
-        """Checks whether a connection between the current and the last oxygen still exists (i.e.
-        that either the current oxygen is in the neighbor list of the previous oxygen, or the
-        previous oxygen is in the neighbor list of the current oxygen. The corresponding distance
-        is then replaced by the rescaled distance."""
-
-        # Check if the last oxygen is actually still in the new oxygen's neighbor list
-        idx_to_old = np.where(indices[self.oxy_idx] == self._last_idx)[0]
-        if idx_to_old:
-            # If it is, the connection will be set to the rescaled distance
-            dist_result[idx_to_old[0]] = dists_rescaled[self._oxy_idx, idx_to_old[0]]
-        else:
-            # If not, check whether the new oxygen is in the old one's neighbor list
-            idx_from_old = np.where(indices[self._last_idx] == self.oxy_idx)[0]
-            if idx_from_old:
-                # In that case, replace the connection with the largest distance with
-                # the connection to the last neighbor
-                old_neighbor_dist = dists_rescaled[self._last_idx, idx_from_old[0]]
-                largest_dist_idx = np.argmax(dist_result)
-                dist_result[largest_dist_idx] = old_neighbor_dist
-                indices[largest_dist_idx] = self._last_idx
-            else:
-                # If not, just return the three closest neighbors
-                return dist_result
 
     def distance_generator(self):
         distance_gen = trajectory_generator(self.distances)

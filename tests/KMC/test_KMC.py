@@ -290,3 +290,9 @@ class TestPositionTracker(unittest.TestCase):
             print("Position:", proton_pos)
             print("Desired:", desired)
             np.testing.assert_allclose(proton_pos, desired, atol=1e-7)
+
+
+class TestFunctions(unittest.TestCase):
+    def test_last_neighbor_is_close(self):
+        dists_unrescaled = np.random.uniform(2.5, 4.0, size=(5, 3))
+        dists_rescaled = dists_unrescaled - 0.2
