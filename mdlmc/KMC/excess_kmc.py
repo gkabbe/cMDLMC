@@ -389,7 +389,8 @@ def kmc_main(settings):
 
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:10d} {:8.2f}"
 
-    kmc_gen = KMCGen(proton_position, distances, distances_rescaled, indices, fermi, (a, b, c))
+    kmc_gen = KMCGen(proton_position, distances, distances_rescaled, indices, fermi, (a, b, c),
+                     keep_last_neighbor_rescaled=settings.keep_last_neighbor_rescaled)
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
 
     if logger.isEnabledFor(logging.DEBUG):
