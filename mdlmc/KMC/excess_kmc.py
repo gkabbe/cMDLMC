@@ -409,9 +409,6 @@ def kmc_main(settings):
                 print(output_format.format(i, i * timestep_md, *proton_coords, proton_position,
                                            jumps, i / (time.time() - start_time)),
                       flush=True, file=settings.output)
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(next(distance_debug)[1][proton_position])
-                    logger.debug(next(distance_rescaled_debug)[1][proton_position])
 
         jumps += 1
         sweep = next_sweep
