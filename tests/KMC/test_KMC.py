@@ -121,6 +121,7 @@ class TestGenerators(unittest.TestCase):
         distances_rescaled = np.zeros((5, 1, 3))
         distances_rescaled[:, 0, 0] = x_rescaled
         relaxation_time = 6
+        indices = np.random.randint(10, size=(5, 1, 3))
 
         def some_fct(x):
             return None
@@ -129,7 +130,7 @@ class TestGenerators(unittest.TestCase):
 
         kmcgen = excess_kmc.KMCGen(oxy_idx=0, distances=distances,
                                    distances_rescaled=distances_rescaled, jumprate_fct=some_fct,
-                                   jumprate_params=params)
+                                   jumprate_params=params, indices=indices)
 
         distance_gen = kmcgen.distance_generator()
 
@@ -161,6 +162,7 @@ class TestGenerators(unittest.TestCase):
         distances_rescaled = np.zeros((5, 1, 3))
         distances_rescaled[:, 0, 0] = x_rescaled
         relaxation_time = 10
+        indices = np.random.randint(10, size=(5, 1, 3))
 
         def some_fct(x):
             return None
@@ -169,7 +171,7 @@ class TestGenerators(unittest.TestCase):
 
         kmcgen = excess_kmc.KMCGen(oxy_idx=0, distances=distances,
                                    distances_rescaled=distances_rescaled, jumprate_fct=some_fct,
-                                   jumprate_params=params)
+                                   jumprate_params=params, indices=indices)
 
         distance_gen = kmcgen.distance_generator()
 
@@ -199,6 +201,7 @@ class TestGenerators(unittest.TestCase):
         distances[:, 0, 0] = x
         distances_rescaled = np.zeros((5, 1, 3))
         distances_rescaled[:, 0, 0] = x_rescaled
+        indices = np.random.randint(10, size=(5, 1, 3))
 
         def some_fct(x):
             return x
@@ -207,7 +210,7 @@ class TestGenerators(unittest.TestCase):
 
         kmcgen = excess_kmc.KMCGen(oxy_idx=0, distances=distances,
                                    distances_rescaled=distances_rescaled, jumprate_fct=some_fct,
-                                   jumprate_params=params)
+                                   jumprate_params=params, indices=indices)
 
         probsum_gen = kmcgen.jumprate_generator()
         for frame, probsum in enumerate(probsum_gen):
