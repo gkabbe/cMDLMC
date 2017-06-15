@@ -138,7 +138,7 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
             old_neighbor_dist = dists_rescaled[last_idx, idx_from_old[0]]
             largest_dist_idx = np.argmax(dist_result)
             dist_result[largest_dist_idx] = old_neighbor_dist
-            indices[last_idx, largest_dist_idx] = last_idx
+            indices[current_idx, largest_dist_idx] = last_idx
     # Otherwise, leave everything as it is
         else:
             logger.debug("No connection exists")
