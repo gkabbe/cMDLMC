@@ -130,6 +130,7 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
         # If it is, the connection will be set to the rescaled distance
         dist_result[idx_to_old[0]] = dists_rescaled[current_idx, idx_to_old[0]]
         logger.debug("Distances after: {}".format(dist_result))
+        return last_idx
     else:
         # If not, check whether the new oxygen is in the old one's neighbor list
         idx_from_old = np.where(indices[last_idx] == current_idx)[0]
@@ -143,9 +144,11 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
             indices[current_idx, largest_dist_idx] = last_idx
             logger.debug("Distances after: {}".format(dist_result))
             logger.debug("Indices from current after: {}".format(indices[current_idx]))
+            return last_idx
     # Otherwise, leave everything as it is
         else:
             logger.debug("No connection exists")
+            return None
 
 
 class KMCGen:
