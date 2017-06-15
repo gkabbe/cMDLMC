@@ -278,6 +278,9 @@ def kmc_main(settings):
     else:
         logging.basicConfig(level=logging.INFO)
 
+    if settings.seed is not None:
+        np.random.seed(settings.seed)
+
     trajectory_fname = settings.filename
     verbose = settings.verbose
     chunk_size = settings.chunk_size
