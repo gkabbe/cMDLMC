@@ -215,30 +215,11 @@ class KMCGen:
                 # Otherwise, just get the rescaled distances
                 dist_result = distance_rescaled[self.oxy_idx]
 
-            if keep_last_neighbor_rescaled:
-                distances[:3] = dist_result
-                dist_idx = np.where(indices[self._last_idx] == self.oxy_idx)[0]
-                if dist_idx:
-                    dist_back = distance_rescaled[dist_idx]
-                    distances[-1] = dist_idx[0]
-                else:
-                    # Set it to -1
-                    # TODO: jumprate_generator has to handle this case and return zero prob
-                    distances[-1] = -1
-            else:
-                yield dist_result
+            if keep_last_neighbor_rescaled and self._last_idx is not None:
+                self._last_idx = last_neighbor_is_close(self.oxy_idx, self._last_idx, indices,
+                                                        distance_rescaled, dist_result)
 
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(dist_idx)
-                logger.debug("Current rescaled distances {}".format(distance_rescaled[self.oxy_idx]))
-                logger.debug("Current unrescaled distances {}".format(distance_unrescaled[self.oxy_idx]))
-                logger.debug("Last oxygen index was {}".format(self._last_idx))
-                logger.debug("Current oxygen index is {}".format(self.oxy_idx))
-                logger.debug("Indices are {}".format(indices[self.oxy_idx]))
-                if dist_idx:
-                    idx, = dist_idx
-                    dist_back = distance_rescaled[idx]
-                    logger.debug("Distance to last oxy: {}".format(dist_back))
+            yield dist_result
 
     def reset_relaxationtime(self, relaxation_time):
         self.relaxation_time = relaxation_time
