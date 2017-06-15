@@ -119,8 +119,9 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
 
     logger.debug("Current idx: {}".format(current_idx))
     logger.debug("Last idx: {}".format(last_idx))
-    logger.debug("Indices from current: {}".format(indices[current_idx]))
-    logger.debug("Indices from last: {}".format(indices[last_idx]))
+    logger.debug("Indices from current: {} -> {}".format(current_idx, indices[current_idx]))
+    logger.debug("Indices from last: {} -> {}".format(last_idx, indices[last_idx]))
+    logger.debug("Distances before: {}".format(dist_result))
 
     # Check if the last oxygen is actually still in the new oxygen's neighbor list
     idx_to_old = np.where(indices[current_idx] == last_idx)[0]
@@ -128,6 +129,7 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
         logger.debug("Connection from new to old exists")
         # If it is, the connection will be set to the rescaled distance
         dist_result[idx_to_old[0]] = dists_rescaled[current_idx, idx_to_old[0]]
+        logger.debug("Distances after: {}".format(dist_result))
     else:
         # If not, check whether the new oxygen is in the old one's neighbor list
         idx_from_old = np.where(indices[last_idx] == current_idx)[0]
@@ -139,6 +141,8 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
             largest_dist_idx = np.argmax(dist_result)
             dist_result[largest_dist_idx] = old_neighbor_dist
             indices[current_idx, largest_dist_idx] = last_idx
+            logger.debug("Distances after: {}".format(dist_result))
+            logger.debug("Indices from current after: {}".format(indices[current_idx]))
     # Otherwise, leave everything as it is
         else:
             logger.debug("No connection exists")
@@ -188,7 +192,7 @@ class KMCGen:
             counter, distance_rescaled = next(distance_rescaled_gen)
             _, distance_unrescaled = next(distance_gen)
             _, indices = next(self.indices)
-            logger.debug("Counter: {}".format(counter))
+            logger.debug("Sweep: {}".format(counter))
 
             if self.relaxation_time:
                 # If relaxation time is set, return a linear combination of rescaled and unrescaled
