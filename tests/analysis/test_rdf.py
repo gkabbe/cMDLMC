@@ -15,8 +15,8 @@ class TestRDF(unittest.TestCase):
 
         trajectory = np.random.uniform(0, 100, size=(100, 100, 3))
         selection = np.ones(trajectory.shape[1], dtype=bool)
-        rdf, dists = calculate_rdf(trajectory, selection, selection, atombox, 1, box_length/2, 20)
-        self.assertAlmostEqual(rdf.mean(), 1, delta=0.1)
+        rdf, dists = calculate_rdf(trajectory, selection, selection, atombox, 1, box_length / 2, 20)
+        assert abs(rdf.mean() - 1) < 0.1
 
     def test_rdf_two_atomtypes(self):
         """Assert that RDF is approximately 1 for two uniformly distributed atom types"""
@@ -30,6 +30,6 @@ class TestRDF(unittest.TestCase):
         selection2 = np.zeros(100, dtype=bool)
         selection2[range(50, 100)] = 1
         rdf, dists = calculate_rdf(trajectory1, selection1, selection2, atombox,
-                                   dmin=1, dmax=box_length/2, bins=22, verbose=True)
+                                   dmin=1, dmax=box_length / 2, bins=22, verbose=True)
 
-        self.assertAlmostEqual(rdf.mean(), 1, delta=0.1)
+        assert abs(rdf.mean() - 1) < 0.1

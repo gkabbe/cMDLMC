@@ -54,9 +54,9 @@ class TestMDMC(unittest.TestCase):
             prot_number = np.random.randint(1, oxy_number)
             oxy_lattice = initialize_oxygen_lattice(oxy_number, prot_number)
             # Make sure the number of protons in the lattice is correct
-            self.assertEqual((oxy_lattice > 0).sum(), prot_number)
+            assert (oxy_lattice > 0).sum() == prot_number
             # Make sure the protons are enumerated from 1 to prot_number
-            self.assertTrue(oxy_lattice.sum() == int(prot_number * (prot_number + 1) / 2))
+            assert oxy_lattice.sum() == int(prot_number * (prot_number + 1) / 2)
 
     def test_cmdlmc_sweep_calls(self):
         """Assert the right number of sweep calls from the cmdlmc function."""
@@ -67,8 +67,8 @@ class TestMDMC(unittest.TestCase):
                                                       MagicMock()
 
         cmd_lmc_run(oxygen_traj, oxygen_lattice, helper, obsman, settings)
-        self.assertEqual(helper.sweep.call_count,
-                         settings.sweeps + settings.equilibration_sweeps)
+        assert helper.sweep.call_count == \
+                         settings.sweeps + settings.equilibration_sweeps
 
     @patch("mdlmc.LMC.MDMC.np.savetxt")
     def test_cmdlmc_sweep_with_jumpmatrix_calls(self, mock_savetxt):
@@ -79,9 +79,9 @@ class TestMDMC(unittest.TestCase):
         settings.jumpmatrix_filename = "sth"
         cmd_lmc_run(oxygen_traj, oxygen_lattice, helper, obsman, settings)
         # During the equilibration nothing is written to the jumpmatrix
-        self.assertEqual(helper.sweep_with_jumpmatrix.call_count, settings.sweeps)
+        assert helper.sweep_with_jumpmatrix.call_count == settings.sweeps
         # In the end, it will be written to disk
-        self.assertEqual(mock_savetxt.call_count, 1)
+        assert mock_savetxt.call_count == 1
 
     def test_cmdlmc_xyz_output_calls(self):
         np.random.seed(1)
@@ -97,6 +97,6 @@ class TestMDMC(unittest.TestCase):
             settings.sweeps = s
             settings.print_freq = r
             cmd_lmc_run(oxygen_traj, oxygen_lattice, helper, obsman, settings)
-            self.assertEqual(obsman.print_xyz.call_count,
-                             settings.sweeps // settings.print_freq)
+            assert obsman.print_xyz.call_count == \
+                             settings.sweeps // settings.print_freq
             obsman.reset_mock()

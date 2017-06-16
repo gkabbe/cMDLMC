@@ -15,8 +15,8 @@ class TestOHBondAutoCorrelation(unittest.TestCase):
     def test_oh_bond_array_filename(self):
         filename = "the_array.npy"
 
-        self.assertEqual(oh_bond_analysis.oh_bond_array_filename(filename),
-                         "the_array_cbo.npy")
+        assert oh_bond_analysis.oh_bond_array_filename(filename) == \
+                         "the_array_cbo.npy"
 
     def test_autocorrelate(self):
         # TODO: Improve test

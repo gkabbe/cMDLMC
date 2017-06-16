@@ -34,6 +34,6 @@ class TestObservableHelper(unittest.TestCase):
             obsman.calculate_displacement(0)
             print(obsman.displacement)
             print(obsman.displacement == [0, 1.0, 0])
-            self.assertTrue((obsman.displacement == [0, i + 1, 0]).all())
+            assert (obsman.displacement == [0, i + 1, 0]).all()
             print("snapshot afterwards:", obsman.proton_pos_snapshot)
             print("displacement:", obsman.displacement)

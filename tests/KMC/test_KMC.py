@@ -1,4 +1,4 @@
-import unittest
+import pytest
 from itertools import product, cycle
 import logging
 
@@ -7,7 +7,7 @@ import numpy as np
 from mdlmc.KMC import excess_kmc
 
 
-class TestVariableJumpRateKMC(unittest.TestCase):
+class TestVariableJumpRateKMC:
 
     def test_fastforward_to_next_jump(self):
         """Compare the KMC with time-dependent rates with the KMC with constant rates.
@@ -47,10 +47,10 @@ class TestVariableJumpRateKMC(unittest.TestCase):
             for i, (t1, t2, s) in enumerate(zip(times, times_verify, sweeps)):
                 print(t1, t2, s)
                 # Assert equal times of both KMC methods
-                self.assertAlmostEqual(t1, t2, msg="Time-dependent and time-independent KMC do not"
-                                                   "deliver the same result!")
+                assert round(abs(t1 - t2), 7) == 0, \
+                    "Time-dependent and time-independent KMC do not deliver the same result!"
                 # Assert agreement of KMC time and MD time
-                self.assertEqual(int(t1 // dt), s)
+                assert int(t1 // dt) == s
 
     def test_variable_rates_average(self):
         """Make sinus-like jump rates and check average jump rate."""
@@ -70,8 +70,8 @@ class TestVariableJumpRateKMC(unittest.TestCase):
         print("Number of jumps:", counter)
         print("Jump rate:", jumprate_avg)
         relative_error = (jumprate_avg - average) / average
-        self.assertLessEqual(relative_error, 0.01, "The average jump rate deviates by more than"
-                                                   "one percent!")
+        assert relative_error <= 0.01, \
+            "The average jump rate deviates by more than one percent!"
 
     def test_variable_rates_index(self):
         """Use variable rates that are all zero except for one entry.
@@ -88,12 +88,12 @@ class TestVariableJumpRateKMC(unittest.TestCase):
         for i, (frame, delta_frame, kmc_time) in enumerate(fastforward_gen):
             print(frame % jumprate_length, delta_frame / jumprate_length)
             if i > 0:
-                self.assertEqual(frame % jumprate_length, nonzero_index)
+                assert frame % jumprate_length == nonzero_index
             if i == 100:
                 break
 
 
-class TestGenerators(unittest.TestCase):
+class TestGenerators:
     def test_trajectory_generator(self):
         """Assert that the trajectory generator correctly yields the trajectory frames and
         does repeat itself after a complete iteration.
@@ -105,12 +105,12 @@ class TestGenerators(unittest.TestCase):
 
         for i in range(5):
             counter, dist = next(trajgen)
-            self.assertEqual(i, dist[0, 0])
-            self.assertEqual(counter, i)
+            assert i == dist[0, 0]
+            assert counter == i
         for i in range(5):
             counter, dist = next(trajgen)
-            self.assertEqual(counter, i + 5)
-            self.assertEqual(i, dist[0, 0])
+            assert counter == i + 5
+            assert i == dist[0, 0]
 
     def test_distance_generator(self):
         """Assert that the distances are correctly generated"""
@@ -136,21 +136,21 @@ class TestGenerators(unittest.TestCase):
 
         # Assert that distance_gen returns the rescaled distances if delay is not set
         dist = next(distance_gen)
-        self.assertTrue(np.allclose(dist, [x_rescaled, 0, 0]))
+        assert np.allclose(dist, [x_rescaled, 0, 0])
 
         # Assert that the delay results in larger distances, which will be scaled linearly down
         # to the scaled distances
         kmcgen.relaxation_time = relaxation_time
         for i in range(6):
             x_generated, *_ = next(distance_gen)
-            self.assertAlmostEqual(x_generated, x - i / relaxation_time * (x - x_rescaled),
-                               "The unrescaled distance should be greater than the rescaled distance")
+            assert x - i / relaxation_time * (x - x_rescaled) == pytest.approx(x_generated), \
+                "The unrescaled distance should be greater than the rescaled distance"
 
         # Assert that after the delay has passed, the distances are equal to the rescaled
         # distances
         for i in range(20):
             x_generated, *_ = next(distance_gen)
-            self.assertEqual(x_generated, x_rescaled)
+            assert x_generated == x_rescaled
 
     def test_distance_generator_reset(self):
         """Assert bla"""
@@ -189,7 +189,7 @@ class TestGenerators(unittest.TestCase):
         for i in range(6):
             x_generated, *_ = next(distance_gen)
             print(x_generated, x - i / relaxation_time * (x - x_rescaled))
-            self.assertEqual(x_generated, x - i / relaxation_time * (x - x_rescaled))
+            assert x_generated == x - i / relaxation_time * (x - x_rescaled)
 
     def test_jumprate_generator(self):
 
@@ -214,21 +214,21 @@ class TestGenerators(unittest.TestCase):
 
         probsum_gen = kmcgen.jumprate_generator()
         for frame, probsum in enumerate(probsum_gen):
-            self.assertEqual(probsum, x_rescaled)
+            assert probsum == x_rescaled
             if frame == 20:
                 break
 
         probsum_gen = kmcgen.jumprate_generator()
         kmcgen.relaxation_time = relaxation_time
         for frame, probsum in enumerate(probsum_gen):
-            self.assertEqual(probsum, x - frame / relaxation_time * (x - x_rescaled))
+            assert probsum == x - frame / relaxation_time * (x - x_rescaled)
             print(frame, probsum)
             if frame == 20:
                 break
 
 
-class TestPositionTracker(unittest.TestCase):
-    def setUp(self):
+class TestPositionTracker:
+    def setup_class(self):
         class MockAtomBox:
             def distance(self, pos1, pos2):
                 return pos2 - pos1
@@ -296,7 +296,7 @@ class TestPositionTracker(unittest.TestCase):
             np.testing.assert_allclose(proton_pos, desired, atol=1e-7)
 
 
-class TestFunctions(unittest.TestCase):
+class TestFunctions:
     def test_last_neighbor_is_close(self):
         last_idx = 0
         current_idx = 1
@@ -316,7 +316,7 @@ class TestFunctions(unittest.TestCase):
         excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result)
         print("After:", dist_result)
 
-        self.assertEqual(dist_result[-1], dists_rescaled[last_idx, 0])
+        assert dist_result[-1] == dists_rescaled[last_idx, 0]
 
         # Case 2: old oxy in new oxy's list
         # ---------------------------------
@@ -330,7 +330,7 @@ class TestFunctions(unittest.TestCase):
         excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result)
         print("After:", dist_result)
 
-        self.assertEqual(dist_result[0], dists_rescaled[current_idx, 0])
+        assert dist_result[0] == dists_rescaled[current_idx, 0]
 
         # Case 3: No more connection exists
         # ---------------------------------
@@ -342,4 +342,4 @@ class TestFunctions(unittest.TestCase):
         excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result)
         print("After:", dist_result)
 
-        self.assertTrue((dist_result == dists_unrescaled[current_idx]).all())
+        assert (dist_result == dists_unrescaled[current_idx]).all()

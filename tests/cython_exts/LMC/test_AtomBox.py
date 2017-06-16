@@ -1,4 +1,4 @@
-import unittest
+import pytest
 import numpy as np
 
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic, AtomBoxWater, \
@@ -7,8 +7,8 @@ from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic, Ato
 np.random.seed(0)
 
 
-class TestAtomBoxes(unittest.TestCase):
-    def setUp(self):
+class TestAtomBoxes:
+    def setup_class(self):
         self.pbc_cubic = np.asfarray([10, 10, 10])
         self.pbc_monoclinic = np.asfarray([10, 0, 0, 0, 10, 0, 0, 0, 10])
         self.atombox_cubic = AtomBoxCubic(self.pbc_cubic)
@@ -23,7 +23,7 @@ class TestAtomBoxes(unittest.TestCase):
 
         for i in range(-5, 5):
             a2 = atom_2 + i * 10
-            self.assertAlmostEqual(self.atombox_cubic.length(atom_1, a2), desired_result)
+            assert self.atombox_cubic.length(atom_1, a2) == pytest.approx(desired_result)
 
         # Test vectorized input
 
@@ -31,8 +31,7 @@ class TestAtomBoxes(unittest.TestCase):
         atoms_2 = np.arange(-10, 10)[:, None] * np.asfarray([10, 10, 10]) + 3
 
         desired_result = np.ones(20) * np.sqrt(27)
-        self.assertTrue(
-            np.isclose(self.atombox_cubic.length(atoms_1, atoms_2), desired_result).all())
+        assert np.isclose(self.atombox_cubic.length(atoms_1, atoms_2), desired_result).all()
 
     def test_atomboxcubic_distance(self):
 
@@ -44,7 +43,7 @@ class TestAtomBoxes(unittest.TestCase):
         print("Desired:", desired_result)
         print("Result:", result)
 
-        self.assertTrue(np.allclose(result, desired_result))
+        assert np.allclose(result, desired_result)
 
         atom_1 = np.zeros((3, 3))
         atom_2 = np.asfarray([[1, 1, 1],
@@ -53,14 +52,14 @@ class TestAtomBoxes(unittest.TestCase):
 
         result = self.atombox_cubic.distance(atom_1, atom_2)
 
-        self.assertTrue(np.allclose(result, atom_2))
+        assert np.allclose(result, atom_2)
 
     def test_atomboxcubic_angle(self):
         atom_1 = np.asfarray([0, 0, 0])
         atom_2 = np.asfarray([3, 0, 0])
         atom_3 = np.asfarray([3, 34, 0])
 
-        self.assertAlmostEqual(self.atombox_cubic.angle(atom_1, atom_2, atom_3), np.pi / 2)
+        assert self.atombox_cubic.angle(atom_1, atom_2, atom_3) == pytest.approx(np.pi / 2)
 
     def test_atomboxcubic_nextneighbor(self):
         pbc = np.asfarray([100, 100, 100])
@@ -71,7 +70,7 @@ class TestAtomBoxes(unittest.TestCase):
             atom = np.random.uniform(0, 50, size=3)
             index, distance = atombox.next_neighbor(atom, atoms)
             index_cmp = np.argmin(np.sqrt(((atom - atoms)**2).sum(axis=-1)))
-            self.assertEqual(index, index_cmp)
+            assert index == index_cmp
 
     def test_atomboxcubic_position_extended_box(self):
         pbc = np.asfarray([10, 10, 10])
@@ -84,7 +83,7 @@ class TestAtomBoxes(unittest.TestCase):
             pos = atombox.position_extended_box(i, atom1)
             pos_target = np.asfarray([0, 0, 10]) * i
             print(pos, pos_target)
-            self.assertTrue(np.allclose(pos, pos_target))
+            assert np.allclose(pos, pos_target)
 
         box_multiplier = (1, 10, 1)
         atombox = AtomBoxCubic(pbc, box_multiplier=box_multiplier)
@@ -93,7 +92,7 @@ class TestAtomBoxes(unittest.TestCase):
             pos = atombox.position_extended_box(i, atom1)
             pos_target = np.asfarray([0, 10, 0]) * i
             print(pos, pos_target)
-            self.assertTrue(np.allclose(pos, pos_target))
+            assert np.allclose(pos, pos_target)
 
         box_multiplier = (10, 1, 1)
         atombox = AtomBoxCubic(pbc, box_multiplier=box_multiplier)
@@ -102,7 +101,7 @@ class TestAtomBoxes(unittest.TestCase):
             pos = atombox.position_extended_box(i, atom1)
             pos_target = np.asfarray([10, 0, 0]) * i
             print(pos, pos_target)
-            self.assertTrue(np.allclose(pos, pos_target))
+            assert np.allclose(pos, pos_target)
 
         box_multiplier = (5, 5, 5)
         atombox = AtomBoxCubic(pbc, box_multiplier=box_multiplier)
@@ -115,7 +114,7 @@ class TestAtomBoxes(unittest.TestCase):
                     pos_target = i * np.asfarray([10, 0, 0]) + j * np.asfarray(
                         [0, 10, 0]) + k * np.asfarray([0, 0, 10])
                     print(pos, pos_target)
-                    self.assertTrue(np.allclose(pos, pos_target))
+                    assert np.allclose(pos, pos_target)
                     index += 1
 
     def test_atomboxcubic_nextneighbor_extended_box(self):
@@ -153,9 +152,9 @@ class TestAtomBoxes(unittest.TestCase):
             angle_c = self.atombox_cubic.angle(atom_1[i], atom_2[i], atom_3[i])
             angle_m = self.atombox_monoclinic.angle(atom_1[i], atom_2[i], atom_3[i])
 
-            self.assertTrue(np.isclose(dist_c, dist_m).all())
-            self.assertTrue(np.allclose(len_c, len_m))
-            self.assertAlmostEqual(angle_c, angle_m)
+            assert np.isclose(dist_c, dist_m).all()
+            assert np.allclose(len_c, len_m)
+            assert angle_c == pytest.approx(angle_m)
 
     def test_length_all_to_all(self):
         pbc = np.asfarray([10, 10, 10])
@@ -173,7 +172,7 @@ class TestAtomBoxes(unittest.TestCase):
         np.testing.assert_allclose(distances, desired_result)
 
 
-class TestAtomBoxWater(unittest.TestCase):
+class TestAtomBoxWater:
     def test_length(self):
         def conversion(distance, a, b, d0, left_bound, right_bound):
             return np.where(distance < d0, b, a * (distance - d0) + b)
@@ -182,13 +181,13 @@ class TestAtomBoxWater(unittest.TestCase):
         parameters = dict(a=0.97672, b=2.342541, d0=2.578514, left_bound=2.34, right_bound=3.058)
         atoms1 = np.zeros((100, 3))
         atoms2 = np.zeros((100, 3))
-        atoms2[:, 2] = np.random.uniform(2.3, 2.9, size=100)
+        atoms2[:, 2] = np.random.uniform(2.343, 2.9, size=100)
 
         atombox = AtomBoxWaterRampConversion(pbc, parameters)
 
         diffs = atombox.length(atoms1, atoms2)
 
-        self.assertTrue((diffs <= atoms2[:, 2]).all())
+        assert (diffs <= atoms2[:, 2]).all()
 
     def test_linear(self):
         a, b, left_bound, right_bound = 0.5, 1.1, 2.2, 3.3
@@ -203,7 +202,7 @@ class TestAtomBoxWater(unittest.TestCase):
         len1 = float(atombox.length(atom1, atom2))
         len2 = float(atombox_lin.length(atom1, atom2))
         print(a * len1 + b, len2)
-        self.assertAlmostEqual(a * len1 + b, len2)
+        assert a * len1 + b == pytest.approx(len2)
 
     def test_ramp(self):
         a, b, d0, left_bound, right_bound = 0.5, 2.3, 2.45, 2.3, 3.33
@@ -221,5 +220,5 @@ class TestAtomBoxWater(unittest.TestCase):
         len2 = float(atombox_ramp.length(atom1, atom2))
         len3 = float(atombox_ramp.length(atom1, atom3))
 
-        self.assertEqual(a * (len1 - d0) + b, len2)
-        self.assertEqual(b, len3)
+        assert a * (len1 - d0) + b == len2
+        assert b == len3

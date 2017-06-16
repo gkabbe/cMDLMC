@@ -19,7 +19,7 @@ class TestExcessChargeAnalyzer(unittest.TestCase):
             protons = waterbox[np.array([i % 3 != 0 for i in range(waterbox.shape[0])])]
             colvars.append(excess_charge_collective_variable(oxygens, protons))
         for a, b in zip(colvars[:-1], colvars[1:]):
-            self.assertTrue(np.allclose(a, b))
+            assert np.allclose(a, b)
 
     def test_collective_variable_correlates_with_excess_charge(self):
         """Assert that the collective variable actually tracks the excess charge movement

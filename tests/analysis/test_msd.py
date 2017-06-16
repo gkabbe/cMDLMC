@@ -17,7 +17,7 @@ class TestMSD(unittest.TestCase):
         intervalnumber = 100
         intervallength = 200
         msd_mean, msd_var = calculate_msd(trajectory, pbc, intervalnumber, intervallength)
-        self.assertAlmostEqual(msd_mean[100].mean(), 10000, delta=0.01)
+        assert abs(msd_mean[100].mean() - 10000) < 0.01
 
     def test_msd_normal_msd_var(self):
         number_of_steps = 1000
@@ -27,4 +27,4 @@ class TestMSD(unittest.TestCase):
         intervalnumber = 100
         intervallength = 200
         msd_mean, msd_var = calculate_msd(trajectory, pbc, intervalnumber, intervallength)
-        self.assertAlmostEqual(msd_var.mean(), 0, delta=0.01)
+        assert abs(msd_var.mean() - 0) < 0.01
