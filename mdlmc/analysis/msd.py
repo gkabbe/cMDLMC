@@ -204,14 +204,14 @@ def main(*args):
     parser.add_argument("-u", "--output_unit", type=ureg.parse_expression,
                         default="angstrom**2/ps",
                         help="In which unit to output MSD and diffusion coefficient")
+    parser.add_argument("--diffcoeff", action="store_true",
+                        help="Calculate diffusion coefficient for each interval")
     parser.add_argument("--columns", "-c", type=int, nargs="+",
                         help="Which columns contain the position?")
     parser_fixed = subparsers.add_parser("single", help="Intervals with fixed size")
     parser_fixed.add_argument("intervalnumber", type=int,
                               help="Number of intervals over which to average")
     parser_fixed.add_argument("intervallength", type=int, help="Interval length")
-    parser_fixed.add_argument("--diffcoeff", action="store_true", help="Calculate diffusion coefficient"
-                                                                       " for each interval")
     parser_multi = subparsers.add_parser("multi", help="Intervals with variable size")
     parser_multi.add_argument("--variance_all_H", action="store_true",
                               help="If set, determine variance over every proton trajectory")
