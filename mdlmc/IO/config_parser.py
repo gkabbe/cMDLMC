@@ -530,6 +530,13 @@ CONFIG_DICT = {
                      " still has a connection to the current oxygen. If yes (and the current oxygen"
                      " has no connection back to the old one, replace another connection of the"
                      " current oxygen with the connection back to the old one"
+         }),
+        ("n_atoms",
+         {
+             "parse_fct": parse_int,
+             "default": 3,
+             "help": "Determines the number of closest neighbors that will be considered in the"
+                     " KMC scheme."
          })
     ])
 }

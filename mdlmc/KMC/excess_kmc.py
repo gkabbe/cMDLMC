@@ -367,19 +367,24 @@ def kmc_main(settings):
                settings.jumprate_params_fs["c"])
 
     jumprate_function = FermiFunction(a, b, c)
-    kmc = KMCRoutine(atombox_cubic, oxygen_lattice, jumprate_function)
+    kmc = KMCRoutine(atombox_cubic, oxygen_lattice, jumprate_function, n_atoms=settings.n_atoms)
     if settings.rescale_parameters:
-        kmc_rescale = KMCRoutine(atombox_rescale, oxygen_lattice, jumprate_function)
+        kmc_rescale = KMCRoutine(atombox_rescale, oxygen_lattice, jumprate_function,
+                                 n_atoms=settings.n_atoms)
 
     logger.info("# Creating array of distances")
+    distances_name = "distances_{}".format(settings.n_atoms)
+    indices_name = "indices_{}".format(settings.n_atoms)
     distances, indices = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
-                                                             ("distances", "indices"),
+                                                             (distances_name, indices_name),
                                                              kmc.determine_distances,
                                                              chunk_size, dtype=(np.float32, np.int32),
                                                              overwrite=settings.overwrite_jumprates)
 
     if settings.rescale_parameters:
         logger.info("Creating array of rescaled distances")
+        distances_rescaled_name = "distances_{}_rescaled".format(settings.n_atoms)
+        indices_rescaled_name = "indices_{}".format(settings.n_atoms)
         distances_rescaled, indices = create_dataset_from_hdf5_trajectory(
             hdf5_file, oxygen_trajectory, ("distances_rescaled", "indices"),
             kmc_rescale.determine_distances, chunk_size, dtype=(np.float32, np.int32),

@@ -387,16 +387,18 @@ cdef class KMCRoutine:
         AtomBox atombox
         public np.uint8_t [:] oxygen_lattice
         int proton_position
+        int n_atoms
 
         vector[vector[double]] jump_probability_per_frame
         double abc
 
     def __cinit__(self, AtomBox atombox, np.uint8_t[:] oxygen_lattice,
-                  JumprateFunction jumprate_fct):
+                  JumprateFunction jumprate_fct, int n_atoms=3):
         self.atombox = atombox
         self.jumprate_fct = jumprate_fct
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.oxygen_lattice = oxygen_lattice
+        self.n_atoms = n_atoms
 
         proton_positions, = np.where(oxygen_lattice)
         assert proton_positions.size == 1, "Only one excess proton, please!"
@@ -415,15 +417,15 @@ cdef class KMCRoutine:
             vector[double] distances
             vector[size_t] neighbor_indices
 
-        all_indices = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3),
-                               dtype=np.int32)
-        dist_array = np.zeros((oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], 3),
-                         dtype=np.float32)
+        all_indices = np.zeros(
+            (oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], self.n_atoms), dtype=np.int32)
+        dist_array = np.zeros(
+            (oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], self.n_atoms), dtype=np.float32)
 
         oxy_traj = np.array(oxygen_trajectory, dtype=float)
 
-        # indices stores the indices of the three closest oxygen neighbors
-        neighbor_indices.resize(3)
+        # indices stores the indices of the n_atoms closest oxygen neighbors
+        neighbor_indices.resize(self.n_atoms)
 
         with nogil:
             for f in range(oxy_traj.shape[0]):
@@ -439,10 +441,10 @@ cdef class KMCRoutine:
                             # Set atom's distance to itself to large value, so it won't find
                             # itself as a neighbor
                             distances.push_back(10**8)
-                    gsl_sort_smallest_index(&neighbor_indices[0], 3, &distances[0], 1,
+                    gsl_sort_smallest_index(&neighbor_indices[0], self.n_atoms, &distances[0], 1,
                                             distances.size())
 
-                    for k in range(3):
+                    for k in range(self.n_atoms):
                         dist_array[f, i, k] = distances[neighbor_indices[k]]
                         all_indices[f, i, k] = neighbor_indices[k]
         return dist_array, all_indices
