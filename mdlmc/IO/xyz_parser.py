@@ -224,6 +224,8 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
         dataset_names = dataset_name
         selection_fct_tup = selection_fct
 
+    logger.debug("Looking for data under {}".format(dataset_names))
+
     if type(dtype) is type:
         dtypes = tuple([dtype for ds in dataset_names])
     elif type(dtype) is tuple:
@@ -233,8 +235,12 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
     else:
         raise TypeError("dtype must be of type \"type\" or tuple of types")
 
+    logger.debug("Got the following dtypes: {}".format(dtypes))
+
     first_frame = trajectory_dataset[:1]
     one_frame_shapes = [ff.shape for ff in selection_fct_tup(first_frame)]
+
+    logger.debug("Got the following shapes: {}".format(one_frame_shapes))
 
     new_datasets = []
     for dsn, ofs, dt in zip(dataset_names, one_frame_shapes, dtypes):
@@ -253,21 +259,21 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
     is_unfinished = any([np.isnan(hdf5_file[dsn][-1]).any() for dsn in dataset_names])
     if is_unfinished or overwrite:
         if is_unfinished:
-            print("# It looks like data set", dataset_name,
-                  "has not been written (completely) to hdf5 yet.",
-                  file=file)
-            print("# Will do it now", file=file)
+            logger.info(
+                "It looks like data set {} has not been written (completely) to hdf5 yet.".format(
+                    dataset_name))
+            logger.info("Will do it now")
         if not is_unfinished and overwrite:
-            print("# File has been written before, but overwrite = True")
-            print("# Will overwrite now")
+            logger.info("File has been written before, but overwrite = True")
+            logger.info("Will overwrite now")
         start_time = time.time()
         for start, stop, traj_chunk in chunk(trajectory_dataset, chunk_size):
             chunk_of_datasets = selection_fct_tup(traj_chunk)
             for ds, chnk in zip(new_datasets, chunk_of_datasets):
                 ds[start:stop] = chnk
             print("# Parsed frames: {: 6d}. {:.2f} fps".format(
-                  stop, stop / (time.time() - start_time)), end="\r", flush=True, file=file)
-        print(file=file)
+                  stop, stop / (time.time() - start_time)), end="\r", flush=True, file=sys.stderr)
+        print(file=sys.stderr)
     if len(new_datasets) == 1:
         return new_datasets[0]
 
