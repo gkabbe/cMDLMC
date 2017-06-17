@@ -521,6 +521,15 @@ CONFIG_DICT = {
              "default": False,
              "help": "If True, the distance to the last donor stays rescaled after a jump. This way"
                      "the probability for a jump back is not diminished."
+         }),
+        ("check_from_old",
+         {
+             "parse_fct": parse_bool,
+             "default": True,
+             "help": "If True, and keep_last_neighbor_rescaled is True, check if the last oxygen"
+                     " still has a connection to the current oxygen. If yes (and the current oxygen"
+                     " has no connection back to the old one, replace another connection of the"
+                     " current oxygen with the connection back to the old one"
          })
     ])
 }

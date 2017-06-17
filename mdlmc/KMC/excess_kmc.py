@@ -111,7 +111,8 @@ def trajectory_generator(trajectory, chunk_size=10000):
                 counter += 1
 
 
-def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result):
+def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result,
+                           check_from_old=False):
     """Checks whether a connection between the current and the last oxygen still exists (i.e.
     that either the current oxygen is in the neighbor list of the previous oxygen, or the
     previous oxygen is in the neighbor list of the current oxygen. The corresponding distance
@@ -131,7 +132,7 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
         dist_result[idx_to_old[0]] = dists_rescaled[current_idx, idx_to_old[0]]
         logger.debug("Distances after: {}".format(dist_result))
         return last_idx
-    else:
+    elif check_from_old:
         # If not, check whether the new oxygen is in the old one's neighbor list
         idx_from_old = np.where(indices[last_idx] == current_idx)[0]
         if idx_from_old.size > 0:
@@ -148,7 +149,9 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
     # Otherwise, leave everything as it is
         else:
             logger.debug("No connection exists")
-            return None
+
+    logger.debug("Do not check connection from old")
+    return last_idx
 
 
 class KMCGen:
@@ -157,7 +160,7 @@ class KMCGen:
     and linearly decrease to the rescaled distances within the set relaxation time."""
 
     def __init__(self, oxy_idx, distances, distances_rescaled, indices, jumprate_fct, jumprate_params, *,
-                 keep_last_neighbor_rescaled=False):
+                 keep_last_neighbor_rescaled=False, check_from_old=True):
         self._oxy_idx = oxy_idx
         self.relaxation_counter = 0
         self.relaxation_time = 0
@@ -170,6 +173,8 @@ class KMCGen:
         # Attribute prob is set while yielding from self.jumprate_generator
         self.prob = None
         self.keep_last_neighbor_rescaled = keep_last_neighbor_rescaled
+        self.check_from_old = check_from_old
+        # _last_idx is set when oxy_idx's value is changed
         self._last_idx = None
 
     @property
@@ -390,7 +395,8 @@ def kmc_main(settings):
     output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:10d} {:8.2f}"
 
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, indices, fermi, (a, b, c),
-                     keep_last_neighbor_rescaled=settings.keep_last_neighbor_rescaled)
+                     keep_last_neighbor_rescaled=settings.keep_last_neighbor_rescaled,
+                     check_from_old=settings.check_from_old)
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
 
     if logger.isEnabledFor(logging.DEBUG):
