@@ -537,6 +537,12 @@ CONFIG_DICT = {
              "default": 3,
              "help": "Determines the number of closest neighbors that will be considered in the"
                      " KMC scheme."
-         })
+         }),
+        ("xyz_output",
+         {
+             "parse_fct": parse_bool,
+             "default": False,
+             "help": "Print xyz output."
+         }),
     ])
 }
