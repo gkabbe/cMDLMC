@@ -503,7 +503,8 @@ def kmc_main(settings):
 
         logger.debug("New proton position: {}".format(proton_position))
 
-        pos_tracker.update_correction_vector(sweep % trajectory_length, proton_position)
+        if d_oh:
+            pos_tracker.update_correction_vector(sweep % trajectory_length, proton_position)
 
 
 def main(*args):
