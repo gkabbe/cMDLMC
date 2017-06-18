@@ -302,6 +302,36 @@ class PositionTracker:
         logger.debug("Correction vector: {}".format(self.correction_vector))
 
 
+class Output:
+    def __init__(self, oxygen_trajectory, timestep, xyz_output=False):
+        self.oxygen_trajectory = oxygen_trajectory
+        self.xyz_output = xyz_output
+        self.output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:10d} {:8.2f}"
+        self.timestep = timestep
+        if xyz_output:
+            self.print_output = self._xyzoutput
+        else:
+            self.print_output = self._standardoutput
+
+    def print_columnnames(self):
+        print("# {:>16} {:>18} {:>15} {:>15} {:>15} {:>10} {:>10} {:>8}".format(
+            "Step", "Time", "x", "y", "z", "O-Neighbor", "Jumps", "fps"))
+
+    def _standardoutput(self, i, proton_idx, jumps, fps):
+        pos = self.oxygen_trajectory[i, proton_idx]
+        print(self.output_format.format(i, i * self.timestep, *pos, i, jumps, fps))
+
+    def _xyzoutput(self, i, proton_idx, jumps, fps):
+        pos = self.oxygen_trajectory[i, proton_idx]
+        oxypos = self.oxygen_trajectory[i]
+
+        print(oxypos.shape[0] + 1)
+        print()
+        print("H", *pos)
+        for oxy in oxypos:
+            print("O", *oxy)
+
+
 def kmc_main(settings):
     print_settings(settings)
 
@@ -378,6 +408,7 @@ def kmc_main(settings):
     atombox_cubic = AtomBoxCubic(settings.pbc)
 
     pos_tracker = PositionTracker(oxygen_trajectory, atombox_cubic, proton_position, d_oh)
+    output = Output(oxygen_trajectory, timestep_md, settings.xyz_output)
 
     if settings.seed is not None:
         np.random.seed(settings.seed)
@@ -422,10 +453,8 @@ def kmc_main(settings):
         logger.debug("No rescaling set.")
         distances_rescaled = distances
 
-    print("# {:16} {:18} {:15} {:15} {:15} {:10} {:10} {:8}".format(
-        "Step", "Time", "x", "y", "z", "O-Neighbor", "Jumps", "fps"))
-
-    output_format = "{:18d} {:18.2f} {:15.8f} {:15.8f} {:15.8f} {:10d} {:10d} {:8.2f}"
+    if not settings.xyz_output:
+        output.print_columnnames()
 
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, indices, fermi, (a, b, c),
                      keep_last_neighbor_rescaled=settings.keep_last_neighbor_rescaled,
@@ -445,10 +474,7 @@ def kmc_main(settings):
 
         for i in range(sweep, next_sweep):
             if i % print_frequency == 0:
-                proton_coords = pos_tracker.get_position(i % trajectory_length)
-                print(output_format.format(i, i * timestep_md, *proton_coords, proton_position,
-                                           jumps, i / (time.time() - start_time)),
-                      flush=True, file=settings.output)
+                output.print_output(i, proton_position, jumps, i / (time.time() - start_time))
 
         jumps += 1
         sweep = next_sweep
