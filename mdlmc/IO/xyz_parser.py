@@ -158,7 +158,7 @@ def load_trajectory_from_hdf5(hdf5_fname, *atom_names, hdf5_key="trajectory", cl
 
 def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_name, selection,
                                         chunk_size, verbose=False, file=sys.stdout, overwrite=False,
-                                        dtype=float):
+                                        dtype=float, max_size=None):
     """Given a hdf5 trajectory, this function creates a new data set inside the hdf5 file with the
     specified dataset_name according to the supplied selection.
     If it already exists, it will be returned directly.
@@ -195,6 +195,9 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
 
     dtype: type or tuple of types
         Specifies the dtype(s) used for the dataset(s)
+
+    max_size: int
+        If specified, will only read arrays up to max_size
 
     Returns
     -------
@@ -256,14 +259,17 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
         new_datasets.append(new_dataset)
 
     # Check if any dataset has not been completely written
-    is_unfinished = any([np.isnan(hdf5_file[dsn][-1]).any() for dsn in dataset_names])
+    if max_size:
+        is_unfinished = any([np.isnan(hdf5_file[dsn][max_size - 1]).any() for dsn in dataset_names])
+    else:
+        is_unfinished = any([np.isnan(hdf5_file[dsn][-1]).any() for dsn in dataset_names])
     if is_unfinished or overwrite:
         if is_unfinished:
             logger.info(
                 "It looks like data set {} has not been written (completely) to hdf5 yet.".format(
                     dataset_name))
             logger.info("Will do it now")
-        if not is_unfinished and overwrite:
+        elif overwrite:
             logger.info("File has been written before, but overwrite = True")
             logger.info("Will overwrite now")
         start_time = time.time()
@@ -273,6 +279,8 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
                 ds[start:stop] = chnk
             print("# Parsed frames: {: 6d}. {:.2f} fps".format(
                   stop, stop / (time.time() - start_time)), end="\r", flush=True, file=sys.stderr)
+            if max_size and stop >= max_size:
+                break
         print(file=sys.stderr)
     if len(new_datasets) == 1:
         return new_datasets[0]
