@@ -187,7 +187,7 @@ class KMCGen:
     and linearly decrease to the rescaled distances within the set relaxation time."""
 
     def __init__(self, oxy_idx, distances, distances_rescaled, indices, jumprate_fct, jumprate_params, *,
-                 keep_last_neighbor_rescaled=False, check_from_old=True):
+                 keep_last_neighbor_rescaled=False, check_from_old=True, n_atoms=3):
         self._oxy_idx = oxy_idx
         self.relaxation_counter = 0
         self.relaxation_time = 0
@@ -204,6 +204,11 @@ class KMCGen:
         # _last_idx is set when oxy_idx's value is changed
         self._last_idx = None
 
+        if n_atoms == 3:
+            self.last_neighbor_is_close = last_neighbor_is_close
+        elif n_atoms == 4:
+            self.last_neighbor_is_close = last_neighbor_is_close_4oxys
+
     @property
     def oxy_idx(self):
         return self._oxy_idx
@@ -217,10 +222,6 @@ class KMCGen:
         distance_gen = trajectory_generator(self.distances)
         distance_rescaled_gen = trajectory_generator(self.distances_rescaled)
         keep_last_neighbor_rescaled = self.keep_last_neighbor_rescaled
-
-        # Contains distances of the closest three atoms, and the rescaled distance to the previous
-        # oxygen site
-        distances = np.zeros(4)
 
         while True:
             # First, get both rescaled and unrescaled distances as well as the neighbor indices
@@ -248,10 +249,10 @@ class KMCGen:
                 dist_result = distance_rescaled[self.oxy_idx]
 
             if keep_last_neighbor_rescaled and self._last_idx is not None:
-                self._last_idx = last_neighbor_is_close(self.oxy_idx, self._last_idx, indices,
-                                                        distance_rescaled, dist_result)
+                self._last_idx = self.last_neighbor_is_close(self.oxy_idx, self._last_idx, indices,
+                                                             distance_rescaled, dist_result)
 
-            yield dist_result
+            yield dist_result[:3]
 
     def reset_relaxationtime(self, relaxation_time):
         self.relaxation_time = relaxation_time
@@ -428,7 +429,7 @@ def kmc_main(settings):
 
     kmc_gen = KMCGen(proton_position, distances, distances_rescaled, indices, fermi, (a, b, c),
                      keep_last_neighbor_rescaled=settings.keep_last_neighbor_rescaled,
-                     check_from_old=settings.check_from_old)
+                     check_from_old=settings.check_from_old, n_atoms=settings.n_atoms)
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
 
     if logger.isEnabledFor(logging.DEBUG):
