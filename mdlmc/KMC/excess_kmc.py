@@ -396,6 +396,10 @@ def kmc_main(settings):
     d_oh = settings.d_oh
 
     oxygen_number = oxygen_trajectory.shape[1]
+
+    if settings.sweeps > trajectory_length:
+        raise ValueError("Number of sweeps are {}, but oxygen trajectory only"
+                " has length {}!".format(settings.sweeps, trajectory_length))
     # Initialize with one excess proton
     if settings.start_position is not None:
         proton_position = settings.start_position
