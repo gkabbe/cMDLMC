@@ -154,6 +154,33 @@ def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_
     return last_idx
 
 
+def last_neighbor_is_close_4oxys(current_idx, last_idx, indices, dists_rescaled, dist_result,
+                                 check_from_old=False):
+    """Finds last neighbor in indices of four neighbors, and moves it to the third place"""
+
+    logger.debug("Using last_neighbor_is_close_4oxys")
+    logger.debug("Current idx: {}".format(current_idx))
+    logger.debug("Last idx: {}".format(last_idx))
+    logger.debug("Indices from current: {} -> {}".format(current_idx, indices[current_idx]))
+    logger.debug("Indices from last: {} -> {}".format(last_idx, indices[last_idx]))
+    logger.debug("Distances before: {}".format(dist_result))
+
+    # Check if the last oxygen is actually still in the new oxygen's neighbor list
+    idx_to_old = np.where(indices[current_idx] == last_idx)[0]
+    if idx_to_old.size > 0:
+        idx, = idx_to_old
+        logger.debug("Connection from new to old exists")
+        if idx == 3:
+            dist_result[2] = dists_rescaled[current_idx, 3]
+            indices[current_idx, 2] = indices[current_idx, 3]
+        else:
+            dist_result[idx] = dists_rescaled[current_idx, idx]
+        logger.debug("Distances after: {}".format(dist_result))
+        return last_idx
+    else:
+        return None
+
+
 class KMCGen:
     """Class responsible for the generation of distances and jump rates.
     If relaxation_time is set, distances will be larger after a proton jump,
