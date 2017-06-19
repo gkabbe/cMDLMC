@@ -171,7 +171,6 @@ def last_neighbor_is_close_4oxys(current_idx, last_idx, indices, dists_rescaled,
     logger.debug("Current idx: {}".format(current_idx))
     logger.debug("Last idx: {}".format(last_idx))
     logger.debug("Indices from current: {} -> {}".format(current_idx, indices[current_idx]))
-    logger.debug("Indices from last: {} -> {}".format(last_idx, indices[last_idx]))
     logger.debug("Distances before: {}".format(dist_result))
 
     # Check if the last oxygen is actually still in the new oxygen's neighbor list
@@ -458,11 +457,6 @@ def kmc_main(settings):
                      (a, b, c), keep_last_neighbor_rescaled=settings.keep_last_neighbor_rescaled,
                      check_from_old=settings.check_from_old, n_atoms=settings.n_atoms)
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
-
-    if logger.isEnabledFor(logging.DEBUG):
-        distance_debug = trajectory_generator(distances)
-        distance_rescaled_debug = rescaled_distance_generator(distances,
-                                                              **settings.rescale_parameters)
 
     kmc_time, frame, sweep, jumps = 0, 0, 0, 0
 
