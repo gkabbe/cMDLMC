@@ -345,3 +345,20 @@ class TestFunctions:
         print("After:", dist_result)
 
         assert (dist_result == dists_unrescaled[current_idx]).all()
+
+    def test_last_neighbor_is_close_4oxys(self):
+        current_idx = 0
+        last_idx = 7
+
+        dist_result = np.zeros(4)
+        dists_unrescaled = np.array([[2.5, 2.6, 2.7, 2.8]])
+        dists_rescaled = dists_unrescaled - 0.2
+        indices = np.array([[1, 2, 3, 7]])
+
+        dist_result[:] = dists_unrescaled
+
+        idx = excess_kmc.last_neighbor_is_close_4oxys(current_idx, last_idx, indices,
+                                                      dists_rescaled, dist_result)
+
+        assert np.allclose(dist_result[:3], [2.5, 2.6, 2.6])
+        assert idx == last_idx
