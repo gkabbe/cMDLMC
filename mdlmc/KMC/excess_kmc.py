@@ -115,7 +115,7 @@ def rescaled_distance_generator(distances, a, b, d0, left_bound, right_bound):
     distgen = trajectory_generator(distances)
     for counter, dist in distgen:
         rescaled = np.where(dist < d0, b, a * (dist - d0) + b)
-        mask = np.logical_and(left_bound < dist, dist < right_bound)
+        mask = np.logical_or(dist <= left_bound, right_bound <= dist)
         rescaled[mask] = dist[mask]
         yield counter, rescaled
 
