@@ -111,6 +111,15 @@ def trajectory_generator(trajectory, chunk_size=10000):
                 counter += 1
 
 
+def rescaled_distance_generator(distances, a, b, d0, left_bound, right_bound):
+    distgen = trajectory_generator(distances)
+    for counter, dist in distgen:
+        rescaled = np.where(dist < d0, b, a * (dist - d0) + b)
+        mask = np.logical_and(left_bound < dist, dist < right_bound)
+        rescaled[mask] = dist[mask]
+        yield counter, rescaled
+
+
 def last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result,
                            check_from_old=False):
     """Checks whether a connection between the current and the last oxygen still exists (i.e.
@@ -186,14 +195,15 @@ class KMCGen:
     If relaxation_time is set, distances will be larger after a proton jump,
     and linearly decrease to the rescaled distances within the set relaxation time."""
 
-    def __init__(self, oxy_idx, distances, distances_rescaled, indices, jumprate_fct, jumprate_params, *,
-                 keep_last_neighbor_rescaled=False, check_from_old=True, n_atoms=3):
+    def __init__(self, oxy_idx, distance_gen, rescaled_distance_gen, indices,
+                 jumprate_fct, jumprate_params, *, keep_last_neighbor_rescaled=False,
+                 check_from_old=True, n_atoms=3):
         self._oxy_idx = oxy_idx
         self.relaxation_counter = 0
         self.relaxation_time = 0
         self.waiting_time = 0  # Don't jump while waiting time > 0
-        self.distances = distances
-        self.distances_rescaled = distances_rescaled
+        self.distance_gen = distance_gen
+        self.rescaled_distance_gen = rescaled_distance_gen
         self.indices = trajectory_generator(indices)
         self.jumprate_fct = jumprate_fct
         self.jumprate_params = jumprate_params
@@ -219,8 +229,9 @@ class KMCGen:
         self._oxy_idx = oxy_idx
 
     def distance_generator(self):
-        distance_gen = trajectory_generator(self.distances)
-        distance_rescaled_gen = trajectory_generator(self.distances_rescaled)
+        distance_gen = self.distance_gen
+        distance_rescaled_gen = self.rescaled_distance_gen
+
         keep_last_neighbor_rescaled = self.keep_last_neighbor_rescaled
 
         while True:
@@ -319,7 +330,8 @@ class Output:
 
     def _standardoutput(self, i, proton_idx, jumps, fps):
         pos = self.oxygen_trajectory[i, proton_idx]
-        print(self.output_format.format(i, i * self.timestep, *pos, i, jumps, fps))
+        print(self.output_format.format(i, i * self.timestep, *pos, proton_idx, jumps, fps),
+              flush=True)
 
     def _xyzoutput(self, i, proton_idx, jumps, fps):
         pos = self.oxygen_trajectory[i, proton_idx]
@@ -417,25 +429,13 @@ def kmc_main(settings):
     if settings.seed is not None:
         np.random.seed(settings.seed)
 
-    if settings.rescale_parameters:
-        if settings.rescale_function == "linear":
-            atombox_rescale = AtomBoxWaterLinearConversion(settings.pbc,
-                                                           settings.rescale_parameters)
-        elif settings.rescale_function == "ramp_function":
-            atombox_rescale = AtomBoxWaterRampConversion(settings.pbc, settings.rescale_parameters)
-        else:
-            raise ValueError("Unknown rescale function name", settings.rescale_function)
-
     a, b, c = (settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"],
                settings.jumprate_params_fs["c"])
 
     jumprate_function = FermiFunction(a, b, c)
     kmc = KMCRoutine(atombox_cubic, oxygen_lattice, jumprate_function, n_atoms=settings.n_atoms)
-    if settings.rescale_parameters:
-        kmc_rescale = KMCRoutine(atombox_rescale, oxygen_lattice, jumprate_function,
-                                 n_atoms=settings.n_atoms)
 
-    logger.info("# Creating array of distances")
+    logger.info("Creating array of distances")
     distances_name = "distances_{}".format(settings.n_atoms)
     indices_name = "indices_{}".format(settings.n_atoms)
     distances, indices = create_dataset_from_hdf5_trajectory(hdf5_file, oxygen_trajectory,
@@ -444,30 +444,25 @@ def kmc_main(settings):
                                                              chunk_size, dtype=(np.float32, np.int32),
                                                              overwrite=settings.overwrite_jumprates)
 
-    if settings.rescale_parameters:
-        logger.info("Creating array of rescaled distances")
-        distances_rescaled_name = "distances_{}_rescaled".format(settings.n_atoms)
-        indices_rescaled_name = "indices_{}".format(settings.n_atoms)
-        distances_rescaled, indices = create_dataset_from_hdf5_trajectory(
-            hdf5_file, oxygen_trajectory, ("distances_rescaled", "indices"),
-            kmc_rescale.determine_distances, chunk_size, dtype=(np.float32, np.int32),
-            overwrite=settings.overwrite_jumprates)
-
-    if settings.no_rescaling or not settings.rescale_parameters:
-        logger.debug("No rescaling set.")
-        distances_rescaled = distances
-
     if not settings.xyz_output:
         output.print_columnnames()
 
-    kmc_gen = KMCGen(proton_position, distances, distances_rescaled, indices, fermi, (a, b, c),
-                     keep_last_neighbor_rescaled=settings.keep_last_neighbor_rescaled,
+    distance_gen = trajectory_generator(distances)
+    if settings.no_rescaling:
+        rescaled_distance_gen = trajectory_generator(distances)
+    else:
+        rescaled_distance_gen = rescaled_distance_generator(distances,
+                                                            **settings.rescale_parameters)
+
+    kmc_gen = KMCGen(proton_position, distance_gen, rescaled_distance_gen, indices, fermi,
+                     (a, b, c), keep_last_neighbor_rescaled=settings.keep_last_neighbor_rescaled,
                      check_from_old=settings.check_from_old, n_atoms=settings.n_atoms)
     fastforward_gen = fastforward_to_next_jump(kmc_gen.jumprate_generator(), timestep_md)
 
     if logger.isEnabledFor(logging.DEBUG):
         distance_debug = trajectory_generator(distances)
-        distance_rescaled_debug = trajectory_generator(distances_rescaled)
+        distance_rescaled_debug = rescaled_distance_generator(distances,
+                                                              **settings.rescale_parameters)
 
     kmc_time, frame, sweep, jumps = 0, 0, 0, 0
 
