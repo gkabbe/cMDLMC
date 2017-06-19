@@ -128,9 +128,9 @@ class TestGenerators:
 
         params = ()
 
-        kmcgen = excess_kmc.KMCGen(oxy_idx=0, distances=distances,
-                                   distances_rescaled=distances_rescaled, jumprate_fct=some_fct,
-                                   jumprate_params=params, indices=indices)
+        kmcgen = excess_kmc.KMCGen(oxy_idx=0, distance_gen=enumerate(cycle(distances)),
+                                   rescaled_distance_gen=enumerate(cycle(distances_rescaled)),
+                                   jumprate_fct=some_fct, jumprate_params=params, indices=indices)
 
         distance_gen = kmcgen.distance_generator()
 
@@ -169,9 +169,9 @@ class TestGenerators:
 
         params = ()
 
-        kmcgen = excess_kmc.KMCGen(oxy_idx=0, distances=distances,
-                                   distances_rescaled=distances_rescaled, jumprate_fct=some_fct,
-                                   jumprate_params=params, indices=indices)
+        kmcgen = excess_kmc.KMCGen(oxy_idx=0, distance_gen=enumerate(cycle(distances)),
+                                   rescaled_distance_gen=enumerate(cycle(distances_rescaled)),
+                                   jumprate_fct=some_fct, jumprate_params=params, indices=indices)
 
         distance_gen = kmcgen.distance_generator()
 
@@ -192,7 +192,6 @@ class TestGenerators:
             assert x_generated == x - i / relaxation_time * (x - x_rescaled)
 
     def test_jumprate_generator(self):
-
         x = 10
         x_rescaled = 5
         relaxation_time = 20
@@ -208,9 +207,9 @@ class TestGenerators:
 
         params = ()
 
-        kmcgen = excess_kmc.KMCGen(oxy_idx=0, distances=distances,
-                                   distances_rescaled=distances_rescaled, jumprate_fct=some_fct,
-                                   jumprate_params=params, indices=indices)
+        kmcgen = excess_kmc.KMCGen(oxy_idx=0, distance_gen=enumerate(cycle(distances)),
+                                   rescaled_distance_gen=enumerate(cycle(distances_rescaled)),
+                                   jumprate_fct=some_fct, jumprate_params=params, indices=indices)
 
         probsum_gen = kmcgen.jumprate_generator()
         for frame, probsum in enumerate(probsum_gen):
@@ -313,7 +312,8 @@ class TestFunctions:
         # -----------------------------------------------------
 
         print("Before:", dist_result)
-        excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result)
+        excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled,
+                                          dist_result, check_from_old=True)
         print("After:", dist_result)
 
         assert dist_result[-1] == dists_rescaled[last_idx, 0]
@@ -327,7 +327,8 @@ class TestFunctions:
         dist_result[:] = dists_unrescaled[current_idx]
 
         print("Before:", dist_result)
-        excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result)
+        excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled,
+                                          dist_result)
         print("After:", dist_result)
 
         assert dist_result[0] == dists_rescaled[current_idx, 0]
@@ -339,7 +340,8 @@ class TestFunctions:
                             [6, 3, 4]])
 
         print("Before:", dist_result)
-        excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled, dist_result)
+        excess_kmc.last_neighbor_is_close(current_idx, last_idx, indices, dists_rescaled,
+                                          dist_result, check_from_old=True)
         print("After:", dist_result)
 
         assert (dist_result == dists_unrescaled[current_idx]).all()
