@@ -362,3 +362,27 @@ def test_last_neighbor_is_close_4oxys():
 
     assert np.allclose(dist_result[:3], [2.5, 2.6, 2.6])
     assert idx == last_idx
+
+
+def test_rescaled_distance_generator():
+    distances = np.linspace(2, 4, 100)
+
+    parameters = {'d0': 2.5440176587446639, 'b': 2.3279003319009188,
+                  'right_bound': 3.0095732864264266, 'left_bound': 2.3249887549289214,
+                  'a': 0.95301006674971556}
+
+    rescaled_gen = excess_kmc.rescaled_distance_generator(distances, **parameters)
+
+    result = []
+    for i, res in rescaled_gen:
+        if i == 100:
+            break
+        result.append(res)
+
+    result = np.array(result)
+
+    mask1 = distances < parameters["left_bound"]
+    mask2 = distances > parameters["right_bound"]
+
+    assert np.allclose(result[mask1], distances[mask1])
+    assert np.allclose(result[mask2], distances[mask2])
