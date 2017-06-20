@@ -544,5 +544,12 @@ CONFIG_DICT = {
              "default": False,
              "help": "Print xyz output."
          }),
+        ("conversion_data",
+         {
+             "parse_fct": parse_string,
+             "default": None,
+             "help": "Filename with conversion data. First column is assumed to be distance, and"
+                     " last column is assumed to be the conversion."
+         })
     ])
 }
