@@ -112,7 +112,7 @@ def construct_conversion_fct(dist_histo, dist_histo_reference, *, number_of_atom
     parameter_dict = {}
 
     for k, v, v_err in zip(param_names[1:], popt, pcov.diagonal()):
-        print("{} = {} +- {}".format(k, v, v_err))
+        print("# {} = {} +- {}".format(k, v, v_err))
         parameter_dict[k] = v
     parameter_dict["left_bound"] = left_limit
     parameter_dict["right_bound"] = right_limit
@@ -167,8 +167,8 @@ def main():
                                                      "trajectory")
     parser.add_argument("reference_pbc", nargs=3, type=float,
                         help="Periodic boundaries of reference trajectory")
-    parser.add_argument("--atom_number", "-a", type=int, help="Number of atoms in first solvation "
-                                                              "shell of the charged system")
+    parser.add_argument("--atom_number", "-a", type=float, default=3,
+                        help="Number of atoms in first solvation shell of the charged system")
     parser.add_argument("--hdf5_key", default="oxygen_trajectory", help="Array key in hdf5 file")
     parser.add_argument("--clip", type=int, default=None, help="Stop after <clip> frames")
     parser.add_argument("--log", "-l", default="info", help="Set log level")
@@ -229,7 +229,7 @@ def main():
         number_of_atoms=number_of_atoms,
         fit_fct=linear_w_cutoff,
         p0=(1, 2.2, 2.5),
-        noa_in_1st_solvationshell=3)
+        noa_in_1st_solvationshell=args.atom_number)
 
     dist = plot_dict2["distance"]
     rdf_neutral = plot_dict2["rdf_integrated_neutral"]
@@ -246,6 +246,10 @@ def main():
         ax2.plot(dist, fit_fct, label="Fit function")
         plt.xlim(2, 3)
         plt.show()
+
+    print("#Distance, RDF_Neutral, RDF_Reference, Conversion")
+    for d, rn, rr, conv in zip(dist, rdf_neutral, rdf_reference, conversion):
+        print(d, rn, rr, conv)
 
 if __name__ == "__main__":
     main()
