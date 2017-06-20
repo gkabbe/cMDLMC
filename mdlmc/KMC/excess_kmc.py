@@ -6,6 +6,7 @@ import logging
 import tables
 import h5py
 import numpy as np
+from scipy.interpolate import interp1d
 
 from mdlmc.IO.xyz_parser import save_trajectory_to_hdf5, create_dataset_from_hdf5_trajectory, \
     get_xyz_selection_from_atomname, get_hdf5_selection_from_atomname
@@ -117,6 +118,22 @@ def rescaled_distance_generator(distances, a, b, d0, left_bound, right_bound):
         rescaled = np.where(dist < d0, b, a * (dist - d0) + b)
         mask = np.logical_or(dist <= left_bound, right_bound <= dist)
         rescaled[mask] = dist[mask]
+        yield counter, rescaled
+
+
+def rescaled_distance_generator_interpolate(distances, dist_array, conversion_array):
+    logger.info("Will interpolate conversion function from data")
+    interp = interp1d(dist_array, conversion_array, kind="linear")
+    x_min, x_max = interp.x[[0, -1]]
+    y_min = interp.y[0]
+    distgen = trajectory_generator(distances)
+    logger.debug("Interpolation in range ({}, {})".format(x_min, x_max))
+
+    for counter, dist in distgen:
+        inside_bounds = np.logical_and(x_min <= dist, dist <= x_max)
+        rescaled = np.copy(dist)
+        rescaled[inside_bounds] = interp(rescaled[inside_bounds])
+        rescaled[rescaled < x_min] = y_min
         yield counter, rescaled
 
 
@@ -451,6 +468,12 @@ def kmc_main(settings):
     distance_gen = trajectory_generator(distances)
     if settings.no_rescaling:
         rescaled_distance_gen = trajectory_generator(distances)
+    elif settings.conversion_data:
+        data = np.loadtxt(settings.conversion_data)
+        dist, *_, conversion = data.T
+        rescaled_distance_gen = rescaled_distance_generator_interpolate(distances, dist, conversion)
+        del dist
+        del conversion
     else:
         rescaled_distance_gen = rescaled_distance_generator(distances,
                                                             **settings.rescale_parameters)
