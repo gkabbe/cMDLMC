@@ -348,7 +348,9 @@ def kmc_main(settings):
 
     # If debug is set, set global variable DEBUG = True
     if settings.debug:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG,
+                            format="%(levelname)s:%(filename)s.%(funcName)s(%(lineno)d):"
+                                   " %(message)s")
     else:
         logging.basicConfig(level=logging.INFO)
 
