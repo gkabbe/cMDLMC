@@ -277,6 +277,7 @@ def main(*args):
                         help="Calculate diffusion coefficient for each interval")
     parser.add_argument("--columns", "-c", type=int, nargs="+",
                         help="Which columns contain the position?")
+    parser.add_argument("--print", action="store_true", help="Print resulting MSD")
 
     parser_fixed = subparsers.add_parser("single", help="Intervals with fixed size")
     parser_fixed.add_argument("intervalnumber", type=int,
@@ -341,8 +342,6 @@ def main(*args):
         # use only first 60% of the calculated interval because of statistic
         msd_mean, msd_var = msd_mean[:int(msd_mean.shape[0] * 0.6)], \
                             msd_var[:int(msd_var.shape[0] * 0.6)]
-        for i in range(msd_mean.shape[0]):
-            print(i, msd_mean[i].sum(), msd_var[i].sum())
 
     else:
         intervalnumber = args.intervalnumber
@@ -405,6 +404,11 @@ def main(*args):
             plt.plot(t.to(output_time_unit), fit.to(output_length_unit**2))
     if args.plot:
         plt.show()
+
+    if args.print:
+        for i in range(msd_mean.shape[0]):
+            print(i, msd_mean[i].sum(), msd_var[i].sum())
+
 
 if __name__ == "__main__":
     main()
