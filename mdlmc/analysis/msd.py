@@ -226,7 +226,8 @@ def calculate_msd_multi_interval_fast(atom_traj, pbc, subinterval_delay=1):
 
     logger.debug("Number of iterations: {}".format(len(loop)))
     for starting_point in loop:
-        print(starting_point, end="\r", file=sys.stderr, flush=True)
+        print("{:8} ({:.1%})".format(starting_point, starting_point / total_length), end="\r",
+              file=sys.stderr, flush=True)
         if starting_point:
             subinterval_displ = displacement(
                 atom_traj[starting_point - subinterval_delay: starting_point + 1], pbc)
