@@ -462,7 +462,7 @@ def kmc_main(settings):
                                                              chunk_size, dtype=(np.float32, np.int32),
                                                              overwrite=settings.overwrite_jumprates)
 
-    if not settings.xyz_output:
+    if not xyz_output:
         output.print_columnnames()
 
     distance_gen = trajectory_generator(distances)
