@@ -11,11 +11,11 @@ import matplotlib.pylab as plt
 import numpy as np
 import pint
 from numba import jit
+from scipy.optimize import curve_fit
 
 from mdlmc.IO import xyz_parser
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
-from scipy.optimize import curve_fit
 
 ureg = pint.UnitRegistry()
 logger = logging.getLogger(__name__)
@@ -30,6 +30,16 @@ def pbc_dist(dist, pbc):
         indices = np.where(dist < -pbc / 2)
         dist[indices] += pbc[indices[-1]]
     return dist
+
+
+@jit(nopython=True)
+def pbc_dist_vectorized(dist, pbc):
+    for i in range(dist.shape[0]):
+        for j in range(3):
+            while dist[i, j] > pbc[j] / 2:
+                dist[i, j] -= pbc[j]
+            while dist[i, j] < -pbc[j] / 2:
+                dist[i, j] += pbc[j]
 
 
 def squared_distance(a1_pos, a2_pos, pbc, axis_wise=False):
@@ -185,11 +195,70 @@ def calculate_msd_multi_interval(atom_traj, pbc, subinterval_delay=1):
     return msd_mean.mean(axis=1), msd_var.mean(axis=1)
 
 
+def calculate_msd_multi_interval_fast(atom_traj, pbc, subinterval_delay=1):
+    """
+    Uses intervals ranging between a length of 1 timestep up to the length of the whole trajectory.
+
+    Parameters
+    ----------
+    atom_traj: array_like
+        Atom trajectory
+    pbc: array_like
+        Periodic boundaries
+    subinterval_delay:
+        The time delay between two successive intervals of the same length
+
+    Returns
+    -------
+    msd_mean: array
+        MSD Mean
+    msd_var: array
+        MSD Variance
+
+    """
+    total_length = atom_traj.shape[0]
+    occurrence_counter = np.zeros(atom_traj.shape, dtype=int)
+    interval_mask = np.zeros(atom_traj.shape, dtype=bool)
+    msd_mean = np.zeros(atom_traj.shape)
+    msd_var = np.zeros(atom_traj.shape)
+    delta = np.zeros(atom_traj.shape)
+    loop = range(0, total_length - subinterval_delay, subinterval_delay)
+
+    logger.debug("Number of iterations: {}".format(len(loop)))
+    for starting_point in loop:
+        print(starting_point, end="\r", file=sys.stderr, flush=True)
+        if starting_point:
+            subinterval_displ = displacement(
+                atom_traj[starting_point - subinterval_delay: starting_point + 1], pbc)
+            diff = subinterval_displ[0] - subinterval_displ[-1]
+            displ_init[starting_point:] += diff
+            displ = displ_init[starting_point:]
+        else:
+            displ_init = displacement(atom_traj, pbc)
+            displ = displ_init
+        sqdist = displ * displ
+        sqdist.resize(atom_traj.shape)
+        interval_mask[:] = 0
+        interval_mask[:-starting_point] = 1
+        occurrence_counter[interval_mask] += 1
+        delta[interval_mask] = sqdist[interval_mask] - msd_mean[interval_mask]
+        msd_mean[interval_mask] += delta[interval_mask] / (occurrence_counter[interval_mask] + 1)
+        msd_var[interval_mask] += \
+            delta[interval_mask] * (sqdist[interval_mask] - msd_mean[interval_mask])
+    where_greater_one = occurrence_counter > 1
+    where_equals_zero = occurrence_counter == 0
+    occurrence_counter[where_greater_one] -= 1
+    occurrence_counter[where_equals_zero] += 1
+    msd_var /= occurrence_counter
+    return msd_mean.mean(axis=1), msd_var.mean(axis=1)
+
+
 def main(*args):
     parser = argparse.ArgumentParser(
         description="Determine Mean Square Displacement of MD trajectory",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers(dest="subparser_name")
+
     parser.add_argument("filename", help="Trajectory filename")
     parser.add_argument("pbc", nargs=3, type=float, help="Periodic boundaries")
     parser.add_argument("timestep", type=ureg.parse_expression, help="MD timestep (e.g. 0.5fs)")
@@ -208,10 +277,12 @@ def main(*args):
                         help="Calculate diffusion coefficient for each interval")
     parser.add_argument("--columns", "-c", type=int, nargs="+",
                         help="Which columns contain the position?")
+
     parser_fixed = subparsers.add_parser("single", help="Intervals with fixed size")
     parser_fixed.add_argument("intervalnumber", type=int,
                               help="Number of intervals over which to average")
     parser_fixed.add_argument("intervallength", type=int, help="Interval length")
+
     parser_multi = subparsers.add_parser("multi", help="Intervals with variable size")
     parser_multi.add_argument("--variance_all_H", action="store_true",
                               help="If set, determine variance over every proton trajectory")
@@ -219,10 +290,12 @@ def main(*args):
                                                                         " of the trajectory")
     parser_multi.add_argument("--subinterval_delay", type=int, default=1, help="Distance between"
                                                                                " intervals")
+
     parser_water = subparsers.add_parser("water", help="MSD for single excess proton")
     parser_water.add_argument("intervalnumber", type=int,
                               help="Number of intervals over which to average")
     parser_water.add_argument("intervallength", type=int, help="Interval length")
+
     args = parser.parse_args()
 
     if args.verbose:
@@ -263,8 +336,8 @@ def main(*args):
         subinterval_delay = args.subinterval_delay
         resolution = args.resolution
         # -------------------------------------
-        msd_mean, msd_var = calculate_msd_multi_interval(trajectory[::resolution], pbc,
-                                                         subinterval_delay)
+        msd_mean, msd_var = calculate_msd_multi_interval_fast(trajectory[::resolution], pbc,
+                                                              subinterval_delay)
         # use only first 60% of the calculated interval because of statistic
         msd_mean, msd_var = msd_mean[:int(msd_mean.shape[0] * 0.6)], \
                             msd_var[:int(msd_var.shape[0] * 0.6)]
