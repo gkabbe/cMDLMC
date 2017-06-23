@@ -10,7 +10,7 @@ from mdlmc.IO.xyz_parser import load_atoms
 from mdlmc.cython_exts.LMC import LMCHelper
 from mdlmc.cython_exts.LMC import PBCHelper
 from mdlmc.cython_exts.LMC.LMCHelper import ActivationEnergyFunction, FermiFunction, \
-    ExponentialFunction
+    ExponentialFunction, FermiFunctionWater
 
 
 def get_git_version():
@@ -250,6 +250,12 @@ def prepare_lmc(settings):
         b = settings.jumprate_params_fs["b"]
         c = settings.jumprate_params_fs["c"]
         jumprate_fct = FermiFunction(a, b, c)
+
+    elif settings.jumprate_type == "MD_rates_Water":
+        a = settings.jumprate_params_fs["a"]
+        b = settings.jumprate_params_fs["b"]
+        c = settings.jumprate_params_fs["c"]
+        jumprate_fct = FermiFunctionWater(a, b, c)
 
     # Jump rates determined via energy surface scans
     elif settings.jumprate_type == "AE_rates":
