@@ -252,8 +252,12 @@ cdef class LMCRoutine:
                             oxygen_number_unextended)
                         start_indices_tmp.push_back(start_index)
                         destination_indices_tmp.push_back(destination_index)
-                        jump_probability_tmp.push_back(
-                            self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle))
+                        if dist <  0.00001:
+                            jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle)*0.0)
+                        else: 
+                            jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle))
+
+
 
         self.start_indices.push_back(start_indices_tmp)
         self.destination_indices.push_back(destination_indices_tmp)
@@ -294,9 +298,10 @@ cdef class LMCRoutine:
                         oxygen_number_unextended)
                     start_indices_tmp.push_back(start_index)
                     destination_indices_tmp.push_back(destination_index)
-                    jump_probability_tmp.push_back(
-                        self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle))
-
+                    if dist <  0.00001:
+                        jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle)*0.0)
+                    else:
+                        jump_probability_tmp.push_back(self.jumprate_fct.evaluate(dist) * self.angle_fct.evaluate(poo_angle))
         self.start_indices.push_back(start_indices_tmp)
         self.destination_indices.push_back(destination_indices_tmp)
         self.jump_probability.push_back(jump_probability_tmp)
