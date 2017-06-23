@@ -5,6 +5,8 @@ import re
 import os
 from math import ceil
 from collections import Counter
+import logging
+import sys
 
 from mdlmc.analysis.proton_jump_statistics import determine_protonated_oxygens
 import numpy as np
@@ -12,7 +14,11 @@ import numpy as np
 from mdlmc.IO import BinDump
 
 
+logger = logging.getLogger(__name__)
+
+
 def determine_hydronium_indices(covevo):
+    logger.info("Determining array of hydronium indices")
     h3o_indices = np.zeros((covevo.shape[0], 1), dtype=int)
     for i in range(covevo.shape[0]):
         counter = Counter(covevo[i])
@@ -29,16 +35,12 @@ def oh_bond_array_filename(trajectory_filename):
 def load_oh_bonds(filename, pbc, *, verbose=False):
     oh_bond_filename = oh_bond_array_filename(filename)
     if not os.path.exists(oh_bond_filename):
-        if verbose:
-            print("# OH-bond file not existing. Creating...")
+        logger.info("OH-bond file not existing. Creating...")
         oxygens, hydrogens = BinDump.npload_atoms(filename, atomnames_list=["O", "H"],
                                                   return_tuple=True, verbose=verbose)
-        oxygens = np.array(oxygens["pos"], order="C")
-        hydrogens = np.array(hydrogens["pos"], order="C")
         oh_bonds = determine_protonated_oxygens(filename, pbc, verbose=verbose)
         np.save(oh_bond_filename, oh_bonds)
-    if verbose:
-        print("# Loading Covevo File...")
+    logger.info("Loading Covevo File...")
     oh_bonds = np.load(oh_bond_filename)
     return oh_bonds
 
@@ -54,17 +56,15 @@ def autocorrelate(oh_vector: np.ndarray, interval_number: int, interval_length: 
         diff = interval_number * interval_length - total_length
         interval_distance = interval_length - int(ceil(diff / float(interval_number - 1)))
 
-    if verbose:
-        print("# Averaging over", interval_number, "intervals of length", interval_length,
-              "with distance", interval_distance, "to each other")
+    logger.info("Averaging over {} intervals of length {} with distance {} to each other".format(
+        interval_number, interval_length, interval_distance)
+    )
 
     for i in range(interval_number):
-        if verbose:
-            print("# {} / {}".format(i, interval_number), end="\r")
+        print("{} / {}".format(i, interval_number), end="\r", file=sys.stderr)
         oh_bonds_avg[i] = (
         oh_vector[i * interval_distance:i * interval_distance + interval_length] == oh_vector[i * interval_distance]).sum(axis=1)
-    if verbose:
-        print("")
+    print("", file=sys.stderr)
 
     result = oh_bonds_avg.mean(axis=0)
     return result
@@ -90,9 +90,12 @@ def main(*args):
 
     oh_bonds = load_oh_bonds(args.filename, pbc, verbose=args.verbose)
 
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
     if args.water:
-        if args.verbose:
-            print("# Determining array of hydronium indices")
         oh_bonds = determine_hydronium_indices(oh_bonds)
 
     result = autocorrelate(oh_bonds, interval_number, interval_length)
