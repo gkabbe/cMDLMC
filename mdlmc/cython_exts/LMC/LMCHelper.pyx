@@ -53,6 +53,23 @@ cdef class FermiFunction(JumprateFunction):
     cdef double _evaluate(self, double distance) nogil:
         return self.a / (1 + exp((distance - self.b) / self.c))
 
+@cython.final
+cdef class FermiFunctionWater(JumprateFunction):
+    """Calculates the jump probability according to the function
+        f(x) = a / ( (1 + exp(x - b) / c)"""
+    cdef:
+        double a, b, c
+
+    def __cinit__(self, double a, double b, double c):
+        self.a = a
+        self.b = b
+        self.c = c
+
+    cdef double _evaluate(self, double distance) nogil:
+        if distance > 0.00001:
+            return 0.0
+        else:
+            return self.a / (1 + exp((distance - self.b) / self.c))
 
 @cython.final
 cdef class ExponentialFunction(JumprateFunction):

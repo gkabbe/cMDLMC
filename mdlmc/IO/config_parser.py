@@ -319,7 +319,7 @@ CONFIG_DICT = {
              "default": "no_default",
              "help": "Choose between jump rates determined from static DFT activation energy "
                      "calculations (AE_rates), jump rates determined from AIMD simulations ("
-                     "MD_rates), and Exponential_rates."
+                     "MD_rates), jump rates determined from AIMD simulations and special water distance criterion (MD_rates_Water) and Exponential_rates."
          }),
         ("jumprate_params_fs",
          {
