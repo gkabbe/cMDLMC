@@ -112,6 +112,14 @@ def trajectory_generator(trajectory, chunk_size=10000):
                 counter += 1
 
 
+def rescale_interpolation_function(interp, dist, x_min, x_max, y_min):
+    inside_bounds = np.logical_and(x_min <= dist, dist <= x_max)
+    rescaled = np.copy(dist)
+    rescaled[inside_bounds] = interp(rescaled[inside_bounds])
+    rescaled[rescaled < x_min] = y_min
+    return rescaled
+
+
 def rescaled_distance_generator(distances, a, b, d0, left_bound, right_bound):
     distgen = trajectory_generator(distances)
     for counter, dist in distgen:
@@ -130,10 +138,7 @@ def rescaled_distance_generator_interpolate(distances, dist_array, conversion_ar
     logger.debug("Interpolation in range ({}, {})".format(x_min, x_max))
 
     for counter, dist in distgen:
-        inside_bounds = np.logical_and(x_min <= dist, dist <= x_max)
-        rescaled = np.copy(dist)
-        rescaled[inside_bounds] = interp(rescaled[inside_bounds])
-        rescaled[rescaled < x_min] = y_min
+        rescaled = rescale_interpolation_function(interp, dist, x_min, x_max, y_min)
         yield counter, rescaled
 
 
