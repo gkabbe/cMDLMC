@@ -322,8 +322,7 @@ def load_trajectory_from_npz(npz_fname, *atom_names, clip=None, verbose=False):
             trajectory = file_content.items()[0]
 
     if clip:
-        if verbose:
-            print("# Clipping trajectory to the first {} frames".format(clip))
+        logger.info("Clipping trajectory to the first {} frames".format(clip))
         trajectory = trajectory[:clip]
     if len(atom_names) > 0:
         single_atom_trajs = []
