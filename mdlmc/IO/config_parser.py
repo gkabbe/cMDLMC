@@ -95,17 +95,21 @@ def load_configfile(config_filename, config_name="cMDLMC", verbose=False):
 def print_confighelp(config_name="cMDLMC"):
     text_width = 80
     parser_dict = CONFIG_DICT[config_name]
+    horizontal, vertical = "-", "|"
     for k, v in parser_dict.items():
-        keylen = len(k)
-        delim_len = (text_width - 2 - keylen) // 2
-        print("{delim} {keyword} {delim}".format(keyword=k.upper(), delim=delim_len * "-"))
-        print("")
-        print("\n".join(wrap(v["help"], width=text_width)))
-        print("")
-        print("Default:", v["default"])
-        print(text_width * "-")
-        print("")
-        print("")
+        print("{keyword:{sign}^{text_width}}".format(keyword=k.upper(), sign=horizontal,
+                                                     text_width=text_width))
+        print("{vertical}{: ^{}}{vertical}".format(" ", text_width-2, vertical=vertical))
+        help_lines = wrap(v["help"], width=text_width - 4)
+        for hl in help_lines:
+            print("{vertical} {:<{}} {vertical}".format(hl, text_width - 4, vertical=vertical))
+        print("{vertical}{: ^{}}{vertical}".format(" ", text_width-2, vertical=vertical))
+        print("{vertical} {:<{}} {vertical}".format("Default: {}".format(v["default"]),
+                                                    text_width - 4, vertical=vertical))
+        print("{:{horizontal}^{text_width}}".format("", text_width=text_width,
+                                                    horizontal=horizontal))
+        print("*{: ^{}}*".format(" ", text_width-2))
+        print("*{: ^{}}*".format(" ", text_width-2))
 
 
 def print_config_template(config_name="cMDLMC", sort=False):
