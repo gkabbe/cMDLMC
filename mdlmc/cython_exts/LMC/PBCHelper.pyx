@@ -5,6 +5,7 @@
 import cython
 cimport cython
 import numpy as np
+import logging
 
 cimport numpy as np
 
@@ -16,6 +17,11 @@ cdef extern from "math.h":
     double exp(double x) nogil
     double cos(double x) nogil
     double acos(double x) nogil
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
 
 cdef class AtomBox:
     """The AtomBox class takes care of all distance and angle calculations.
@@ -89,19 +95,13 @@ cdef class AtomBox:
         return result
 
     @cython.boundscheck(False)
-    def length_all_to_all(self, arr1, arr2):
+    def length_all_to_all(self, double [:, ::1] arr1, double [:, ::1] arr2):
         cdef int i, j
-        if len(arr1.shape) > 2 or len(arr2.shape) > 2:
-            raise ValueError("shape needs to be <= 2")
-
-        cdef double [:, ::1] arr1b = arr1.reshape((-1, 3)).astype(float)
-        cdef double [:, ::1] arr2b = arr2.reshape((-1, 3)).astype(float)
-
         result = np.zeros((arr1.shape[0], arr2.shape[0]))
 
-        for i in range(arr1b.shape[0]):
-            for j in range(arr2b.shape[0]):
-                result[i, j] = self.length_ptr(&arr1b[i, 0], &arr2b[j, 0])
+        for i in range(arr1.shape[0]):
+            for j in range(arr2.shape[0]):
+                result[i, j] = self.length_ptr(&arr1[i, 0], &arr2[j, 0])
         return result
 
     cdef double length_extended_box_ptr(self, int index_1, double * frame_1, int frame_1_len,
