@@ -387,13 +387,20 @@ def main(*args):
         m, y_0 = params
         m_err, y_0_err = np.sqrt(cov_mat[0, 0]), np.sqrt(cov_mat[1, 1])
 
+        # Determine R²
+        f = y_0 + m * np.arange(args.fit_from, msd_mean.shape[0])
+        ss_res = np.sum((msd_mean[args.fit_from:] - f)**2)
+        ss_tot = np.sum((msd_mean[args.fit_from:] - np.mean(msd_mean[args.fit_from:]))**2)
+        print("R² =", 1 - ss_res / ss_tot)
+
         m = m * args.length_unit**2 / args.timestep
         m_err = m_err * args.length_unit**2 / args.timestep
 
-        print("\nSlope in {}:".format(args.output_unit))
+        print()
+        print("Slope in {}:".format(args.output_unit))
         print("({:.2e} +/- {:.2e}) {}".format(m.to(args.output_unit).magnitude,
                                               m_err.to(args.output_unit).magnitude, args.output_unit))
-
+        print()
         print("\nDiffusion coefficient in {}:".format(args.output_unit))
         print("({:.2e} +/- {:.2e}) {}".format(m.to(args.output_unit).magnitude / 6,
                                               m_err.to(args.output_unit).magnitude / 6,
@@ -403,8 +410,11 @@ def main(*args):
             fit = m * np.arange(msd_mean.shape[0]) * args.timestep + y_0 * args.length_unit**2
             t = np.arange(msd_mean.shape[0]) * args.timestep
             plt.plot(t.to(output_time_unit), fit.to(output_length_unit**2))
-    if args.plot:
-        plt.show()
+
+            if args.fit_from:
+                fit_start = (args.fit_from * args.timestep).to(output_time_unit).magnitude
+                plt.vlines(fit_start, *plt.ylim())
+            plt.show()
 
     if args.print:
         for i in range(msd_mean.shape[0]):
