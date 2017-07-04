@@ -454,6 +454,8 @@ def kmc_main(settings):
 
     a, b, c = (settings.jumprate_params_fs["a"], settings.jumprate_params_fs["b"],
                settings.jumprate_params_fs["c"])
+    # Multiply with timestep, to get the jump probability within one timestep
+    a *= timestep_md
 
     jumprate_function = FermiFunction(a, b, c)
     kmc = KMCRoutine(atombox_cubic, oxygen_lattice, jumprate_function, n_atoms=settings.n_atoms)
