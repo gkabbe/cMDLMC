@@ -1,16 +1,53 @@
 import argparse
 import sys
+import logging
 
 import matplotlib.pylab as plt
 import numpy as np
+from scipy.interpolate import interp1d
 
 from mdlmc.IO import xyz_parser
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
 from mdlmc.misc.tools import argparse_compatible
+from mdlmc.KMC.excess_kmc import rescale_interpolation_function
+
+
+logger = logging.getLogger(__name__)
+
+
+def reduce_pbc(atom_pos, origin, pbc):
+    mask = atom_pos - origin < -pbc / 2
+    while mask.any():
+        atom_pos[mask] += pbc[mask]
+        mask = atom_pos - origin < -pbc / 2
+    mask = atom_pos - origin > pbc / 2
+    while mask.any():
+        atom_pos[mask] -= pbc[mask]
+        mask = atom_pos - origin > pbc / 2
+
+
+def rescale_distance(atom_pos, origin, new_distance):
+    connection_vec = atom_pos - origin
+    new_pos = origin + connection_vec / np.linalg.norm(connection_vec) * new_distance
+    return new_pos
 
 
 def excess_charge_collective_variable(oxygen_pos, proton_pos):
     return proton_pos.sum(axis=0) - 2 * oxygen_pos.sum(axis=0)
+
+
+def group_h2os(oxygens, protons, atombox):
+    dist_matrix = atombox.length_all_to_all(oxygens, protons)
+    closest_protons = np.argsort(dist_matrix, axis=-1)[:, :2]
+    return closest_protons
+
+
+def print_h2o(oxygen, proton1, proton2, pbc):
+    print("O", *oxygen)
+    reduce_pbc(proton1, oxygen, pbc)
+    print("H", *proton1)
+    reduce_pbc(proton2, oxygen, pbc)
+    print("H", *proton2)
 
 
 class HydroniumHelper:
@@ -81,6 +118,99 @@ def track_hydronium_ion(trajectory, pbc, *, visualize=False):
                 print(atom["name"], " ".join(map(str, atom["pos"])))
         print("S", " ".join(map(str, hydronium_position)), flush=True)
     print("Number of jumps:", hydronium_helper.jumps)
+
+
+@argparse_compatible
+def print_hydronium_and_solvationshell(trajectory, pbc, *, frame):
+    pbc = np.array(pbc)
+    atombox = AtomBoxCubic(pbc)
+    with open(trajectory, "rb") as f:
+        atomnumber = int(f.readline())
+        f.seek(0)
+        traj = xyz_parser.parse_xyz(f, atomnumber + 2, no_of_frames=frame + 1)
+    oxygen_frame = traj["pos"][traj["name"] == b"O"]
+    proton_frame = traj["pos"][traj["name"] == b"H"]
+
+    hydronium_helper = HydroniumHelper()
+    hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame, proton_frame,
+                                                                 atombox)
+
+    proton_dists = atombox.length_all_to_all(oxygen_frame[hydronium_index].reshape((-1, 3)),
+                                             proton_frame).flatten()
+    closest_four = np.argsort(proton_dists)[:4]
+    oxygen_mask = np.zeros(oxygen_frame.shape[0], dtype=bool)
+    oxygen_mask[hydronium_index] = 1
+    oxygen_pos = oxygen_frame[hydronium_index]
+    proton_mask = np.zeros(proton_frame.shape[0], dtype=bool)
+    proton_mask[closest_four] = 1
+
+    print(oxygen_frame.shape[0] + proton_frame.shape[0])
+    print()
+    print("O", *oxygen_frame[oxygen_mask][0])
+    for proton_pos in proton_frame[proton_mask]:
+        reduce_pbc(proton_pos, oxygen_pos, pbc)
+        print("H", *proton_pos)
+    for oxy in oxygen_frame[~oxygen_mask]:
+        reduce_pbc(oxy, oxygen_pos, pbc)
+        print("O", *oxy)
+    for prot in proton_frame[~proton_mask]:
+        reduce_pbc(prot, oxygen_pos, pbc)
+        print("H", *prot)
+
+
+@argparse_compatible
+def show_kmc_rescaling(trajectory, pbc, *, rescaling_file, oxygen_index, frame):
+    rescale_data = np.loadtxt(rescaling_file, usecols=(0, -1))
+    rescale_func = interp1d(rescale_data[:, 0], rescale_data[:, -1], kind="linear")
+
+    pbc = np.array(pbc)
+    atombox = AtomBoxCubic(pbc)
+    with open(trajectory, "rb") as f:
+        atomnumber = int(f.readline())
+        f.seek(0)
+        traj = xyz_parser.parse_xyz(f, atomnumber + 2, no_of_frames=frame + 1)
+    oxygen_frame = traj[frame]["pos"][traj[frame]["name"] == b"O"]
+    proton_frame = traj[frame]["pos"][traj[frame]["name"] == b"H"]
+
+    oo_dists = atombox.length_all_to_all(oxygen_frame.reshape((-1, 3)),
+                                         oxygen_frame.reshape((-1, 3)))
+    closest_three = np.argsort(oo_dists)[oxygen_index, 1:4]
+    oxygen_mask = np.zeros(oxygen_frame.shape[0], dtype=bool)
+    oxygen_mask[oxygen_index] = 1
+    central_oxygen_pos = oxygen_frame[oxygen_index]
+    neighbor_mask = np.zeros(oxygen_frame.shape[0], dtype=bool)
+    neighbor_mask[closest_three] = 1
+
+    h2o_groups = group_h2os(oxygen_frame, proton_frame, atombox)
+
+    print(oxygen_frame.shape[0] + proton_frame.shape[0] + 9)
+    print()
+    first_h2o = oxygen_frame[oxygen_index], *proton_frame[h2o_groups[oxygen_index]]
+    print_h2o(*first_h2o, pbc)
+
+    for oxy_index in closest_three:
+        old_pos = oxygen_frame[oxy_index]
+        reduce_pbc(old_pos, central_oxygen_pos, pbc)
+        distance = np.linalg.norm(old_pos - central_oxygen_pos)
+        new_pos = rescale_distance(old_pos, central_oxygen_pos,
+                                   rescale_interpolation_function(rescale_func, distance,
+                                                                  rescale_func.x[0],
+                                                                  rescale_func.x[-1],
+                                                                  rescale_func.y[0]))
+        diffvec = new_pos - old_pos
+        print_h2o(new_pos, *(proton_frame[h2o_groups[oxy_index]] + diffvec), pbc)
+
+    for oxy_index in closest_three:
+        oxy_pos = oxygen_frame[oxy_index]
+        reduce_pbc(oxy_pos, central_oxygen_pos, pbc)
+        print_h2o(oxy_pos, *proton_frame[h2o_groups[oxy_index]], pbc)
+
+    for oxy_index in np.arange(oxygen_frame.shape[0]):
+        if oxy_index == oxygen_index or oxy_index in closest_three:
+            continue
+        oxy_pos = oxygen_frame[oxy_index]
+        reduce_pbc(oxy_pos, central_oxygen_pos, pbc)
+        print_h2o(oxy_pos, *proton_frame[h2o_groups[oxy_index]], pbc)
 
 
 @argparse_compatible
@@ -208,6 +338,7 @@ def main(*args):
         description="Determine the excess charge movement in a water box",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--visualize", action="store_true", help="Visualize excess charge position")
+    parser.add_argument("--debug", action="store_true", help="Enable debug messages")
     parser.add_argument("trajectory", help="Trajectory path")
     parser.add_argument("pbc", nargs=3, type=float, help="periodic boundary conditions")
 
@@ -254,9 +385,27 @@ def main(*args):
     parser_rdf.add_argument("--clip", type=int, help="Determine maximum length")
     parser_rdf.set_defaults(func=rdf_between_hydronium_and_all_oxygens)
 
+    parser_print = subparsers.add_parser("print_hydronium", help="Print hydronium structure")
+
+    parser_print.add_argument("frame", type=int, help="Trajectory frame")
+    parser_print.set_defaults(func=print_hydronium_and_solvationshell)
+
+    parser_kmcrescale = subparsers.add_parser("rescale", help="Rescale neutral H2O trajectory")
+
+    parser_kmcrescale.add_argument("rescaling_file", help="Rescaling file")
+    parser_kmcrescale.add_argument("oxygen_index", type=int, help="Oxygen index")
+    parser_kmcrescale.add_argument("frame", type=int, help="Frame")
+
+    parser_kmcrescale.set_defaults(func=show_kmc_rescaling)
+
     args = parser.parse_args()
 
     if args.subparser_name == "histo_all":
         args.print_ = True
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     args.func(args)
