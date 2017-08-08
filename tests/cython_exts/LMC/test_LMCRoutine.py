@@ -3,7 +3,7 @@ import numpy as np
 from mdlmc.cython_exts.LMC import LMCHelper
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from mdlmc.cython_exts.LMC.LMCHelper import JumprateFunction, AngleCutoff
-
+from mdlmc.cython_exts.LMC.LMCHelper import FermiFunctionWater 
 
 class TestLMCRoutine:
     def test_angle_cutoff(self):
@@ -38,3 +38,14 @@ class TestLMCRoutine:
         # angle PO_2O_1 = 45 -> prob = 0
         assert probs[0] == 1.0
         assert probs[1] == 0.0
+
+
+    def test_FermiFunctionWater(self):
+        a = 1.0
+        b = 1.0
+        c = 1.0
+        jumprate_fct = FermiFunctionWater(a, b, c)
+        test1 = jumprate_fct.evaluate(0.00)
+        test2 = jumprate_fct.evaluate(1.00)
+        assert  test1 == 0.0
+        assert  test2 != 0.0
