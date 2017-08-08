@@ -347,6 +347,7 @@ def main(*args):
     else:
         intervalnumber = args.intervalnumber
         intervallength = args.intervallength
+        resolution = 1
 
         if args.diffcoeff:
             diffcoeff, err = calculate_diffusion_coefficient(trajectory, pbc, intervalnumber,
@@ -369,7 +370,7 @@ def main(*args):
             [k for k, v in args.output_unit.to_tuple()[1] if v == -1.0][0])
         output_length_unit = ureg.parse_expression(
             [k for k, v in args.output_unit.to_tuple()[1] if v == 2.0][0])
-        time_w_unit = np.arange(0, msd_mean.shape[0], step) * args.timestep
+        time_w_unit = np.arange(0, msd_mean.shape[0], step) * args.timestep * resolution
         msd_w_unit = msd_mean[::step] * args.length_unit**2
         yerr_w_unit = np.sqrt(msd_var[::step]) * args.length_unit**2
         plt.errorbar(time_w_unit.to(output_time_unit).magnitude,
@@ -393,8 +394,8 @@ def main(*args):
         ss_tot = np.sum((msd_mean[args.fit_from:] - np.mean(msd_mean[args.fit_from:]))**2)
         print("R² =", 1 - ss_res / ss_tot)
 
-        m = m * args.length_unit**2 / args.timestep
-        m_err = m_err * args.length_unit**2 / args.timestep
+        m = m * args.length_unit**2 / (args.timestep * resolution)
+        m_err = m_err * args.length_unit**2 / (args.timestep * resolution)
 
         print()
         print("Slope in {}:".format(args.output_unit))
@@ -407,12 +408,13 @@ def main(*args):
                                               args.output_unit))
 
         if args.plot:
-            fit = m * np.arange(msd_mean.shape[0]) * args.timestep + y_0 * args.length_unit**2
-            t = np.arange(msd_mean.shape[0]) * args.timestep
+            fit = m * np.arange(msd_mean.shape[0]) * args.timestep * resolution\
+                  + y_0 * args.length_unit**2
+            t = np.arange(msd_mean.shape[0]) * args.timestep * resolution
             plt.plot(t.to(output_time_unit), fit.to(output_length_unit**2))
 
             if args.fit_from:
-                fit_start = (args.fit_from * args.timestep).to(output_time_unit).magnitude
+                fit_start = (args.fit_from * args.timestep * resolution).to(output_time_unit).magnitude
                 plt.vlines(fit_start, *plt.ylim())
             plt.show()
 
