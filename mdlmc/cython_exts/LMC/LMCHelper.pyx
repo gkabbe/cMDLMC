@@ -66,7 +66,7 @@ cdef class FermiFunctionWater(JumprateFunction):
         self.c = c
 
     cdef double _evaluate(self, double distance) nogil:
-        if distance > 0.00001:
+        if distance == 0.0:
             return 0.0
         else:
             return self.a / (1 + exp((distance - self.b) / self.c))
