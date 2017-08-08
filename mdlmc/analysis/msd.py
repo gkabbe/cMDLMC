@@ -262,17 +262,16 @@ def main(*args):
 
     parser.add_argument("filename", help="Trajectory filename")
     parser.add_argument("pbc", nargs=3, type=float, help="Periodic boundaries")
-    parser.add_argument("timestep", type=ureg.parse_expression, help="MD timestep (e.g. 0.5fs)")
+    parser.add_argument("timestep", help="MD timestep (e.g. 0.5fs)")
     parser.add_argument("atom", type=str, help="Atom name")
-    parser.add_argument("--length_unit", type=ureg.parse_expression, default="angstrom",
+    parser.add_argument("--length_unit", default="angstrom",
                         help="Length unit of atom coordinates")
     parser.add_argument("--trajectory_cut", type=int,
                         help="Restrict trajectory to specified number of frames")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbosity")
     parser.add_argument("--plot", action="store_true", help="Plot results")
     parser.add_argument("--fit_from", type=int, help="Fit MSD from specified data point")
-    parser.add_argument("-u", "--output_unit", type=ureg.parse_expression,
-                        default="angstrom**2/ps",
+    parser.add_argument("-u", "--output_unit", default="angstrom**2/ps",
                         help="In which unit to output MSD and diffusion coefficient")
     parser.add_argument("--diffcoeff", action="store_true",
                         help="Calculate diffusion coefficient for each interval")
@@ -292,12 +291,6 @@ def main(*args):
                                                                         " of the trajectory")
     parser_multi.add_argument("--subinterval_delay", type=int, default=1, help="Distance between"
                                                                                " intervals")
-
-    parser_water = subparsers.add_parser("water", help="MSD for single excess proton")
-    parser_water.add_argument("intervalnumber", type=int,
-                              help="Number of intervals over which to average")
-    parser_water.add_argument("intervallength", type=int, help="Interval length")
-
     args = parser.parse_args()
 
     if args.verbose:
@@ -307,6 +300,14 @@ def main(*args):
 
     pbc = np.array(args.pbc)
     atom_box = AtomBoxCubic(pbc)
+
+    for attr in ("timestep", "length_unit", "output_unit"):
+        val = getattr(args, attr)
+        if val == "None":
+            val = ureg["dimensionless"]
+        else:
+            val = ureg.parse_expression(val)
+        setattr(args, attr, val)
 
     if type(args.timestep) != ureg.Quantity:
         raise ValueError("You forgot to assign a unit to timestep!")
@@ -366,10 +367,11 @@ def main(*args):
         step = 1
 
     if args.plot:
-        output_time_unit = ureg.parse_expression(
-            [k for k, v in args.output_unit.to_tuple()[1] if v == -1.0][0])
-        output_length_unit = ureg.parse_expression(
-            [k for k, v in args.output_unit.to_tuple()[1] if v == 2.0][0])
+        prefac, units = args.output_unit.to_tuple()
+        if len(units) == 0:
+            output_length_unit = output_time_unit = ureg["dimensionless"]
+        else:
+            (output_length_unit, _), (output_time_unit, _) = units
         time_w_unit = np.arange(0, msd_mean.shape[0], step) * args.timestep * resolution
         msd_w_unit = msd_mean[::step] * args.length_unit**2
         yerr_w_unit = np.sqrt(msd_var[::step]) * args.length_unit**2
