@@ -268,6 +268,7 @@ def main(*args):
                         help="Length unit of atom coordinates")
     parser.add_argument("--trajectory_cut", type=int,
                         help="Restrict trajectory to specified number of frames")
+    parser.add_argument("--no-units", "-n", action="store_true", help="Turn off units")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbosity")
     parser.add_argument("--plot", action="store_true", help="Plot results")
     parser.add_argument("--fit_from", type=int, help="Fit MSD from specified data point")
@@ -303,7 +304,7 @@ def main(*args):
 
     for attr in ("timestep", "length_unit", "output_unit"):
         val = getattr(args, attr)
-        if val == "None":
+        if val == "None" or args.no_units:
             val = ureg["dimensionless"]
         else:
             val = ureg.parse_expression(val)
