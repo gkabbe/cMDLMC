@@ -1,6 +1,10 @@
-# cython: profile = False
+# cython: profile = True
 # cython: boundscheck = False, wraparound = False, cdivision = True, initializedcheck = False
 # cython: language_level = 3
+# cython: linetrace=True
+# distutils: define_macros=CYTHON_TRACE=1
+# distutils: define_macros=CYTHON_TRACE_NOGIL=1
+
 import time
 
 import numpy as np
@@ -17,7 +21,6 @@ from libcpp.algorithm cimport sort
 from libcpp cimport bool
 from libc.stdio cimport *
 
-from mdlmc.cython_exts.LMC.PBCHelper cimport AtomBox, AtomBoxCubic, AtomBoxMonoclinic
 
 cdef extern from "math.h":
     double sqrt(double x) nogil
@@ -25,18 +28,19 @@ cdef extern from "math.h":
     double cos(double x) nogil
     double acos(double x) nogil
 
+
 ctypedef np.int_t DTYPE_t
 cdef double PI = np.pi
-
 cdef double R = 1.9872041e-3   # universal gas constant in kcal/mol/K
 
 
-# Define Function Objects. These can later be substituted easily by LMCRoutine
+# Define Jump rate classes which can be plugged into LMCHelper
 cdef class JumprateFunction:
     def evaluate(self, double distance):
         return self._evaluate(distance)
     cdef double _evaluate(self, double distance) nogil:
         return 0
+
 
 @cython.final
 cdef class FermiFunction(JumprateFunction):
@@ -52,6 +56,7 @@ cdef class FermiFunction(JumprateFunction):
 
     cdef double _evaluate(self, double distance) nogil:
         return self.a / (1 + exp((distance - self.b) / self.c))
+
 
 @cython.final
 cdef class FermiFunctionWater(JumprateFunction):
@@ -71,6 +76,7 @@ cdef class FermiFunctionWater(JumprateFunction):
         else:
             return self.a / (1 + exp((distance - self.b) / self.c))
 
+
 @cython.final
 cdef class ExponentialFunction(JumprateFunction):
     """Calculates the jump probability according to the function
@@ -89,9 +95,9 @@ cdef class ExponentialFunction(JumprateFunction):
 @cython.final
 cdef class ActivationEnergyFunction(JumprateFunction):
     """Calculates the activation energy according to the function
-        E(x) = a * (x - d0) / sqrt(b + 1 / (x -d0)**2)
-    Finally, E(x) is inserted into the Arrhenius equation
-        f(x, T) = A * exp(-E(x)/(k_B * T)"""
+           E(x) = a * (x - d0) / sqrt(b + 1 / (x -d0)**2)
+       Finally, E(x) is inserted into the Arrhenius equation
+           f(x, T) = A * exp(-E(x)/(k_B * T)"""
     cdef:
         double A, a, b, d0, T
 
@@ -174,6 +180,7 @@ cdef class LMCRoutine:
         cdef:
             int i
             double[:] pbc_extended
+
         self.r = gsl_rng_alloc(gsl_rng_mt19937)
         self.jumps = 0
         self.cutoff_radius = cutoff_radius
@@ -191,7 +198,9 @@ cdef class LMCRoutine:
 
         if type(seed) != int:
             seed = time.time()
+
         gsl_rng_set(self.r, seed)
+
         if verbose:
             print("# Using seed", seed)
 
@@ -391,102 +400,3 @@ cdef class LMCRoutine:
     def reset_jumpcounter(self):
         self.jumps = 0
 
-
-@cython.final
-cdef class KMCRoutine:
-    """Uses "classical" KMC (i.e. not constant, but randomly drawn time steps) to determine the
-    excess proton motion in a water box."""
-
-    cdef:
-        JumprateFunction jumprate_fct
-        gsl_rng * r
-        double cutoff_radius
-        AtomBox atombox
-        public np.uint8_t [:] oxygen_lattice
-        int proton_position
-        int n_atoms
-
-        vector[vector[double]] jump_probability_per_frame
-        double abc
-
-    def __cinit__(self, AtomBox atombox, np.uint8_t[:] oxygen_lattice,
-                  JumprateFunction jumprate_fct, int n_atoms=3):
-        self.atombox = atombox
-        self.jumprate_fct = jumprate_fct
-        self.r = gsl_rng_alloc(gsl_rng_mt19937)
-        self.oxygen_lattice = oxygen_lattice
-        self.n_atoms = n_atoms
-
-        proton_positions, = np.where(oxygen_lattice)
-        assert proton_positions.size == 1, "Only one excess proton, please!"
-
-        self.proton_position = proton_positions[0]
-
-    @cython.wraparound(True)
-    def determine_distances(self, oxygen_trajectory, double upper_bound=1e8):
-        """Save probabilities for the closest 3 oxygens.
-        This corresponds to the first solvation shell of H2O."""
-        cdef:
-            int f, i, j, k
-            np.ndarray[np.float32_t, ndim=3] dist_array
-            np.ndarray[double, ndim=3] oxy_traj
-            np.ndarray[np.int32_t, ndim=3] all_indices
-            vector[double] distances
-            vector[size_t] neighbor_indices
-
-        all_indices = np.zeros(
-            (oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], self.n_atoms), dtype=np.int32)
-        dist_array = np.zeros(
-            (oxygen_trajectory.shape[0], oxygen_trajectory.shape[1], self.n_atoms), dtype=np.float32)
-
-        oxy_traj = np.array(oxygen_trajectory, dtype=float)
-
-        # indices stores the indices of the n_atoms closest oxygen neighbors
-        neighbor_indices.resize(self.n_atoms)
-
-        with nogil:
-            for f in range(oxy_traj.shape[0]):
-                for i in range(oxy_traj.shape[1]):
-                    distances.clear()
-                    for j in range(oxy_traj.shape[1]):
-                        # Collect all distances
-                        dist = self.atombox.length_ptr(&oxy_traj[f, j, 0],
-                                                       &oxy_traj[f, i, 0])
-                        if i != j:
-                            distances.push_back(dist)
-                        else:
-                            # Set atom's distance to itself to large value, so it won't find
-                            # itself as a neighbor
-                            distances.push_back(10**8)
-                    gsl_sort_smallest_index(&neighbor_indices[0], self.n_atoms, &distances[0], 1,
-                                            distances.size())
-
-                    for k in range(self.n_atoms):
-                        dist_array[f, i, k] = distances[neighbor_indices[k]]
-                        all_indices[f, i, k] = neighbor_indices[k]
-        return dist_array, all_indices
-
-#    def determine_transition(self, double[:, ::1] oxygen_frame):
-#        cdef:
-#            int i
-#            double dist
-#            double rand
-#
-#            vector[int] destination
-#            vector[double] probability
-#
-#        for i in range(oxygen_frame.shape[0]):
-#            if i != self.proton_position:
-#                destination.push_back(i)
-#                dist = self.atombox.length_ptr(&oxygen_frame[self.proton_position, 0],
-#                                               &oxygen_frame[i, 0])
-#                probability.push_back(self.jumprate_fct.evaluate(dist))
-#
-#        while True:
-#            i = gsl_rng_uniform_int(self.r, oxygen_frame.shape[0] - 1)
-#            rand = gsl_rng_uniform(self.r)
-#            if rand < probability[i]:
-#                self.oxygen_lattice[destination[i]] = self.oxygen_lattice[self.proton_position]
-#                self.oxygen_lattice[self.proton_position] = 0
-#                self.proton_position = destination[i]
-#                return destination[i]
