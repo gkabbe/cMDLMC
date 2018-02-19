@@ -295,7 +295,7 @@ class KMCGen:
         while True:
             for dists in distance_gen:
                 if self.waiting_time > 0:
-                    logger.debug("Waiting time:", self.waiting_time)
+                    logger.debug("Waiting time: %s", self.waiting_time)
                     prob = np.zeros(3)
                     self.waiting_time -= 1
                 else:
