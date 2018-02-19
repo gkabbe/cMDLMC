@@ -13,7 +13,7 @@ import pint
 from numba import jit
 from scipy.optimize import curve_fit
 
-from mdlmc.IO import xyz_parser
+from mdlmc.IO import trajectory_parser
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 
@@ -320,17 +320,17 @@ def main(*args):
     else:
         if os.path.splitext(args.filename)[1] == "npz":
             if args.atom == "AH":
-                trajectory = xyz_parser.load_trajectory_from_npz(args.filename, verbose=args.verbose)
+                trajectory = trajectory_parser.load_trajectory_from_npz(args.filename, verbose=args.verbose)
             else:
-                trajectory, = xyz_parser.load_trajectory_from_npz(args.filename, args.atom,
-                                                                  verbose=args.verbose)
+                trajectory, = trajectory_parser.load_trajectory_from_npz(args.filename, args.atom,
+                                                                         verbose=args.verbose)
         else:
             if args.atom == "AH":
-                trajectory = xyz_parser.load_atoms(args.filename, verbose=args.verbose,
-                                                    clip=args.trajectory_cut)
+                trajectory = trajectory_parser.load_atoms(args.filename, verbose=args.verbose,
+                                                          clip=args.trajectory_cut)
             else:
-                trajectory, = xyz_parser.load_atoms(args.filename, args.atom, verbose=args.verbose,
-                                                    clip=args.trajectory_cut)
+                trajectory, = trajectory_parser.load_atoms(args.filename, args.atom, verbose=args.verbose,
+                                                           clip=args.trajectory_cut)
         if args.atom == "AH":
             trajectory = npa.get_acidic_protons(trajectory, atom_box, verbose=args.verbose)
 

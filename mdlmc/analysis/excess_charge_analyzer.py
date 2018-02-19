@@ -6,7 +6,7 @@ import matplotlib.pylab as plt
 import numpy as np
 from scipy.interpolate import interp1d
 
-from mdlmc.IO import xyz_parser
+from mdlmc.IO import trajectory_parser
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
 from mdlmc.misc.tools import argparse_compatible
 from mdlmc.KMC.excess_kmc import rescale_interpolation_function
@@ -74,14 +74,14 @@ class HydroniumHelper:
 def track_collective_variable(trajectory, pbc, *, visualize=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
+    oxygens, protons = trajectory_parser.load_atoms(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
     excess_charge_start_index = hydronium_helper.determine_hydronium_index(oxygens[0], protons[0],
                                                                            atombox)
     excess_charge_start_position = oxygens[0, excess_charge_start_index]
     excess_charge_colvar_0 = excess_charge_collective_variable(oxygens[0], protons[0])
     if visualize:
-        atoms = xyz_parser.load_atoms(trajectory)
+        atoms = trajectory_parser.load_atoms(trajectory)
 
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
         # Like in the PVPA paper, create a collective variable that tracks the excess charge motion
@@ -103,9 +103,9 @@ def track_collective_variable(trajectory, pbc, *, visualize=False):
 def track_hydronium_ion(trajectory, pbc, *, visualize=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
+    oxygens, protons = trajectory_parser.load_atoms(trajectory, "O", "H")
     if visualize:
-        atoms = xyz_parser.load_atoms(trajectory)
+        atoms = trajectory_parser.load_atoms(trajectory)
     hydronium_helper = HydroniumHelper()
     for i, (oxygen_frame, proton_frame) in enumerate(zip(oxygens, protons)):
         hydronium_index = hydronium_helper.determine_hydronium_index(oxygen_frame, proton_frame,
@@ -127,7 +127,7 @@ def print_hydronium_and_solvationshell(trajectory, pbc, *, frame):
     with open(trajectory, "rb") as f:
         atomnumber = int(f.readline())
         f.seek(0)
-        traj = xyz_parser.parse_xyz(f, atomnumber + 2, no_of_frames=frame + 1)
+        traj = trajectory_parser.parse_xyz(f, atomnumber + 2, no_of_frames=frame + 1)
     oxygen_frame = traj["pos"][traj["name"] == b"O"]
     proton_frame = traj["pos"][traj["name"] == b"H"]
 
@@ -168,7 +168,7 @@ def show_kmc_rescaling(trajectory, pbc, *, rescaling_file, oxygen_index, frame):
     with open(trajectory, "rb") as f:
         atomnumber = int(f.readline())
         f.seek(0)
-        traj = xyz_parser.parse_xyz(f, atomnumber + 2, no_of_frames=frame + 1)
+        traj = trajectory_parser.parse_xyz(f, atomnumber + 2, no_of_frames=frame + 1)
     oxygen_frame = traj[frame]["pos"][traj[frame]["name"] == b"O"]
     proton_frame = traj[frame]["pos"][traj[frame]["name"] == b"H"]
 
@@ -218,7 +218,7 @@ def distance_histogram_between_hydronium_and_closest_oxygen(trajectory, pbc, dmi
                                                             plot=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
+    oxygens, protons = trajectory_parser.load_atoms(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
 
     # distance_histogram = np.zeros(args.bins, dtype=int)
@@ -251,7 +251,7 @@ def distance_histogram_between_hydronium_and_all_oxygens(trajectory, pbc, dmin, 
                                                          normalized=False):
     pbc = np.array(pbc)
     atombox = AtomBoxCubic(pbc)
-    oxygens, protons = xyz_parser.load_atoms(trajectory, "O", "H")
+    oxygens, protons = trajectory_parser.load_atoms(trajectory, "O", "H")
     hydronium_helper = HydroniumHelper()
 
     if normalized:

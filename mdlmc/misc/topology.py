@@ -4,7 +4,7 @@ import numpy as np
 from collections import Counter
 import argparse
 
-from mdlmc.IO import xyz_parser
+from mdlmc.IO import trajectory_parser
 from mdlmc.cython_exts.LMC.LMCHelper import AtomBoxCubic, AtomBoxMonoclinic
 
 def main(*args):
@@ -30,7 +30,7 @@ def main(*args):
 
     frames = dict()
     atom_types = list(c.keys())
-    atoms = xyz_parser.load_atoms(fname, *atom_types, clip=1)
+    atoms = trajectory_parser.load_atoms(fname, *atom_types, clip=1)
 
     for a, f in zip(atom_types, atoms):
         frames[a] = f

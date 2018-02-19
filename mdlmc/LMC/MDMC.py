@@ -6,7 +6,7 @@ import time
 import numpy as np
 from mdlmc.IO.config_parser import print_confighelp, load_configfile, print_config_template, \
     check_cmdlmc_settings, print_settings
-from mdlmc.IO.xyz_parser import load_atoms
+from mdlmc.IO.trajectory_parser import load_atoms
 from mdlmc.cython_exts.LMC import LMCHelper
 from mdlmc.cython_exts.LMC import PBCHelper
 from mdlmc.cython_exts.LMC.LMCHelper import ActivationEnergyFunction, FermiFunction, \

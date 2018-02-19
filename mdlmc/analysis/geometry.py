@@ -2,7 +2,7 @@ import sys
 import numpy as np
 
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
-from mdlmc.IO import xyz_parser
+from mdlmc.IO import trajectory_parser
 
 
 def distance(a1, a2):
@@ -15,7 +15,7 @@ def determine_neighbors():
     pbc = np.array([x, y, z])
     atom_index = int(atom_index)
     radius = float(radius)
-    trajectory = xyz_parser.load_atoms(filename)
+    trajectory = trajectory_parser.load_atoms(filename)
     atombox = AtomBoxCubic((x, y, z))
 
     center = trajectory[0][atom_index]

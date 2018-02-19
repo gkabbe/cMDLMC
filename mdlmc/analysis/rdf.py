@@ -9,7 +9,7 @@ import numpy as np
 
 import mdlmc.atoms.numpyatom as npa
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
-from mdlmc.IO import xyz_parser
+from mdlmc.IO import trajectory_parser
 from mdlmc.misc.tools import argparse_compatible, chunk, chunk_trajectory
 
 
@@ -162,10 +162,10 @@ def prepare_trajectory(filename, pbc, bins, dmin, dmax, clip, elements, acidic_p
     _, ext = os.path.splitext(filename)
     if ext == ".hdf5":
         logger.info("Loading hdf5 file")
-        atom_names, trajectory = xyz_parser.load_trajectory_from_hdf5(filename, hdf5_key=hdf5_key)
+        atom_names, trajectory = trajectory_parser.load_trajectory_from_hdf5(filename, hdf5_key=hdf5_key)
     else:
         logger.info("Loading xyz file")
-        trajectory = xyz_parser.load_atoms(filename, clip=clip)
+        trajectory = trajectory_parser.load_atoms(filename, clip=clip)
         atom_names = trajectory[0]["name"].astype(str)
         trajectory = np.array(trajectory["pos"], order="C")
 

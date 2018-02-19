@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pylab as plt
 import pint
 
-from mdlmc.IO import xyz_parser
+from mdlmc.IO import trajectory_parser
 from mdlmc.atoms import numpyatom as npa
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxMonoclinic, AtomBoxCubic
 from mdlmc.misc.tools import argparse_compatible, online_variance_generator
@@ -109,7 +109,7 @@ def proton_jump_probability_at_oxygen_distance(filename, dmin, dmax, bins, pbc, 
     logger.info("# Periodic box lengths used:")
     logger.info(pbc)
 
-    atoms = xyz_parser.load_atoms(filename, verbose=verbose)
+    atoms = trajectory_parser.load_atoms(filename, verbose=verbose)
 
     protonated_oxygens_filename = re.sub("\..{3}$", "", filename) + "_cbo.npy"
     if not os.path.exists(protonated_oxygens_filename):
@@ -185,7 +185,7 @@ def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
                                            nonorthorhombic_box=False, water=False, plot=False,
                                            no_shuttling=False, verbose=False, time_unit=None):
 
-    atoms = xyz_parser.load_atoms(filename)
+    atoms = trajectory_parser.load_atoms(filename)
 
     protonated_oxygens_filename = re.sub("\..{3}$", "", filename) + "_cbo.npy"
     if not os.path.exists(protonated_oxygens_filename):
@@ -312,7 +312,7 @@ def oxygen_and_proton_motion_during_a_jump(filename, pbc, time_window, *,
 def oxygen_relaxation(filename, pbc, time_window):
     """After an excess proton transfer, determine the relaxation of the H3O+ neighbors"""
 
-    atoms = xyz_parser.load_atoms(filename)
+    atoms = trajectory_parser.load_atoms(filename)
     oxygen_distances = []
 
     protonated_oxygens_filename = re.sub("\..{3}$", "", filename) + "_cbo.npy"
