@@ -8,13 +8,19 @@
 *.so
 *.swp
 
+.cache
+.coverage
+.idea/
+.project
+.pydevproject
+.pytest_cache/
+.style.yapf
 build/
 cover
 cython_debug/
 dist/
 doxy/
 htmlcov/
-.idea/
 mdkmc.egg-info/
 mdlmc.egg-info/
 sphinx
