@@ -7,6 +7,7 @@ import os
 import time
 import types
 import sys
+from typing import Iterable
 
 import numpy as np
 import tables
@@ -43,6 +44,29 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
 
     data = np.genfromtxt(filter_, dtype=dtype_xyz_bytes)
     return data.reshape(output_shape)
+
+
+def filter_lines(f, frame_len, no_of_frames):
+    for i, line in enumerate(f):
+        if i % frame_len not in (0, 1):
+            yield line
+            if (i + 1) // frame_len == no_of_frames:
+                break
+
+
+def filter_selection(f, s, frame_len):
+    for i, line in enumerate(f):
+        if i % frame_len in s:
+            yield line
+
+
+def xyz_generator(filename: str, frame_len: int, no_of_frames: int = 1) -> Iterable[np.array]:
+    with open(filename, "r") as f:
+        while True:
+            data = np.genfromtxt(filter_lines(f, frame_len, no_of_frames), dtype=dtype_xyz_bytes)
+            if data.shape[0] == 0:
+                break
+            yield data
 
 
 def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
