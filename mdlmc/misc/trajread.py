@@ -1,6 +1,6 @@
 import sys
 from mdlmc.IO import trajectory_parser
-from mdlmc.atoms import numpyatom as npa
+from mdlmc.atoms import numpy_atom as npa
 
 
 def main(*args):

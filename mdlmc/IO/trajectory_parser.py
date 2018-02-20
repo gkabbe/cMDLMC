@@ -14,9 +14,9 @@ import tables
 import h5py
 import mdtraj
 
-from mdlmc.atoms import numpyatom as npa
-from mdlmc.atoms.numpyatom import dtype_xyz, dtype_xyz_bytes
-from mdlmc.misc.tools import argparse_compatible, chunk
+from ..atoms import numpy_atom as npa
+from ..atoms.numpy_atom import dtype_xyz, dtype_xyz_bytes
+from ..misc.tools import argparse_compatible, chunk
 
 
 logger = logging.getLogger(__name__)

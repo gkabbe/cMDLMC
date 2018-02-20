@@ -4,13 +4,13 @@ import sys
 import time
 
 import numpy as np
-from mdlmc.IO.config_parser import print_confighelp, load_configfile, print_config_template, \
+from ..IO.config_parser import print_confighelp, load_configfile, print_config_template, \
     check_cmdlmc_settings, print_settings
-from mdlmc.IO.trajectory_parser import load_atoms
-from mdlmc.cython_exts.LMC import LMCHelper
-from mdlmc.cython_exts.LMC import PBCHelper
-from mdlmc.cython_exts.LMC.LMCHelper import ActivationEnergyFunction, FermiFunction, \
-    ExponentialFunction, FermiFunctionWater
+from ..IO.trajectory_parser import load_atoms
+from ..cython_exts.LMC import LMCHelper
+from ..cython_exts.LMC import PBCHelper
+from mdlmc.cython_exts.LMC.LMCHelper import (ActivationEnergyFunction, FermiFunction,
+                                             ExponentialFunction, FermiFunctionWater)
 
 
 def get_git_version():

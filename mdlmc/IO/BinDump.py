@@ -4,7 +4,7 @@ import os
 import re
 
 import numpy as np
-from mdlmc.atoms import numpyatom as npa
+from mdlmc.atoms import numpy_atom as npa
 from mdlmc.cython_exts.atoms import numpyatom as cython_npa
 
 
