@@ -7,7 +7,7 @@ import os
 import time
 import types
 import sys
-from typing import Iterable
+from typing import Iterator
 
 import numpy as np
 import tables
@@ -60,7 +60,7 @@ def filter_selection(f, s, frame_len):
             yield line
 
 
-def xyz_generator(filename: str, frame_len: int, no_of_frames: int = 1) -> Iterable[np.array]:
+def xyz_generator(filename: str, frame_len: int, no_of_frames: int = 1) -> Iterator[np.array]:
     with open(filename, "r") as f:
         while True:
             data = np.genfromtxt(filter_lines(f, frame_len, no_of_frames), dtype=dtype_xyz_bytes)
