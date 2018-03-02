@@ -9,13 +9,13 @@ logger = logging.getLogger(__name__)
 dtype_xyz = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
 dtype_xyz_bytes = np.dtype([("name", np.string_, 2), ("pos", np.float64, (3,))])
 
-atom_masses = {'C': 12.001,
+atom_masses = {'C' : 12.001,
                'Cl': 35.45,
                'Cs': 132.90545196,
-               'H': 1.008,
-               'O': 15.999,
-               'P': 30.973761998,
-               'S': 32.06,
+               'H' : 1.008,
+               'O' : 15.999,
+               'P' : 30.973761998,
+               'S' : 32.06,
                'Se': 78.971}
 
 
