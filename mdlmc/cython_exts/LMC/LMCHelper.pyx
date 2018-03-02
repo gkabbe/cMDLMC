@@ -21,6 +21,8 @@ from libcpp.algorithm cimport sort
 from libcpp cimport bool
 from libc.stdio cimport *
 
+from mdlmc.cython_exts.LMC.PBCHelper cimport AtomBox, AtomBoxCubic, AtomBoxMonoclinic
+
 
 cdef extern from "math.h":
     double sqrt(double x) nogil
