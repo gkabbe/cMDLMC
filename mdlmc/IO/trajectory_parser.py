@@ -62,7 +62,7 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
     return data.reshape(output_shape)
 
 
-def filter_lines(f, frame_len, no_of_frames):
+def filter_lines(f, frame_len, no_of_frames=None):
     for i, line in enumerate(f):
         if i % frame_len not in (0, 1):
             yield line
