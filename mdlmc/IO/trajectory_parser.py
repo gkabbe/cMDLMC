@@ -22,6 +22,22 @@ from ..misc.tools import argparse_compatible, chunk
 logger = logging.getLogger(__name__)
 
 
+@contextmanager
+def as_file(file_or_string):
+    need_to_close = False
+    # If the input is no file, try to open it
+    if not isinstance(file_or_string, IOBase):
+        logger.debug("Try to open filename %s", file_or_string)
+        file = open(file_or_string, "r")
+        need_to_close = True
+    else:
+        file = file_or_string
+    yield file
+
+    if need_to_close:
+        file.close()
+
+
 def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
     def filter_lines(f, frame_len):
         for i, line in enumerate(f):
