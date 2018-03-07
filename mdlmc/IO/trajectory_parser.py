@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 
 import argparse
-from functools import reduce
 import logging
 import os
+import sys
 import time
 import types
-import sys
+from collections.abc import Container
+from contextlib import contextmanager
+from functools import reduce
+from io import IOBase
 from typing import Iterator
+import warnings
 
-import numpy as np
-import tables
 import h5py
 import mdtraj
+import numpy as np
 
 from ..atoms import numpy_atom as npa
 from ..atoms.numpy_atom import dtype_xyz, dtype_xyz_bytes
