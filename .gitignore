@@ -24,5 +24,6 @@ htmlcov/
 mdkmc.egg-info/
 mdlmc.egg-info/
 sphinx
+src/
 stats/
 version_hash.py
