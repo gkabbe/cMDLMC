@@ -22,6 +22,9 @@ from ..atoms.numpy_atom import dtype_xyz, dtype_xyz_bytes
 from ..misc.tools import argparse_compatible, chunk
 
 
+warnings.filterwarnings('error')
+
+
 logger = logging.getLogger(__name__)
 
 
