@@ -82,11 +82,50 @@ def filter_selection(f, s, frame_len):
             yield line
 
 
-def xyz_generator(filename: str, frame_len: int, no_of_frames: int = 1) -> Iterator[np.array]:
-    with open(filename, "r") as f:
+def xyz_generator(filename: str, number_of_atoms: int = None,
+                  selection: Container = None) -> Iterator[np.array]:
+    """
+
+    Parameters
+    ----------
+    filename
+    number_of_atoms:
+        Number of atoms per frame
+    selection:
+        List of atom indices
+
+    Returns
+    -------
+
+    """
+
+    # Check if atom number is specified
+    # If not, try to read it from file
+    if not number_of_atoms:
+        logger.info("Number of atoms not specified. Will try to read it from xyz file")
+        with open(filename, "r") as f:
+            try:
+                number_of_atoms = int(f.readline())
+            except(("ValueError", "TypeError")):
+                logger.error("Could not read atom number from %s", filename)
+                raise
+
+    frame_len = number_of_atoms + 2
+
+    if selection:
+        def filter_(f):
+            yield from filter_selection(filter_lines(f, frame_len, no_of_frames=1), selection,
+                                        frame_len)
+    else:
+        def filter_(f):
+            yield from filter_lines(f, frame_len, no_of_frames=1)
+
+    with warnings.catch_warnings(), as_file(filename) as f:
         while True:
-            data = np.genfromtxt(filter_lines(f, frame_len, no_of_frames), dtype=dtype_xyz_bytes)
-            if data.shape[0] == 0:
+            try:
+                data = np.genfromtxt(filter_(f), dtype=dtype_xyz_bytes)
+            except Warning:
+                logger.info("Reached end of file")
                 break
             yield data
 
