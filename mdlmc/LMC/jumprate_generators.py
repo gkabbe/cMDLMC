@@ -2,8 +2,11 @@ from typing import Iterator
 
 import numpy as np
 
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBox
 
-def jumprate_generator_distance(trajectory_generator: Iterator[np.array]):
+
+def jumprate_generator(trajectory_generator: Iterator[np.array], atombox: AtomBox,
+                       acceptor_atom: str ="O"):
     """
     Converts frames of a trajectory into arrays consisting of
     donor index, acceptor index, and jump probability.
