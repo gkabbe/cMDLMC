@@ -132,12 +132,12 @@ class NeighborTopology:
         self.atombox = atombox
 
     def get_topology_bruteforce(self):
-        frame = next(self.trajectory)
-        topology_matrix = lil_matrix((frame.shape[0], frame.shape[0]), dtype=float)
-        for i, atom1 in enumerate(frame):
-            for j, atom2 in enumerate(frame):
-                if i != j:
-                    dist = self.atombox.length(atom1, atom2)
-                    if dist <= self.cutoff:
-                        topology_matrix[i, j] = dist
-        return topology_matrix.tocoo()
+        for frame in self.trajectory:
+            topology_matrix = lil_matrix((frame.shape[0], frame.shape[0]), dtype=float)
+            for i, atom1 in enumerate(frame):
+                for j, atom2 in enumerate(frame):
+                    if i != j:
+                        dist = self.atombox.length(atom1, atom2)
+                        if dist <= self.cutoff:
+                            topology_matrix[i, j] = dist
+            yield topology_matrix.tocoo()
