@@ -1,12 +1,12 @@
-import logging
-
+import daiquiri
 import numpy as np
 
 from mdlmc.atoms.numpy_atom import NeighborTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 
 
-logger = logging.getLogger(__name__)
+logger = daiquiri.getLogger(__name__)
+daiquiri.setup(daiquiri.logging.DEBUG)
 
 
 def test_NeighborTopology_get_topology_bruteforce():
@@ -25,16 +25,32 @@ def test_NeighborTopology_get_topology_bruteforce():
     destination = [1,   4,   0,   2,   1,   0]
     dist        = [1.5, 1.0, 1.5, 1.5, 1.5, 1.0]
 
-    atoms = atoms[None, ...]
-
     cutoff = 2.0
 
     top = NeighborTopology(iter(atoms), cutoff, atombox)
 
-    conn = next(top.get_topology_bruteforce())
+    conn = top.get_topology_bruteforce(atoms)
 
-    for st_target, de_target, di_target, st, de, di in zip(start, destination, dist, conn.row,
-                                                           conn.col, conn.data):
+    for st_target, de_target, di_target, st, de, di in zip(start, destination, dist, *conn):
         assert st_target == st
         assert de_target == de
         assert di_target == di
+
+
+def test_NeighborTopology_get_topology_verlet_list():
+    def trajgen():
+        atoms = np.random.uniform(0, 10, size=(5, 3))
+        while True:
+            atoms += np.random.normal(size=(5, 3), scale=4)
+            yield atoms.copy()
+
+    pbc = [10, 10, 10]
+    atombox = AtomBoxCubic(pbc)
+
+    top = NeighborTopology(trajgen(), 3.0, atombox)
+
+    for i, (start, dest, dist) in enumerate(top.get_topology_verlet_list()):
+        logger.info("%s %s %s", start, dest, dist)
+        if i == 5:
+            break
+
