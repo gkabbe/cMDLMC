@@ -20,7 +20,6 @@ cdef extern from "math.h":
 
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 
 cdef class AtomBox:
