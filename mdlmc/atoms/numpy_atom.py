@@ -125,8 +125,17 @@ def print_center_of_mass_commandline(*args):
 class NeighborTopology:
     """Keeps track of the connections between atoms.
     Given a cutoff distance, for each atom the atoms within this
-    distance will be calculated."""
-    def __init__(self, trajectory: Iterator[np.ndarray], cutoff: float, atombox: AtomBox) -> None:
+    distance will be determined."""
+    def __init__(self, trajectory: Iterator[np.ndarray], cutoff: float, atombox: AtomBox,
+                 buffer: float = 3.0) -> None:
+        """
+        Parameters
+        ----------
+        trajectory
+        cutoff
+        atombox
+        buffer
+        """
         self.trajectory = trajectory
         self.cutoff = cutoff
         self.atombox = atombox
