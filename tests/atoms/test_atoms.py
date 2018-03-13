@@ -9,7 +9,9 @@ from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 logger = logging.getLogger(__name__)
 
 
-def test_NeighborTopology():
+def test_NeighborTopology_get_topology_bruteforce():
+    """Assert that NeighborTopology correctly identifies the connection between the
+    atoms"""
     periodic_boundaries = [10, 10, 10]
     atombox = AtomBoxCubic(periodic_boundaries)
 
@@ -29,7 +31,7 @@ def test_NeighborTopology():
 
     top = NeighborTopology(iter(atoms), cutoff, atombox)
 
-    conn = top.get_topology_bruteforce()
+    conn = next(top.get_topology_bruteforce())
 
     for st_target, de_target, di_target, st, de, di in zip(start, destination, dist, conn.row,
                                                            conn.col, conn.data):
