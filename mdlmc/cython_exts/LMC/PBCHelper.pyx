@@ -27,15 +27,6 @@ cdef class AtomBox:
     """The AtomBox class takes care of all distance and angle calculations.
     Depending on the periodic boundary conditions of the system, either the subclass
     AtomBoxCubic or AtomBoxMonoclinic need to be instantiated."""
-    # cdef:
-    #     public double[:, :, ::1] oxygen_trajectory
-    #     public double[:, :, ::1] phosphorus_trajectory
-    #     double[:] periodic_boundaries
-    #     public double[:] periodic_boundaries_extended
-    #     double[:, ::1] pbc_matrix
-    #     int[:] box_multiplier
-    #     int oxygen_number_extended
-    #     int phosphorus_number_extended
 
     def __cinit__(self, periodic_boundaries, *args, box_multiplier=(1, 1, 1), **kwargs):
         self.periodic_boundaries = np.array(periodic_boundaries, dtype=float)
@@ -359,4 +350,3 @@ cdef class AtomBoxWaterRampConversion(AtomBoxWater):
         else:
             new_distance = distance
         return new_distance
-
