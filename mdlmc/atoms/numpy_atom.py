@@ -155,3 +155,18 @@ class NeighborTopology:
         for frame in self.trajectory:
             yield self.get_topology_bruteforce(frame)
 
+    def get_topology_verlet_list(self):
+        last_frame = None
+        atombox = self.atombox
+        logger.debug("start verlet list")
+        for frame in self.trajectory:
+            logger.debug(frame)
+            if last_frame is None:
+                yield self.get_topology_bruteforce(frame)
+            else:
+                dr = atombox.length(last_frame, frame)
+                logger.debug("dr = %s", dr)
+                yield 1, 2, 3
+
+            last_frame = frame
+
