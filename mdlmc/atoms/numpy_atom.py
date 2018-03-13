@@ -1,6 +1,12 @@
+from itertools import tee
 import sys
+from typing import Iterator
 import numpy as np
 import logging
+
+from scipy.sparse import lil_matrix
+
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBox
 
 
 logger = logging.getLogger(__name__)
@@ -114,3 +120,24 @@ def print_center_of_mass(npa_traj):
 def print_center_of_mass_commandline(*args):
     trajectory = np.load(sys.argv[1])["trajectory"]
     print_center_of_mass(trajectory)
+
+
+class NeighborTopology:
+    """Keeps track of the connections between atoms.
+    Given a cutoff distance, for each atom the atoms within this
+    distance will be calculated."""
+    def __init__(self, trajectory: Iterator[np.ndarray], cutoff: float, atombox: AtomBox) -> None:
+        self.trajectory = trajectory
+        self.cutoff = cutoff
+        self.atombox = atombox
+
+    def get_topology_bruteforce(self):
+        frame = next(self.trajectory)
+        topology_matrix = lil_matrix((frame.shape[0], frame.shape[0]), dtype=float)
+        for i, atom1 in enumerate(frame):
+            for j, atom2 in enumerate(frame):
+                if i != j:
+                    dist = self.atombox.length(atom1, atom2)
+                    if dist <= self.cutoff:
+                        topology_matrix[i, j] = dist
+        return topology_matrix.tocoo()
