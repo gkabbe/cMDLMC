@@ -158,7 +158,7 @@ class NeighborTopology:
         for frame in self.trajectory:
             yield self.get_topology_bruteforce(frame)
 
-    def get_topology_verlet_list(self):
+    def topology_verlet_list_generator(self):
         """Keep track of the two maximum atom displacements.
         As soon as their sum is larger than the buffer region, update
         the neighbor topology."""
