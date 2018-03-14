@@ -112,7 +112,13 @@ def xyz_generator(filename: str, number_of_atoms: int = None,
 
     frame_len = number_of_atoms + 2
 
-    if selection:
+    if selection is not None:
+        if isinstance(selection, str):
+            selection = get_xyz_selection_from_atomname(filename, selection)
+        elif isinstance(selection, tuple):
+            selection = get_xyz_selection_from_atomname(filename, *selection)
+
+    if selection is not None:
         def filter_(f):
             yield from filter_selection(filter_lines(f, frame_len, no_of_frames=1), selection,
                                         frame_len)
