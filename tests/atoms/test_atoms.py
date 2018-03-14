@@ -1,3 +1,4 @@
+from itertools import tee
 import daiquiri
 import numpy as np
 
@@ -7,6 +8,10 @@ from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 
 logger = daiquiri.getLogger(__name__)
 daiquiri.setup(daiquiri.logging.DEBUG)
+daiquiri.getLogger("mdlmc.atoms.numpy_atom").setLevel(daiquiri.logging.INFO)
+
+
+np.random.seed(0)
 
 
 def test_NeighborTopology_get_topology_bruteforce():
@@ -27,7 +32,7 @@ def test_NeighborTopology_get_topology_bruteforce():
 
     cutoff = 2.0
 
-    top = NeighborTopology(iter(atoms), cutoff, atombox)
+    top = NeighborTopology(iter(atoms), cutoff, atombox, buffer=0)
 
     conn = top.get_topology_bruteforce(atoms)
 
@@ -41,16 +46,29 @@ def test_NeighborTopology_get_topology_verlet_list():
     def trajgen():
         atoms = np.random.uniform(0, 10, size=(5, 3))
         while True:
-            atoms += np.random.normal(size=(5, 3), scale=4)
+            atoms += np.random.normal(size=(5, 3), scale=1)
             yield atoms.copy()
 
     pbc = [10, 10, 10]
     atombox = AtomBoxCubic(pbc)
 
-    top = NeighborTopology(trajgen(), 3.0, atombox)
+    cut, buffer = 3, 10
 
-    for i, (start, dest, dist) in enumerate(top.get_topology_verlet_list()):
-        logger.info("%s %s %s", start, dest, dist)
-        if i == 5:
+    traj1, traj2 = tee(trajgen())
+    top1 = NeighborTopology(traj1, cut, atombox, buffer=buffer)
+    top2 = NeighborTopology(traj2, cut, atombox, buffer=buffer)
+
+    count = 0
+    for neighbors1, neighbors2 in zip(top1.topology_verlet_list_generator(),
+                                      top2.topology_bruteforce_generator()):
+        s1, d1 = neighbors1
+        s2, d2, dist = neighbors2
+
+        np.testing.assert_array_equal(s1, s2)
+        np.testing.assert_array_equal(d1, d2)
+
+        count += 1
+        if count == 50:
             break
+
 
