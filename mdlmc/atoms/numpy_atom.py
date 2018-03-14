@@ -165,17 +165,38 @@ class NeighborTopology:
         """Keep track of the two maximum atom displacements.
         As soon as their sum is larger than the buffer region, update
         the neighbor topology."""
+
         last_frame = None
         atombox = self.atombox
         logger.debug("start verlet list")
+        displacement = 0
+
         for frame in self.trajectory:
             logger.debug(frame)
+
             if last_frame is None:
-                yield self.get_topology_bruteforce(frame)
+                logger.debug("First frame. Get topo by bruteforce")
+                topology = self.get_topology_bruteforce(frame)
+                logger.debug(topology)
+                dr = np.zeros(frame.shape[0])
             else:
                 dr = atombox.length(last_frame, frame)
-                logger.debug("dr = %s", dr)
-                yield 1, 2, 3
+
+            displacement += dr
+            displ_max1, displ_max2 = np.sort(displacement)[-2:]
+            logger.debug("displ_max1 = %s; displ_max2 = %s", displ_max1, displ_max2)
+
+            if displ_max1 + displ_max2 > self.buffer:
+                logger.debug("Buffer region crossed. Recalculating topology")
+                topology = self.get_topology_bruteforce(frame)
+                displacement = 0
+            else:
+                logger.debug("Topology has not changed")
+
+            # Only yield the neighbor topology
+            # The distances change in each time step
+            # and are therefore wrongly predicted
+            # by the Verlet list
+            yield topology[:2]
 
             last_frame = frame
-
