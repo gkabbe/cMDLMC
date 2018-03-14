@@ -139,19 +139,22 @@ class NeighborTopology:
         self.trajectory = trajectory
         self.cutoff = cutoff
         self.atombox = atombox
+        self.buffer = buffer
 
     def get_topology_bruteforce(self, frame):
         """Determine the distance for each atom pair.
         If it is below the cutoff parameter, add it to the list
         of connections."""
+
         topology_matrix = lil_matrix((frame.shape[0], frame.shape[0]), dtype=float)
         for i, atom1 in enumerate(frame):
             for j, atom2 in enumerate(frame):
                 if i != j:
                     dist = self.atombox.length(atom1, atom2)
-                    if dist <= self.cutoff:
+                    if dist <= self.cutoff + self.buffer:
                         topology_matrix[i, j] = dist
         tocoo = topology_matrix.tocoo()
+        logger.debug("Tocoo: %s", tocoo)
         return tocoo.row, tocoo.col, tocoo.data
 
     def topology_bruteforce_generator(self):
