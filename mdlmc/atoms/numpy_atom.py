@@ -127,7 +127,7 @@ class NeighborTopology:
     Given a cutoff distance, for each atom the atoms within this
     distance will be determined."""
     def __init__(self, trajectory: Iterator[np.ndarray], cutoff: float, atombox: AtomBox,
-                 buffer: float = 3.0) -> None:
+                 buffer: float = 0.0) -> None:
         """
         Parameters
         ----------
