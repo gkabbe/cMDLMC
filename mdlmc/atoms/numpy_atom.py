@@ -141,6 +141,9 @@ class NeighborTopology:
         self.atombox = atombox
 
     def get_topology_bruteforce(self, frame):
+        """Determine the distance for each atom pair.
+        If it is below the cutoff parameter, add it to the list
+        of connections."""
         topology_matrix = lil_matrix((frame.shape[0], frame.shape[0]), dtype=float)
         for i, atom1 in enumerate(frame):
             for j, atom2 in enumerate(frame):
@@ -156,6 +159,9 @@ class NeighborTopology:
             yield self.get_topology_bruteforce(frame)
 
     def get_topology_verlet_list(self):
+        """Keep track of the two maximum atom displacements.
+        As soon as their sum is larger than the buffer region, update
+        the neighbor topology."""
         last_frame = None
         atombox = self.atombox
         logger.debug("start verlet list")
