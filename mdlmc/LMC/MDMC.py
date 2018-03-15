@@ -367,3 +367,60 @@ def main(*args):
 
 if __name__ == "__main__":
     main()
+
+
+def fastforward_to_next_jump(jumprates, dt):
+    """Implements Kinetic Monte Carlo with time-dependent rates.
+
+    Parameters
+    ----------
+    jumprates : generator / iterator
+        Unit: femtosecond^{-1}
+        Proton jump rate from an oxygen site to any neighbor
+    proton_position : int
+        Index of oxygen at which the excess proton is residing.
+    dt : float
+        Trajectory time step
+    frame : int
+        Start frame
+    time : float
+        Start time
+
+    Returns
+    -------
+    frame: int
+        Frame at which the next event occurs
+    delta_frame : int
+        Difference between frame and the index at which the next event occurs
+    delta_t : float
+        Difference between current time and the time of the next event
+    """
+
+    sweep, kmc_time = 0, 0
+
+    current_rate = next(jumprates)
+    while True:
+        time_selector = -np.log(1 - np.random.random())
+
+        # Handle case where time selector is so small that the next frame is not reached
+        t_trial = time_selector / current_rate
+        if (kmc_time + t_trial) // dt == kmc_time // dt:
+            kmc_time += t_trial
+            delta_frame = 0
+        else:
+            delta_t, delta_frame = dt - kmc_time % dt, 1
+            current_probsum = current_rate * delta_t
+            next_rate = next(jumprates)
+            next_probsum = current_probsum + next_rate * dt
+
+            while next_probsum < time_selector:
+                delta_frame += 1
+                current_probsum = next_probsum
+                next_rate = next(jumprates)
+                next_probsum = current_probsum + next_rate * dt
+
+            rest = time_selector - current_probsum
+            delta_t += (delta_frame - 1) * dt + rest / next_rate
+            kmc_time += delta_t
+        sweep += delta_frame
+        yield sweep, delta_frame, kmc_time
