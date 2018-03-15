@@ -3,7 +3,6 @@ import os
 import time
 import logging
 
-import tables
 import h5py
 import numpy as np
 from scipy.interpolate import interp1d
@@ -14,8 +13,7 @@ from mdlmc.IO.config_parser import load_configfile, print_settings, print_config
     print_confighelp
 from mdlmc.misc.tools import chunk
 from mdlmc.cython_exts.LMC.LMCHelper import KMCRoutine, FermiFunction
-from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxWaterLinearConversion, \
-    AtomBoxWaterRampConversion
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from mdlmc.LMC.MDMC import initialize_oxygen_lattice, fastforward_to_next_jump
 
 
