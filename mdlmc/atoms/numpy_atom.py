@@ -117,7 +117,7 @@ def print_center_of_mass(npa_traj):
         print("Frame {:6d}".format(i), com)
 
 
-def print_center_of_mass_commandline(*args):
+def print_center_of_mass_commandline():
     trajectory = np.load(sys.argv[1])["trajectory"]
     print_center_of_mass(trajectory)
 
@@ -136,6 +136,7 @@ class NeighborTopology:
         atombox
         buffer
         """
+
         self.trajectory = trajectory
         self.cutoff = cutoff
         self.atombox = atombox
