@@ -10,7 +10,7 @@ from collections.abc import Container
 from contextlib import contextmanager
 from functools import reduce
 from io import IOBase
-from typing import Iterator
+from typing import Iterator, Union, Tuple
 import warnings
 
 import h5py
@@ -83,7 +83,7 @@ def filter_selection(f, s, frame_len):
 
 
 def xyz_generator(filename: str, number_of_atoms: int = None,
-                  selection: Container = None) -> Iterator[np.array]:
+                  selection: Union[Container, str, Tuple[str]] = None) -> Iterator[np.array]:
     """
 
     Parameters
@@ -92,7 +92,7 @@ def xyz_generator(filename: str, number_of_atoms: int = None,
     number_of_atoms:
         Number of atoms per frame
     selection:
-        List of atom indices
+        List of atom indices or string or tuple of strings
 
     Returns
     -------
