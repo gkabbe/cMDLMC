@@ -161,6 +161,7 @@ class NeighborTopology:
 
     def topology_bruteforce_generator(self):
         for frame in self.trajectory:
+            frame = frame["pos"]
             yield self.get_topology_bruteforce(frame)
 
     def topology_verlet_list_generator(self):
@@ -174,7 +175,7 @@ class NeighborTopology:
         displacement = 0
 
         for frame in self.trajectory:
-            logger.debug(frame)
+            frame = frame["pos"]
 
             if last_frame is None:
                 logger.debug("First frame. Get topo by bruteforce")
@@ -192,13 +193,10 @@ class NeighborTopology:
                 logger.debug("Buffer region crossed. Recalculating topology")
                 topology = self.get_topology_bruteforce(frame)
                 displacement = 0
+                yield topology
             else:
                 logger.debug("Topology has not changed")
-
-            # Only yield the neighbor topology
-            # The distances change in each time step
-            # and are therefore wrongly predicted
-            # by the Verlet list
-            yield topology[:2]
+                dist = atombox.length(frame[topology[0]], frame[topology[1]])
+                yield (*topology[:2], dist)
 
             last_frame = frame
