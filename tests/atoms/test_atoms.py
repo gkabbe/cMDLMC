@@ -43,6 +43,8 @@ def test_NeighborTopology_get_topology_bruteforce():
 
 
 def test_NeighborTopology_get_topology_verlet_list():
+    """Assert that the verlet list method yields the same results as the bruteforce
+    method"""
     def trajgen():
         atoms = np.random.uniform(0, 10, size=(5, 3))
         while True:
@@ -58,17 +60,15 @@ def test_NeighborTopology_get_topology_verlet_list():
     top1 = NeighborTopology(traj1, cut, atombox, buffer=buffer)
     top2 = NeighborTopology(traj2, cut, atombox, buffer=buffer)
 
-    count = 0
-    for neighbors1, neighbors2 in zip(top1.topology_verlet_list_generator(),
-                                      top2.topology_bruteforce_generator()):
-        s1, d1 = neighbors1
-        s2, d2, dist = neighbors2
+    for count, (neighbors1, neighbors2) in enumerate(zip(top1.topology_verlet_list_generator(),
+                                                         top2.topology_bruteforce_generator())):
+        s1, d1, dist1 = neighbors1
+        s2, d2, dist2 = neighbors2
 
         np.testing.assert_array_equal(s1, s2)
         np.testing.assert_array_equal(d1, d2)
+        np.testing.assert_array_equal(dist1, dist2)
 
-        count += 1
         if count == 50:
             break
-
 
