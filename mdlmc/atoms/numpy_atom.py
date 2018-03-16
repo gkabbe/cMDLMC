@@ -205,3 +205,11 @@ class NeighborTopology:
                 yield (*topology[:2], dist)
 
             last_frame = frame
+
+class NeighborTopArray(NeighborTopology):
+    """If the trajectory generator directly yields Numpy arrays,
+    use this class"""
+    def _get_selection(self, trajectory):
+        for frame in trajectory:
+            yield frame
+
