@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 dtype_xyz = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
 dtype_xyz_bytes = np.dtype([("name", np.string_, 2), ("pos", np.float64, (3,))])
 
+
 atom_masses = {'C' : 12.001,
                'Cl': 35.45,
                'Cs': 132.90545196,
@@ -203,8 +204,8 @@ class NeighborTopology:
                 logger.debug("Topology has not changed")
                 dist = atombox.length(frame[topology[0]], frame[topology[1]])
                 yield (*topology[:2], dist)
-
             last_frame = frame
+
 
 class NeighborTopArray(NeighborTopology):
     """If the trajectory generator directly yields Numpy arrays,
