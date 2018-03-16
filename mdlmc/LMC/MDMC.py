@@ -2,11 +2,14 @@
 import argparse
 import sys
 import time
+from itertools import tee
+
 
 import numpy as np
 from ..IO.config_parser import print_confighelp, load_configfile, print_config_template, \
     check_cmdlmc_settings, print_settings
 from ..IO.trajectory_parser import load_atoms
+from ..atoms.numpy_atom import NeighborTopology
 from ..cython_exts.LMC import LMCHelper
 from ..cython_exts.LMC import PBCHelper
 from mdlmc.cython_exts.LMC.LMCHelper import (ActivationEnergyFunction, FermiFunction,
