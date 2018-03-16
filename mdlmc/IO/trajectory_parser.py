@@ -83,7 +83,8 @@ def filter_selection(f, s, frame_len):
 
 
 def xyz_generator(filename: str, number_of_atoms: int = None,
-                  selection: Union[Container, str, Tuple[str]] = None) -> Iterator[np.array]:
+                  selection: Union[Container, str, Tuple[str]] = None,
+                  repeat=False) -> Iterator[np.array]:
     """
 
     Parameters
@@ -126,14 +127,18 @@ def xyz_generator(filename: str, number_of_atoms: int = None,
         def filter_(f):
             yield from filter_lines(f, frame_len, no_of_frames=1)
 
-    with warnings.catch_warnings(), as_file(filename) as f:
-        while True:
-            try:
-                data = np.genfromtxt(filter_(f), dtype=dtype_xyz_bytes)
-            except Warning:
-                logger.info("Reached end of file")
-                break
-            yield data
+    while True:
+        with warnings.catch_warnings(), as_file(filename) as f:
+            while True:
+                try:
+                    data = np.genfromtxt(filter_(f), dtype=dtype_xyz_bytes)
+                except Warning:
+                    logger.info("Reached end of file")
+                    break
+                yield data
+
+        if not repeat:
+            break
 
 
 def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
