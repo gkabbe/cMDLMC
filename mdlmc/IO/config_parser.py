@@ -9,7 +9,7 @@ import numpy as np
 
 # Functions which parse the input from the config file
 def get_dictionary(line):
-    dict_string = re.findall("\{.*\}|dict\s*\(.*\)", line)[0]
+    dict_string = re.findall(r"\{.*\}|dict\s*\(.*\)", line)[0]
     param_dict = eval(dict_string)
     return param_dict
 
