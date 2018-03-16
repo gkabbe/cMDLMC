@@ -365,8 +365,6 @@ def main(*args):
         cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings)
 
 
-if __name__ == "__main__":
-    main()
 
 
 def fastforward_to_next_jump(jumprates, dt):
@@ -424,3 +422,7 @@ def fastforward_to_next_jump(jumprates, dt):
             kmc_time += delta_t
         sweep += delta_frame
         yield sweep, delta_frame, kmc_time
+
+
+if __name__ == "__main__":
+    main()
