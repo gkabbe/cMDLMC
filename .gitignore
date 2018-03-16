@@ -11,6 +11,7 @@
 .cache
 .coverage
 .idea/
+.mypy_cache/
 .project
 .pydevproject
 .pytest_cache/
