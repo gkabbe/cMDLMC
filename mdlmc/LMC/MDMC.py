@@ -368,6 +368,25 @@ def main(*args):
         cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, settings)
 
 
+class Lattice:
+    def __init__(self, trajectory, topology, lattice_size, proton_number):
+        self.trajectory = trajectory
+        self.topology = topology
+        self._initialize_lattice(lattice_size, proton_number)
+        self.current_frame = None
+
+    def _initialize_lattice(self, lattice_size, proton_number):
+        self.lattice = np.zeros(lattice_size, dtype=np.int32)
+        self.lattice[:proton_number] = range(1, proton_number + 1)
+        np.random.shuffle(self.lattice)
+
+
+def jumprate_generator(jumprate_function, lattice, topology):
+    for start, destination, distance in topology.topology_verlet_list_generator():
+        omega = jumprate_function(distance)
+        # select only jumprates from donors which are occupied
+        occupied_sites, = np.where(lattice)
+        yield omega[np.in1d(start, occupied_sites)].sum()
 
 
 def fastforward_to_next_jump(jumprates, dt):
