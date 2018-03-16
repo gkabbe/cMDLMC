@@ -9,9 +9,6 @@ import time
 
 import numpy as np
 import cython
-from cython.parallel import prange
-import tables
-import h5py
 
 cimport numpy as np
 cimport cython
