@@ -7,10 +7,11 @@ import sys
 import time
 import types
 from collections.abc import Container
+from abc import ABCMeta, abstractproperty, abstractmethod
 from contextlib import contextmanager
 from functools import reduce
 from io import IOBase
-from typing import Iterator, Union, Tuple
+from typing import Iterator, Union, Tuple, IO
 import warnings
 
 import h5py
@@ -42,6 +43,21 @@ def as_file(file_or_string):
 
     if need_to_close:
         file.close()
+
+
+class Trajectory(metaclass=ABCMeta):
+    """Abstract Trajectory class which should be inherited when defining
+    a custom trajectory class"""
+
+    @property
+    @abstractmethod
+    def current_frame(self):
+        """Return the current frame."""
+        pass
+
+    @abstractmethod
+    def __iter__(self):
+        pass
 
 
 def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
@@ -82,63 +98,77 @@ def filter_selection(f, s, frame_len):
             yield line
 
 
-def xyz_generator(filename: str, number_of_atoms: int = None,
-                  selection: Union[Container, str, Tuple[str]] = None,
-                  repeat=False) -> Iterator[np.array]:
-    """
+class XYZTrajectory(Trajectory):
+    def __init__(self, filename: Union[str, IO],
+                 number_of_atoms: int = None,
+                 selection: Union[Container, str, Tuple[str]] = None, repeat=False):
+        self.filename = filename
+        self.number_of_atoms = number_of_atoms
+        self.selection = selection
+        self.repeat = repeat
+        self._current_frame = None
 
-    Parameters
-    ----------
-    filename
-    number_of_atoms:
-        Number of atoms per frame
-    selection:
-        List of atom indices or string or tuple of strings
-
-    Returns
-    -------
-
-    """
-
-    # Check if atom number is specified
-    # If not, try to read it from file
-    if not number_of_atoms:
-        logger.info("Number of atoms not specified. Will try to read it from xyz file")
-        with open(filename, "r") as f:
-            try:
-                number_of_atoms = int(f.readline())
-            except(("ValueError", "TypeError")):
-                logger.error("Could not read atom number from %s", filename)
-                raise
-
-    frame_len = number_of_atoms + 2
-
-    if selection is not None:
-        if isinstance(selection, str):
-            selection = get_xyz_selection_from_atomname(filename, selection)
-        elif isinstance(selection, tuple):
-            selection = get_xyz_selection_from_atomname(filename, *selection)
-
-    if selection is not None:
-        def filter_(f):
-            yield from filter_selection(filter_lines(f, frame_len, no_of_frames=1), selection,
-                                        frame_len)
-    else:
-        def filter_(f):
-            yield from filter_lines(f, frame_len, no_of_frames=1)
-
-    while True:
-        with warnings.catch_warnings(), as_file(filename) as f:
-            while True:
+        # Check if atom number is specified
+        # If not, try to read it from file
+        if not self.number_of_atoms:
+            logger.info("Number of atoms not specified. Will try to read it from xyz file")
+            with open(self.filename, "r") as f:
                 try:
-                    data = np.genfromtxt(filter_(f), dtype=dtype_xyz_bytes)
-                except Warning:
-                    logger.info("Reached end of file")
-                    break
-                yield data
+                    self.number_of_atoms = int(f.readline())
+                except(("ValueError", "TypeError")):
+                    logger.error("Could not read atom number from %s", self.filename)
+                    raise
 
-        if not repeat:
-            break
+    @property
+    def current_frame(self):
+        return self._current_frame
+
+    def __iter__(self) -> Iterator[np.array]:
+        """
+
+        Parameters
+        ----------
+        filename
+        number_of_atoms:
+            Number of atoms per frame
+        selection:
+            List of atom indices or string or tuple of strings
+
+        Returns
+        -------
+
+        """
+
+
+        frame_len = self.number_of_atoms + 2
+
+        if self.selection is not None:
+            if isinstance(self.selection, str):
+                self.selection = get_xyz_selection_from_atomname(self.filename, self.selection)
+            elif isinstance(self.selection, tuple):
+                self.selection = get_xyz_selection_from_atomname(self.filename, *self.selection)
+
+        if self.selection is not None:
+            def filter_(f):
+                yield from filter_selection(filter_lines(f, frame_len, no_of_frames=1),
+                                            self.selection, frame_len)
+        else:
+            def filter_(f):
+                yield from filter_lines(f, frame_len, no_of_frames=1)
+
+        while True:
+            with warnings.catch_warnings(), as_file(self.filename) as f:
+                while True:
+                    try:
+                        data = np.genfromtxt(filter_(f), dtype=dtype_xyz_bytes)
+                    except Warning:
+                        logger.info("Reached end of file")
+                        break
+                    self._current_frame = data
+                    yield data
+
+            if not self.repeat:
+                break
 
 
 def get_xyz_selection_from_atomname(xyz_filename, *atomnames):

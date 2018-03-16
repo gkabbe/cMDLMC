@@ -2,7 +2,7 @@ from io import StringIO
 
 import daiquiri
 
-from mdlmc.IO.trajectory_parser import xyz_generator, filter_lines, filter_selection
+from mdlmc.IO.trajectory_parser import XYZTrajectory, filter_lines, filter_selection
 
 
 daiquiri.setup(level=daiquiri.logging.DEBUG)
@@ -34,12 +34,12 @@ def test_filter_lines():
         assert line.strip() not in ("3", "comment")
 
 
-def test_xyz_generator():
+def test_xyztrajectory():
 
     # Assert that the xyz generator yields three frames with three atoms each
 
     mock_file = StringIO(MOCK_XYZ)
-    parser = xyz_generator(mock_file, number_of_atoms=3)
+    parser = XYZTrajectory(mock_file, number_of_atoms=3)
 
     frames = list(parser)
 
@@ -50,7 +50,7 @@ def test_xyz_generator():
     # Select O and second H
     selection = [0, 2]
     mock_file = StringIO(MOCK_XYZ)
-    parser = xyz_generator(mock_file, number_of_atoms=3, selection=selection)
+    parser = XYZTrajectory(mock_file, number_of_atoms=3, selection=selection)
 
     frames = list(parser)
 
