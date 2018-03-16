@@ -139,12 +139,19 @@ class NeighborTopology:
 
         self.trajectory = trajectory
         self.cutoff = cutoff
-        self.atombox = atombox
         self.buffer = buffer
+        self.atombox = atombox
+
+    def _get_selection(self, trajectory):
+        """Given a trajectory array with fields name and pos,
+        yield the array with the atom positions.
+        """
+        for frame in trajectory:
+            yield frame["pos"]
 
     def get_topology_bruteforce(self, frame):
         """Determine the distance for each atom pair.
-        If it is below the cutoff parameter, add it to the list
+        If it is below cutoff + buffer, add it to the list
         of connections."""
 
         topology_matrix = lil_matrix((frame.shape[0], frame.shape[0]), dtype=float)
@@ -156,13 +163,12 @@ class NeighborTopology:
                     if dist <= self.cutoff + self.buffer:
                         topology_matrix[i, j] = dist
                         topology_matrix[j, i] = dist
-        tocoo = topology_matrix.tocoo()
-        logger.debug("Tocoo: %s", tocoo)
-        return tocoo.row, tocoo.col, tocoo.data
+        connections = topology_matrix.tocoo()
+        logger.debug("Tocoo: %s", connections)
+        return connections.row, connections.col, connections.data
 
     def topology_bruteforce_generator(self):
-        for frame in self.trajectory:
-            frame = frame["pos"]
+        for frame in self._get_selection(self.trajectory):
             yield self.get_topology_bruteforce(frame)
 
     def topology_verlet_list_generator(self):
@@ -175,9 +181,7 @@ class NeighborTopology:
         logger.debug("start verlet list")
         displacement = 0
 
-        for frame in self.trajectory:
-            frame = frame["pos"]
-
+        for frame in self._get_selection(self.trajectory):
             if last_frame is None:
                 logger.debug("First frame. Get topo by bruteforce")
                 topology = self.get_topology_bruteforce(frame)
