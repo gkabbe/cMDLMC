@@ -5,7 +5,7 @@ from itertools import tee
 import daiquiri
 import numpy as np
 
-from mdlmc.IO.trajectory_parser import xyz_generator
+from mdlmc.IO.trajectory_parser import XYZTrajectory
 from mdlmc.atoms.numpy_atom import NeighborTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from mdlmc.LMC.MDMC import Lattice, fastforward_to_next_jump, jumprate_generator
@@ -25,10 +25,10 @@ def test_mdlmc():
     atombox = AtomBoxCubic(pbc)
     script_path = pathlib.Path(__file__).absolute().parent
     filename = "400Kbeginning.xyz"
-    xyz_gen1, xyz_gen2 = tee(xyz_generator(script_path / filename, selection="O", repeat=True))
-    topo = NeighborTopology(xyz_gen1, cutoff=3.0, buffer=1.0, atombox=atombox)
+    xyz_traj = XYZTrajectory(script_path / filename, selection="O", repeat=True)
+    topo = NeighborTopology(xyz_traj, cutoff=3.0, buffer=1.0, atombox=atombox)
 
-    lattice = Lattice(xyz_gen1, topo, 144, 96)
+    lattice = Lattice(xyz_traj, topo, 144, 96)
 
     jrf = partial(fermi, a=0.06, b=2.3, c=0.1)
 
