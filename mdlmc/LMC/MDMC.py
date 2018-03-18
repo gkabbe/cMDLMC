@@ -2,7 +2,7 @@
 import argparse
 import sys
 import time
-from itertools import tee
+from typing import Iterator
 
 
 import numpy as np
@@ -369,10 +369,11 @@ def main(*args):
 
 
 class KMCLattice:
-    def __init__(self, trajectory, topology, lattice_size, proton_number):
+    def __init__(self, trajectory, topology, lattice_size, proton_number, jumprate_function):
         self.trajectory = trajectory
         self.topology = topology
         self._initialize_lattice(lattice_size, proton_number)
+        self.jumprate_function = jumprate_function
 
     @property
     def lattice(self):
@@ -383,7 +384,7 @@ class KMCLattice:
         self._lattice[:proton_number] = range(1, proton_number + 1)
         np.random.shuffle(self._lattice)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[np.ndarray]:
         pass
 
     def fastforward_to_next_jump(self, jumprates, dt):
@@ -442,9 +443,10 @@ class KMCLattice:
             sweep += delta_frame
             yield sweep, delta_frame, kmc_time
 
-    def jumprate_generator(self, jumprate_function):
+    def jumprate_generator(self):
         lattice = self.lattice
         topology = self.topology
+        jumprate_function = self.jumprate_function
 
         for start, destination, distance in topology.topology_verlet_list_generator():
             omega = jumprate_function(distance)
