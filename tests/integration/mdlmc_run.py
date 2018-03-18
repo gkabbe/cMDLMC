@@ -8,7 +8,7 @@ import numpy as np
 from mdlmc.IO.trajectory_parser import XYZTrajectory
 from mdlmc.atoms.numpy_atom import NeighborTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
-from mdlmc.LMC.MDMC import KMCLattice, fastforward_to_next_jump, jumprate_generator
+from mdlmc.LMC.MDMC import KMCLattice
 
 
 logger = daiquiri.getLogger(__name__)
@@ -31,13 +31,6 @@ def test_mdlmc():
     lattice = KMCLattice(xyz_traj, topo, 144, 96)
 
     jrf = partial(fermi, a=0.06, b=2.3, c=0.1)
-
-    for frame, delta_frame, dt in fastforward_to_next_jump(jumprate_generator(jrf, lattice.lattice,
-                                                                              topo),
-                                                           dt=0.5):
-        print(frame, delta_frame, dt)
-
-
 
 
 if __name__ == "__main__":
