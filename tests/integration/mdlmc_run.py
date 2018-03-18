@@ -8,7 +8,7 @@ import numpy as np
 from mdlmc.IO.trajectory_parser import XYZTrajectory
 from mdlmc.atoms.numpy_atom import NeighborTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
-from mdlmc.LMC.MDMC import Lattice, fastforward_to_next_jump, jumprate_generator
+from mdlmc.LMC.MDMC import KMCLattice, fastforward_to_next_jump, jumprate_generator
 
 
 logger = daiquiri.getLogger(__name__)
@@ -28,7 +28,7 @@ def test_mdlmc():
     xyz_traj = XYZTrajectory(script_path / filename, selection="O", repeat=True)
     topo = NeighborTopology(xyz_traj, cutoff=3.0, buffer=1.0, atombox=atombox)
 
-    lattice = Lattice(xyz_traj, topo, 144, 96)
+    lattice = KMCLattice(xyz_traj, topo, 144, 96)
 
     jrf = partial(fermi, a=0.06, b=2.3, c=0.1)
 
