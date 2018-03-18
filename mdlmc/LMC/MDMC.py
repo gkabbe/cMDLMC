@@ -373,7 +373,6 @@ class KMCLattice:
         self.trajectory = trajectory
         self.topology = topology
         self._initialize_lattice(lattice_size, proton_number)
-        self.current_frame = None
 
     @property
     def lattice(self):
@@ -443,13 +442,15 @@ class KMCLattice:
             sweep += delta_frame
             yield sweep, delta_frame, kmc_time
 
+    def jumprate_generator(self, jumprate_function):
+        lattice = self.lattice
+        topology = self.topology
 
-def jumprate_generator(jumprate_function, lattice, topology):
-    for start, destination, distance in topology.topology_verlet_list_generator():
-        omega = jumprate_function(distance)
-        # select only jumprates from donors which are occupied
-        occupied_sites, = np.where(lattice)
-        yield omega[np.in1d(start, occupied_sites)].sum()
+        for start, destination, distance in topology.topology_verlet_list_generator():
+            omega = jumprate_function(distance)
+            # select only jumprates from donors which are occupied
+            occupied_sites, = np.where(lattice)
+            yield omega[np.in1d(start, occupied_sites)].sum()
 
 
 if __name__ == "__main__":
