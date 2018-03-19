@@ -127,8 +127,8 @@ class NeighborTopology:
     """Keeps track of the connections between donor/acceptor atoms.
     Given a cutoff distance, for each atom the atoms within this
     distance will be determined."""
-    def __init__(self, trajectory, cutoff: float, atombox: AtomBox,
-                 buffer: float = 0.0) -> None:
+    def __init__(self, trajectory, cutoff: float, atombox: AtomBox, donor_atoms: str,
+                 buffer: float = 0.0, ) -> None:
         """
         Parameters
         ----------
@@ -142,13 +142,14 @@ class NeighborTopology:
         self.cutoff = cutoff
         self.buffer = buffer
         self.atombox = atombox
+        self.donor_atoms = donor_atoms.encode()
 
     def _get_selection(self, trajectory):
         """Given a trajectory array with fields name and pos,
         yield the array with the atom positions.
         """
         for frame in trajectory:
-            yield frame["pos"]
+            yield frame["pos"][frame["name"] == self.donor_atoms]
 
     def get_topology_bruteforce(self, frame):
         """Determine the distance for each atom pair.
