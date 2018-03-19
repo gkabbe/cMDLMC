@@ -124,7 +124,7 @@ def print_center_of_mass_commandline():
 
 
 class NeighborTopology:
-    """Keeps track of the connections between atoms.
+    """Keeps track of the connections between donor/acceptor atoms.
     Given a cutoff distance, for each atom the atoms within this
     distance will be determined."""
     def __init__(self, trajectory, cutoff: float, atombox: AtomBox,
