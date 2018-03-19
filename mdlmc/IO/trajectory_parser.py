@@ -176,7 +176,7 @@ class XYZTrajectory(Trajectory):
 
 
 def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
-    with open(xyz_filename, "r") as f:
+    with as_file(xyz_filename) as f:
         frame_len = int(f.readline())
         selection = []
         f.readline()
@@ -185,6 +185,10 @@ def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
                 selection.append(i)
             if i == frame_len:
                 break
+        # If xyz_filename is actually a file,
+        # it should be rewinded to the beginning
+        f.seek(0)
+    logger.debug("Selection: %s", selection)
     return np.array(selection)
 
 
