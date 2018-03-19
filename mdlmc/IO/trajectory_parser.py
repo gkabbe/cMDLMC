@@ -99,6 +99,7 @@ def filter_selection(f, s, frame_len):
 
 class XYZTrajectory(Trajectory):
     def __init__(self, filename: Union[str, IO],
+                 *,
                  number_of_atoms: int = None,
                  selection: Union[Container, str, Tuple[str]] = None,
                  time_step: float = None,
@@ -149,12 +150,13 @@ class XYZTrajectory(Trajectory):
             if isinstance(self.selection, str):
                 self.selection = get_xyz_selection_from_atomname(self.filename, self.selection)
             elif isinstance(self.selection, tuple):
-                self.selection = get_xyz_selection_from_atomname(self.filename, *self.selection)
+                if isinstance(self.selection[0], str):
+                    self.selection = get_xyz_selection_from_atomname(self.filename, *self.selection)
 
         if self.selection is not None:
             def filter_(f):
                 yield from filter_selection(filter_lines(f, frame_len, no_of_frames=1),
-                                            self.selection, frame_len)
+                                            self.selection, self.number_of_atoms)
         else:
             def filter_(f):
                 yield from filter_lines(f, frame_len, no_of_frames=1)
