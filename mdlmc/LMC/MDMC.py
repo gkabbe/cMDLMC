@@ -369,11 +369,29 @@ def main():
 
 
 class KMCLattice:
-    def __init__(self, trajectory, topology, lattice_size, proton_number, jumprate_function):
+    def __init__(self, trajectory, topology, lattice_size, proton_number, jumprate_function,
+                 donor_atoms, extra_atoms=None):
+        """
+
+        Parameters
+        ----------
+        trajectory
+        topology
+        lattice_size
+        proton_number
+        jumprate_function
+        donor_atoms:
+            name of donor / acceptor atoms
+        extra_atoms:
+            extra atoms used for the determination of the jump rate
+        """
+
         self.trajectory = trajectory
         self.topology = topology
         self._initialize_lattice(lattice_size, proton_number)
         self.jumprate_function = jumprate_function
+        self.donor_atoms = donor_atoms
+        self.extra_atoms = extra_atoms
 
     @property
     def lattice(self):
@@ -385,7 +403,14 @@ class KMCLattice:
         np.random.shuffle(self._lattice)
 
     def __iter__(self) -> Iterator[np.ndarray]:
-        pass
+        current_frame = 0
+        current_time  = 0
+
+        jumprate_gen = self.jumprate_generator()
+        kmc_routine = self.fastforward_to_next_jump(jumprate_gen, self.trajectory.time_step)
+
+        for f, df, dt in kmc_routine:
+            pass
 
     def fastforward_to_next_jump(self, jumprates, dt):
         """Implements Kinetic Monte Carlo with time-dependent rates.
