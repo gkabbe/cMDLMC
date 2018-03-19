@@ -7,7 +7,6 @@ import logging
 from scipy.sparse import lil_matrix
 
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBox
-from ..IO.trajectory_parser import Trajectory
 
 
 logger = logging.getLogger(__name__)
@@ -128,7 +127,7 @@ class NeighborTopology:
     """Keeps track of the connections between atoms.
     Given a cutoff distance, for each atom the atoms within this
     distance will be determined."""
-    def __init__(self, trajectory: Trajectory, cutoff: float, atombox: AtomBox,
+    def __init__(self, trajectory, cutoff: float, atombox: AtomBox,
                  buffer: float = 0.0) -> None:
         """
         Parameters
