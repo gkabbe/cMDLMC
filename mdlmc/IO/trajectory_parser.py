@@ -6,12 +6,11 @@ import os
 import sys
 import time
 import types
-from collections.abc import Container
 from abc import ABCMeta, abstractproperty, abstractmethod
 from contextlib import contextmanager
 from functools import reduce
 from io import IOBase
-from typing import Iterator, Union, Tuple, IO
+from typing import Iterator, Union, Tuple, IO, Container
 import warnings
 
 import h5py
