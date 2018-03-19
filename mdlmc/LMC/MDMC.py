@@ -346,7 +346,7 @@ def cmd_lmc_run(oxygen_trajectory, oxygen_lattice, helper, observable_manager, s
         np.savetxt(settings.jumpmatrix_filename, helper.jumpmatrix)
 
 
-def main(*args):
+def main():
     parser = argparse.ArgumentParser(
         description="cMD/LMC", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers(dest="subparser_name")
