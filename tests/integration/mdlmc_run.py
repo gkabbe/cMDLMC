@@ -25,12 +25,14 @@ def test_mdlmc():
     atombox = AtomBoxCubic(pbc)
     script_path = pathlib.Path(__file__).absolute().parent
     filename = "400Kbeginning.xyz"
-    xyz_traj = XYZTrajectory(script_path / filename, selection="O", repeat=True)
-    topo = NeighborTopology(xyz_traj, cutoff=3.0, buffer=1.0, atombox=atombox)
-
-    lattice = KMCLattice(xyz_traj, topo, 144, 96)
+    xyz_traj = XYZTrajectory(script_path / filename, selection="O", repeat=True, time_step=0.4)
+    topo = NeighborTopology(xyz_traj, cutoff=3.0, buffer=1.0, atombox=atombox, donor_atoms="O")
 
     jrf = partial(fermi, a=0.06, b=2.3, c=0.1)
+    lattice = KMCLattice(xyz_traj, topo, 144, 96, jumprate_function=jrf, donor_atoms="O")
+
+    for f, df, dt in lattice:
+        print(f, df, dt)
 
 
 if __name__ == "__main__":
