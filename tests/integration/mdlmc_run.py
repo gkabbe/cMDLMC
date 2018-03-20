@@ -29,10 +29,11 @@ def test_mdlmc():
     topo = NeighborTopology(xyz_traj, cutoff=3.0, buffer=1.0, atombox=atombox, donor_atoms="O")
 
     jrf = partial(fermi, a=0.06, b=2.3, c=0.1)
-    lattice = KMCLattice(xyz_traj, topo, 144, 96, jumprate_function=jrf, donor_atoms="O")
+    lattice = KMCLattice(topo, lattice_size=144, proton_number=96, jumprate_function=jrf,
+                         donor_atoms="O")
 
-    for f, df, dt in lattice:
-        print(f, df, dt)
+    for frame in lattice:
+        print(frame)
 
 
 if __name__ == "__main__":
