@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import argparse
+from collections import deque
 import sys
 import time
 from typing import Iterator
 
 
+import daiquiri
 import numpy as np
+
 from ..IO.config_parser import print_confighelp, load_configfile, print_config_template, \
     check_cmdlmc_settings, print_settings
 from ..IO.trajectory_parser import load_atoms
@@ -14,6 +17,9 @@ from ..cython_exts.LMC import LMCHelper
 from ..cython_exts.LMC import PBCHelper
 from mdlmc.cython_exts.LMC.LMCHelper import (ActivationEnergyFunction, FermiFunction,
                                              ExponentialFunction, FermiFunctionWater)
+
+
+logger = daiquiri.getLogger(__name__)
 
 
 def get_git_version():
@@ -369,13 +375,12 @@ def main():
 
 
 class KMCLattice:
-    def __init__(self, trajectory, topology, lattice_size, proton_number, jumprate_function,
+    def __init__(self, topology, *, lattice_size, proton_number, jumprate_function,
                  donor_atoms, extra_atoms=None):
         """
 
         Parameters
         ----------
-        trajectory
         topology
         lattice_size
         proton_number
@@ -386,7 +391,6 @@ class KMCLattice:
             extra atoms used for the determination of the jump rate
         """
 
-        self.trajectory = trajectory
         self.topology = topology
         self._initialize_lattice(lattice_size, proton_number)
         self.jumprate_function = jumprate_function
@@ -403,14 +407,31 @@ class KMCLattice:
         np.random.shuffle(self._lattice)
 
     def __iter__(self) -> Iterator[np.ndarray]:
+        yield from self.continuous_output()
+
+    def continuous_output(self):
         current_frame = 0
         current_time  = 0
+        cache = self.topology.cache
 
         jumprate_gen = self.jumprate_generator()
-        kmc_routine = self.fastforward_to_next_jump(jumprate_gen, self.trajectory.time_step)
+        kmc_routine = self.fastforward_to_next_jump(jumprate_gen,
+                                                    self.topology.trajectory.time_step)
 
         for f, df, dt in kmc_routine:
-            pass
+            current_time += dt
+            logger.debug("Next jump at time %.2f", current_time)
+            logger.debug("deque length: %s", len(self.topology.cache))
+
+            while len(cache) > 0:
+                yield cache.popleft()
+
+            self.move_proton()
+
+    def move_proton(self):
+        """Given the hopping rates between the acceptor atoms, choose a connection randomly and
+        move the proton."""
+        pass
 
     def fastforward_to_next_jump(self, jumprates, dt):
         """Implements Kinetic Monte Carlo with time-dependent rates.
