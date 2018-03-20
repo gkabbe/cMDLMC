@@ -1,3 +1,4 @@
+from collections import deque
 from itertools import tee
 import sys
 from typing import Iterator
@@ -143,6 +144,8 @@ class NeighborTopology:
         self.buffer = buffer
         self.atombox = atombox
         self.donor_atoms = donor_atoms.encode()
+        # Store consumed trajectory frames in cache
+        self.cache = deque()
 
     def _get_selection(self, trajectory):
         """Given a trajectory array with fields name and pos,
@@ -184,6 +187,7 @@ class NeighborTopology:
         displacement = 0
 
         for frame in self._get_selection(self.trajectory):
+            self.cache.append(frame)
             if last_frame is None:
                 logger.debug("First frame. Get topo by bruteforce")
                 topology = self.get_topology_bruteforce(frame)
