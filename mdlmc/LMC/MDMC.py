@@ -423,10 +423,15 @@ class KMCLattice:
             logger.debug("Next jump at time %.2f", current_time)
             logger.debug("deque length: %s", len(self.topology.cache))
 
-            while len(cache) > 0:
+            # discard all transitions except for the ones of the
+            # current frame
+            # TODO: use topo_cache
+            while len(cache) > 1:
                 yield cache.popleft()
 
-            self.move_proton()
+            transitions = cache.popleft()
+
+            self.move_proton(*transitions)
 
     def move_proton(self):
         """Given the hopping rates between the acceptor atoms, choose a connection randomly and

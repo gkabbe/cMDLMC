@@ -146,6 +146,8 @@ class NeighborTopology:
         self.donor_atoms = donor_atoms.encode()
         # Store consumed trajectory frames in cache
         self.cache = deque()
+        #TODO: cache -> frame_cache
+        # self.topo_cache = deque()
 
     def _get_selection(self, trajectory):
         """Given a trajectory array with fields name and pos,
