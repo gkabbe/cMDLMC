@@ -423,20 +423,23 @@ class KMCLattice:
             logger.debug("Next jump at time %.2f", current_time)
             logger.debug("deque length: %s", len(self.topology.cache))
 
-            # discard all transitions except for the ones of the
-            # current frame
-            # TODO: use topo_cache
             while len(cache) > 1:
                 yield cache.popleft()
 
-            transitions = cache.popleft()
-
-            self.move_proton(*transitions)
+            # take last frame from cache, but leave it inside, so move_proton
+            # can consume it later
+            last_frame, = cache
+            yield last_frame
+            self.move_proton()
 
     def move_proton(self):
         """Given the hopping rates between the acceptor atoms, choose a connection randomly and
         move the proton."""
-        pass
+
+        # if needed, take last frame and determine jump rate based on some geometric
+        # criterion
+        frame = self.topology.frame_cache.popleft()
+        start, destination, dist = self.topology.topo_cache.pop()
 
     def fastforward_to_next_jump(self, jumprates, dt):
         """Implements Kinetic Monte Carlo with time-dependent rates.
