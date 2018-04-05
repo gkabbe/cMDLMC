@@ -145,9 +145,8 @@ class NeighborTopology:
         self.atombox = atombox
         self.donor_atoms = donor_atoms.encode()
         # Store consumed trajectory frames in cache
-        self.cache = deque()
-        #TODO: cache -> frame_cache
-        # self.topo_cache = deque()
+        self.frame_cache = deque()
+        self.topo_cache = deque()
 
     def _get_selection(self, trajectory):
         """Given a trajectory array with fields name and pos,
@@ -176,7 +175,9 @@ class NeighborTopology:
 
     def topology_bruteforce_generator(self):
         for frame in self._get_selection(self.trajectory):
-            yield self.get_topology_bruteforce(frame)
+            topo = self.get_topology_bruteforce(frame)
+            self.topo_cache.append(topo)
+            yield topo
 
     def topology_verlet_list_generator(self):
         """Keep track of the two maximum atom displacements.
@@ -189,7 +190,7 @@ class NeighborTopology:
         displacement = 0
 
         for frame in self._get_selection(self.trajectory):
-            self.cache.append(frame)
+            self.frame_cache.append(frame)
             if last_frame is None:
                 logger.debug("First frame. Get topo by bruteforce")
                 topology = self.get_topology_bruteforce(frame)
@@ -206,11 +207,13 @@ class NeighborTopology:
                 logger.debug("Buffer region crossed. Recalculating topology")
                 topology = self.get_topology_bruteforce(frame)
                 displacement = 0
-                yield topology
             else:
                 logger.debug("Topology has not changed")
                 dist = atombox.length(frame[topology[0]], frame[topology[1]])
-                yield (*topology[:2], dist)
+                topology = (*topology[:2], dist)
+
+            self.topo_cache.append(topology)
+            yield topology
             last_frame = frame
 
 

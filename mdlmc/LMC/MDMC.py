@@ -412,7 +412,7 @@ class KMCLattice:
     def continuous_output(self):
         current_frame = 0
         current_time  = 0
-        cache = self.topology.cache
+        cache = self.topology.frame_cache
 
         jumprate_gen = self.jumprate_generator()
         kmc_routine = self.fastforward_to_next_jump(jumprate_gen,
