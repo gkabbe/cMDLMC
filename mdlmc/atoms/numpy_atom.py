@@ -128,8 +128,8 @@ class NeighborTopology:
     """Keeps track of the connections between donor/acceptor atoms.
     Given a cutoff distance, for each atom the atoms within this
     distance will be determined."""
-    def __init__(self, trajectory, cutoff: float, atombox: AtomBox, donor_atoms: str,
-                 buffer: float = 0.0, ) -> None:
+    def __init__(self, trajectory, atombox: AtomBox, *, donor_atoms: str, cutoff: float,
+                 buffer: float = 0.0) -> None:
         """
         Parameters
         ----------
@@ -144,9 +144,6 @@ class NeighborTopology:
         self.buffer = buffer
         self.atombox = atombox
         self.donor_atoms = donor_atoms.encode()
-        # Store consumed trajectory frames in cache
-        self.frame_cache = deque()
-        self.topo_cache = deque(maxlen=1)  # only store the last topology
 
     def _get_selection(self, trajectory):
         """Given a trajectory array with fields name and pos,
@@ -176,7 +173,6 @@ class NeighborTopology:
     def topology_bruteforce_generator(self):
         for frame in self._get_selection(self.trajectory):
             topo = self.get_topology_bruteforce(frame)
-            self.topo_cache.append(topo)
             yield topo
 
     def topology_verlet_list_generator(self):
@@ -190,7 +186,6 @@ class NeighborTopology:
         displacement = 0
 
         for frame in self._get_selection(self.trajectory):
-            self.frame_cache.append(frame)
             if last_frame is None:
                 logger.debug("First frame. Get topo by bruteforce")
                 topology = self.get_topology_bruteforce(frame)
@@ -212,7 +207,6 @@ class NeighborTopology:
                 dist = atombox.length(frame[topology[0]], frame[topology[1]])
                 topology = (*topology[:2], dist)
 
-            self.topo_cache.append(topology)
             yield topology
             last_frame = frame
 
