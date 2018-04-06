@@ -109,7 +109,7 @@ class XYZTrajectory(Trajectory):
         self.number_of_atoms = number_of_atoms
         self.selection = selection
         self.repeat = repeat
-        self._current_frame = None
+        self._current_frame = 0
         self.time_step = time_step
 
         # Check if atom number is specified
@@ -169,8 +169,8 @@ class XYZTrajectory(Trajectory):
                     except Warning:
                         logger.info("Reached end of file")
                         break
-                    self._current_frame = data
                     yield data
+                    self._current_frame += 1
 
             if not self.repeat:
                 break
