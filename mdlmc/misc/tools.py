@@ -223,3 +223,17 @@ def read_file(file, *, usecols=None, dtype=float, memmap_file=None, shape=None, 
         array.flush()
 
     return array
+
+
+def remember_last_element(iterator):
+    memory = None
+    def new_iterator(iterator):
+        nonlocal memory
+        for val in iterator:
+            memory = val
+            yield val
+    def mem():
+        nonlocal memory
+        return memory
+    return new_iterator(iterator), mem
+
