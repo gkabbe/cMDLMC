@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 from collections import deque
+from itertools import tee
 import sys
 import time
 from typing import Iterator
@@ -13,6 +14,7 @@ from ..IO.config_parser import print_confighelp, load_configfile, print_config_t
     check_cmdlmc_settings, print_settings
 from ..IO.trajectory_parser import load_atoms
 from ..atoms.numpy_atom import NeighborTopology
+from ..misc.tools import remember_last_element
 from ..cython_exts.LMC import LMCHelper
 from ..cython_exts.LMC import PBCHelper
 from mdlmc.cython_exts.LMC.LMCHelper import (ActivationEnergyFunction, FermiFunction,
@@ -375,13 +377,13 @@ def main():
 
 
 class KMCLattice:
-    def __init__(self, topology, *, lattice_size, proton_number, jumprate_function,
-                 donor_atoms, extra_atoms=None):
+    def __init__(self, trajectory, *, lattice_size, atom_box, proton_number, jumprate_function,
+                 donor_atoms, extra_atoms=None, topology_cutoff=3.0, topology_buffer=1.0):
         """
 
         Parameters
         ----------
-        topology
+        trajectory
         lattice_size
         proton_number
         jumprate_function
@@ -391,7 +393,15 @@ class KMCLattice:
             extra atoms used for the determination of the jump rate
         """
 
-        self.topology = topology
+        # make two copies of trajectory
+        # one will be used from the topology object, and the other
+        # for the output of the atomic structure
+        self.trajectory = trajectory
+        self.trajectory_iterator, topo_trajectory = tee(iter(trajectory))
+        topology = NeighborTopology(topo_trajectory, atom_box, donor_atoms=donor_atoms,
+                                    cutoff=topology_cutoff, buffer=topology_buffer)
+        self._topology_iterator, self._last_topo = remember_last_element(
+            topology.topology_verlet_list_generator())
         self._initialize_lattice(lattice_size, proton_number)
         self.jumprate_function = jumprate_function
         self.donor_atoms = donor_atoms
@@ -412,34 +422,36 @@ class KMCLattice:
     def continuous_output(self):
         current_frame = 0
         current_time  = 0
-        cache = self.topology.frame_cache
+        trajectory = self.trajectory_iterator
 
-        jumprate_gen = self.jumprate_generator()
-        kmc_routine = self.fastforward_to_next_jump(jumprate_gen,
-                                                    self.topology.trajectory.time_step)
+        jumprate_gen, last_jumprates = remember_last_element(
+            self.jumprate_generator(self.lattice, self._topology_iterator))
+        sum_of_jumprates = (np.sum(jumpr) for jumpr in jumprate_gen)
+        kmc_routine = self.fastforward_to_next_jump(sum_of_jumprates,
+                                                    self.trajectory.time_step)
 
         for f, df, dt in kmc_routine:
             current_time += dt
             logger.debug("Next jump at time %.2f", current_time)
-            logger.debug("deque length: %s", len(self.topology.cache))
+            for _ in range(df):
+                frame = next(trajectory)
+                yield frame
 
-            while len(cache) > 1:
-                yield cache.popleft()
+        self.move_proton(last_jumprates)
 
-            # take last frame from cache, but leave it inside, so move_proton
-            # can consume it later
-            last_frame, = cache
-            yield last_frame
-            self.move_proton()
-
-    def move_proton(self):
+    def move_proton(self, jump_rates):
         """Given the hopping rates between the acceptor atoms, choose a connection randomly and
         move the proton."""
 
         # if needed, take last frame and determine jump rate based on some geometric
         # criterion
-        frame = self.topology.frame_cache.popleft()
-        start, destination, dist = self.topology.topo_cache.pop()
+        start, destination, dist = self._last_topo
+        cumsum = np.cumsum(jump_rates)
+        random_draw = np.random.uniform(0, cumsum[-1])
+        transition_idx = np.searchsorted(cumsum, random_draw)
+        occupied_idx = np.where(self.lattice)[transition_idx]
+        import ipdb; ipdb.set_trace()
+
 
     def fastforward_to_next_jump(self, jumprates, dt):
         """Implements Kinetic Monte Carlo with time-dependent rates.
@@ -497,16 +509,14 @@ class KMCLattice:
             sweep += delta_frame
             yield sweep, delta_frame, kmc_time
 
-    def jumprate_generator(self):
-        lattice = self.lattice
-        topology = self.topology
+    def jumprate_generator(self, lattice, topology_iterator):
         jumprate_function = self.jumprate_function
 
-        for start, destination, distance in topology.topology_verlet_list_generator():
+        for start, destination, distance in topology_iterator:
             omega = jumprate_function(distance)
             # select only jumprates from donors which are occupied
             occupied_sites, = np.where(lattice)
-            yield omega[np.in1d(start, occupied_sites)].sum()
+            yield omega[np.in1d(start, occupied_sites)]
 
 
 if __name__ == "__main__":
