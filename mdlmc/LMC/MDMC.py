@@ -447,13 +447,11 @@ class KMCLattice:
 
         # if needed, take last frame and determine jump rate based on some geometric
         # criterion
-        start, destination, dist = self._last_topo
+        start, destination, dist = self._last_topo()
         cumsum = np.cumsum(jump_rates)
         random_draw = np.random.uniform(0, cumsum[-1])
         transition_idx = np.searchsorted(cumsum, random_draw)
-        occupied_idx = np.where(self.lattice)[transition_idx]
-        import ipdb; ipdb.set_trace()
-
+        #occupied_idx = np.where(self.lattice)[transition_idx]
 
     def fastforward_to_next_jump(self, jumprates, dt):
         """Implements Kinetic Monte Carlo with time-dependent rates.
