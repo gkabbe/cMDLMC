@@ -516,7 +516,8 @@ class KMCLattice:
             omega = jumprate_function(distance)
             # select only jumprates from donors which are occupied
             occupied_sites, = np.where(lattice)
-            yield omega[np.in1d(start, occupied_sites)]
+            omega_occ = omega[np.in1d(start, occupied_sites)]
+            yield omega_occ
 
 
 if __name__ == "__main__":
