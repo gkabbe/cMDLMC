@@ -26,11 +26,10 @@ def test_mdlmc():
     script_path = pathlib.Path(__file__).absolute().parent
     filename = "400Kbeginning.xyz"
     xyz_traj = XYZTrajectory(script_path / filename, selection="O", repeat=True, time_step=0.4)
-    topo = NeighborTopology(xyz_traj, cutoff=3.0, buffer=1.0, atombox=atombox, donor_atoms="O")
 
     jrf = partial(fermi, a=0.06, b=2.3, c=0.1)
-    lattice = KMCLattice(topo, lattice_size=144, proton_number=96, jumprate_function=jrf,
-                         donor_atoms="O")
+    lattice = KMCLattice(xyz_traj, atom_box=atombox, lattice_size=144, proton_number=96,
+                         jumprate_function=jrf, donor_atoms="O")
 
     for frame in lattice:
         print(frame)
