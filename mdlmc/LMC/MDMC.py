@@ -476,8 +476,8 @@ class KMCLattice:
             Frame at which the next event occurs
         delta_frame : int
             Difference between frame and the index at which the next event occurs
-        delta_t : float
-            Difference between current time and the time of the next event
+        kmc_time : float
+            Time of the next event
         """
 
         sweep, kmc_time = 0, 0
