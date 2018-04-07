@@ -2,12 +2,12 @@
 import argparse
 from collections import deque
 from itertools import tee
+import logging
 import sys
 import time
 from typing import Iterator
 
 
-import daiquiri
 import numpy as np
 
 from ..IO.config_parser import print_confighelp, load_configfile, print_config_template, \
@@ -21,7 +21,7 @@ from mdlmc.cython_exts.LMC.LMCHelper import (ActivationEnergyFunction, FermiFunc
                                              ExponentialFunction, FermiFunctionWater)
 
 
-logger = daiquiri.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_git_version():
