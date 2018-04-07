@@ -164,6 +164,7 @@ class XYZTrajectory(Trajectory):
         while True:
             with warnings.catch_warnings(), as_file(self.filename) as f:
                 while True:
+                    logger.debug("Reading xyz frame %i", self._current_frame)
                     try:
                         data = np.genfromtxt(filter_(f), dtype=dtype_xyz_bytes)
                     except Warning:
