@@ -31,8 +31,10 @@ def test_mdlmc():
     lattice = KMCLattice(xyz_traj, atom_box=atombox, lattice_size=144, proton_number=96,
                          jumprate_function=jrf, donor_atoms="O")
 
-    for frame in lattice:
-        print(frame)
+    for f, t, frame in lattice:
+        print("Current frame:", f)
+        print(t)
+        print(frame.shape)
 
 
 if __name__ == "__main__":
