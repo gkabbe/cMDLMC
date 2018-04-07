@@ -396,16 +396,16 @@ class KMCLattice:
         # make two copies of trajectory
         # one will be used from the topology object, and the other
         # for the output of the atomic structure
-        self.trajectory = trajectory
-        self.trajectory_iterator, topo_trajectory = tee(iter(trajectory))
+        self._trajectory = trajectory
+        self._trajectory_iterator, topo_trajectory = tee(iter(trajectory))
         topology = NeighborTopology(topo_trajectory, atom_box, donor_atoms=donor_atoms,
                                     cutoff=topology_cutoff, buffer=topology_buffer)
         self._topology_iterator, self._last_topo = remember_last_element(
             topology.topology_verlet_list_generator())
         self._initialize_lattice(lattice_size, proton_number)
-        self.jumprate_function = jumprate_function
-        self.donor_atoms = donor_atoms
-        self.extra_atoms = extra_atoms
+        self._jumprate_function = jumprate_function
+        self._donor_atoms = donor_atoms
+        self._extra_atoms = extra_atoms
 
     @property
     def lattice(self):
@@ -422,13 +422,13 @@ class KMCLattice:
     def continuous_output(self):
         current_frame = 0
         current_time  = 0
-        trajectory = self.trajectory_iterator
+        trajectory = self._trajectory_iterator
 
         jumprate_gen, last_jumprates = remember_last_element(
             self.jumprate_generator(self.lattice, self._topology_iterator))
         sum_of_jumprates = (np.sum(jumpr) for jumpr in jumprate_gen)
         kmc_routine = self.fastforward_to_next_jump(sum_of_jumprates,
-                                                    self.trajectory.time_step)
+                                                    self._trajectory.time_step)
 
         for f, df, dt in kmc_routine:
             current_time += dt
@@ -510,7 +510,7 @@ class KMCLattice:
             yield sweep, delta_frame, kmc_time
 
     def jumprate_generator(self, lattice, topology_iterator):
-        jumprate_function = self.jumprate_function
+        jumprate_function = self._jumprate_function
 
         for start, destination, distance in topology_iterator:
             omega = jumprate_function(distance)
