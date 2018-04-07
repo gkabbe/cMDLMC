@@ -157,6 +157,7 @@ class NeighborTopology:
         If it is below cutoff + buffer, add it to the list
         of connections."""
 
+        logger.debug("Determine topology")
         topology_matrix = lil_matrix((frame.shape[0], frame.shape[0]), dtype=float)
         for i, atom1 in enumerate(frame):
             for j in range(i):
@@ -167,7 +168,7 @@ class NeighborTopology:
                         topology_matrix[i, j] = dist
                         topology_matrix[j, i] = dist
         connections = topology_matrix.tocoo()
-        logger.debug("Tocoo: %s", connections)
+        logger.debug("Topology matrix: %s", connections)
         return connections.row, connections.col, connections.data
 
     def topology_bruteforce_generator(self):
