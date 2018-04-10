@@ -6,7 +6,7 @@ import daiquiri
 import numpy as np
 
 from mdlmc.IO.trajectory_parser import XYZTrajectory
-from mdlmc.atoms.numpy_atom import NeighborTopology
+from mdlmc.topo.topology import NeighborTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from mdlmc.LMC.MDMC import KMCLattice
 

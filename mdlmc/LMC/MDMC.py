@@ -13,7 +13,7 @@ import numpy as np
 from ..IO.config_parser import print_confighelp, load_configfile, print_config_template, \
     check_cmdlmc_settings, print_settings
 from ..IO.trajectory_parser import load_atoms
-from ..atoms.numpy_atom import NeighborTopology
+from mdlmc.topo.topology import NeighborTopology
 from ..misc.tools import remember_last_element
 from ..cython_exts.LMC import LMCHelper
 from ..cython_exts.LMC import PBCHelper

@@ -2,7 +2,7 @@ from itertools import tee
 import daiquiri
 import numpy as np
 
-from mdlmc.atoms.numpy_atom import NeighborTopArray
+from mdlmc.topo.topology import NeighborTopArray
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 
 
