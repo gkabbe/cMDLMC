@@ -461,14 +461,8 @@ class KMCLattice:
         jumprates : generator / iterator
             Unit: femtosecond^{-1}
             Proton jump rate from an oxygen site to any neighbor
-        proton_position : int
-            Index of oxygen at which the excess proton is residing.
         dt : float
             Trajectory time step
-        frame : int
-            Start frame
-        time : float
-            Start time
 
         Returns
         -------
