@@ -425,7 +425,7 @@ class KMCLattice:
 
         jumprate_iterator, last_jumprates = remember_last_element(
             self.jumprate_generator(self.lattice, self._topology_iterator))
-        sum_of_jumprates = (np.sum(jumpr) for jumpr in jumprate_iterator)
+        sum_of_jumprates = (np.sum(jumpr) for _, _, jumpr in jumprate_iterator)
         kmc_routine = self.fastforward_to_next_jump(sum_of_jumprates,
                                                     self._trajectory.time_step)
 
@@ -509,9 +509,15 @@ class KMCLattice:
         for start, destination, distance in topology_iterator:
             omega = jumprate_function(distance)
             # select only jumprates from donors which are occupied
-            occupied_sites, = np.where(lattice)
-            omega_occ = omega[np.in1d(start, occupied_sites)]
-            yield omega_occ
+            lattice_is_occupied = lattice > 0
+            occupied_sites, = np.where(lattice_is_occupied)
+            unoccupied_sites, = np.where(~lattice_is_occupied)
+            occupied_mask = np.in1d(start, occupied_sites)
+            unoccupied_mask = np.in1d(destination, unoccupied_sites)
+            omega_allowed = omega[occupied_mask & unoccupied_mask]
+            start_allowed = start[occupied_mask & unoccupied_mask]
+            destination_allowed = destination[occupied_mask & unoccupied_mask]
+            yield start_allowed, destination_allowed, omega_allowed
 
 
 if __name__ == "__main__":
