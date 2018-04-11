@@ -5,7 +5,7 @@ from collections import Counter
 import argparse
 
 from mdlmc.IO import trajectory_parser
-from mdlmc.cython_exts.LMC.LMCHelper import AtomBoxCubic, AtomBoxMonoclinic
+from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
 
 def main(*args):
     parser = argparse.ArgumentParser(description="topology",
