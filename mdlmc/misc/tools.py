@@ -71,7 +71,8 @@ def chunk_trajectory(trajectory, chunk_size, length=None, selection=None):
         Trajectory length.
         Allows iterating over only a part of the trajectory
     selection: array_like
-        Expects a boolean array"""
+        Expects a boolean array
+    """
 
     assert chunk_size > 0, "Chunk size must be greater than zero"
     if not length:
