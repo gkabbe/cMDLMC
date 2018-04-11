@@ -20,11 +20,11 @@ build/
 cover
 cython_debug/
 dist/
+docs/
 doxy/
 htmlcov/
 mdkmc.egg-info/
 mdlmc.egg-info/
-sphinx
 src/
 stats/
 version_hash.py
