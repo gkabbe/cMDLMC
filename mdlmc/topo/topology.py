@@ -12,11 +12,13 @@ class NeighborTopology:
     def __init__(self, trajectory, atombox: AtomBox, *, donor_atoms: str, cutoff: float,
                  buffer: float = 0.0) -> None:
         """
+
         Parameters
         ----------
         trajectory
-        cutoff
         atombox
+        donor_atoms
+        cutoff
         buffer
         """
 
