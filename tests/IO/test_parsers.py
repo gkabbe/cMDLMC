@@ -1,9 +1,11 @@
 from io import StringIO
 
 import daiquiri
+import numpy as np
 import pytest
 
-from mdlmc.IO.trajectory_parser import XYZTrajectory, filter_lines, filter_selection
+from mdlmc.IO.trajectory_parser import XYZTrajectory, filter_lines, filter_selection, Frame
+from mdlmc.atoms.numpy_atom import dtype_xyz
 
 
 logger = daiquiri.getLogger(__name__)
@@ -30,9 +32,29 @@ H 1.4 0 0
 
 
 @pytest.fixture
+def xyz_array():
+    """Return an array of dtype xyz_dtype"""
+    return np.array([("O", [0, 0, 0]),
+                     ("H", [0, 1, 0]),
+                     ("H", [1, 0, 0])], dtype=dtype_xyz)
+
+
+@pytest.fixture
 def xyz_file():
     """Return a StringIO object containing a small xyz trajectory"""
     return StringIO(MOCK_XYZ)
+
+
+def test_frame(xyz_array):
+    frame = Frame(xyz_array)
+
+    np.testing.assert_equal(frame["H"], xyz_array["pos"][xyz_array["name"] == "H"]), \
+        "Frame did not select atoms properly by name"
+
+    np.testing.assert_equal(frame[[0, -1]], xyz_array["pos"][[0, -1]]), \
+        "Frame did not select atoms properly by index selection"
+
+    np.testing.assert_equal(frame.shape, (3,))
 
 
 def test_filter_lines(xyz_file):
