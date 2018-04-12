@@ -30,7 +30,7 @@ class NeighborTopology:
         self.cutoff = cutoff
         self.buffer = buffer
         self.atombox = atombox
-        self.donor_atoms = donor_atoms.encode()
+        self.donor_atoms = donor_atoms
 
     def _get_selection(self, trajectory):
         """Given a trajectory array with fields name and pos,

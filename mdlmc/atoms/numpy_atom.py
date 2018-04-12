@@ -5,8 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-dtype_xyz = np.dtype([("name", np.str_, 2), ("pos", np.float64, (3,))])
-dtype_xyz_bytes = np.dtype([("name", np.string_, 2), ("pos", np.float64, (3,))])
+dtype_xyz = np.dtype([("name", "<U2"), ("pos", np.float64, (3,))])
 
 
 atom_masses = {'C' : 12.001,
@@ -50,8 +49,8 @@ def select_atoms(xyzatom_traj, *atomnames):
     selections = []
     frames = xyzatom_traj.shape[0]
     for atomname in atomnames:
-        if type(atomname) is str:
-            atomname = atomname.encode()
+        #if type(atomname) is str:
+        #    atomname = atomname.encode()
         traj = xyzatom_traj[xyzatom_traj["name"] == atomname]["pos"]
         atomnumber = xyzatom_traj[0][xyzatom_traj[0]["name"] == atomname].size
         selections.append(np.array(traj.reshape((frames, atomnumber, 3)), order="C"))

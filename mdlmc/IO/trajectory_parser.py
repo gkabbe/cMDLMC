@@ -18,7 +18,7 @@ import mdtraj
 import numpy as np
 
 from ..atoms import numpy_atom as npa
-from ..atoms.numpy_atom import dtype_xyz, dtype_xyz_bytes
+from ..atoms.numpy_atom import dtype_xyz
 from ..misc.tools import argparse_compatible, chunk
 
 
@@ -108,7 +108,7 @@ def parse_xyz(f, frame_len, selection=None, no_of_frames=None):
         filter_ = filter_lines(f, frame_len)
         output_shape = (-1, frame_len - 2)
 
-    data = np.genfromtxt(filter_, dtype=dtype_xyz_bytes)
+    data = np.genfromtxt(filter_, dtype=dtype_xyz)
     return data.reshape(output_shape)
 
 
@@ -192,11 +192,11 @@ class XYZTrajectory(Trajectory):
                 while True:
                     logger.debug("Reading xyz frame %i", self._current_frame_number)
                     try:
-                        data = np.genfromtxt(filter_(f), dtype=dtype_xyz_bytes)
+                        data = np.genfromtxt(filter_(f), dtype=dtype_xyz)
                     except Warning:
                         logger.info("Reached end of file")
                         break
-                    yield data
+                    yield Frame(data)
                     self._current_frame_number += 1
 
             if not self.repeat:
