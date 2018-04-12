@@ -1,8 +1,12 @@
+import logging
 import numpy as np
 from scipy.sparse import lil_matrix
 
-from mdlmc.atoms.numpy_atom import logger
+from ..IO.trajectory_parser import Trajectory
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBox
+
+
+logger = logging.getLogger(__name__)
 
 
 class NeighborTopology:
