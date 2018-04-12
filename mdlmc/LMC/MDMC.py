@@ -399,8 +399,7 @@ class KMCLattice:
         self._trajectory_iterator, topo_trajectory = tee(iter(trajectory))
         topology = NeighborTopology(topo_trajectory, atom_box, donor_atoms=donor_atoms,
                                     cutoff=topology_cutoff, buffer=topology_buffer)
-        self._topology_iterator, self._last_topo = remember_last_element(
-            topology.topology_verlet_list_generator())
+        self._topology_iterator, self._last_topo = remember_last_element(iter(topology))
         self._initialize_lattice(lattice_size, proton_number)
         self._jumprate_function = jumprate_function
         self._donor_atoms = donor_atoms
