@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-from collections import deque
 from itertools import tee
 import logging
 import sys
