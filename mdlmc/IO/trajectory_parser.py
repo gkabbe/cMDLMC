@@ -156,7 +156,7 @@ class XYZTrajectory(Trajectory):
     def current_frame_number(self):
         return self._current_frame_number
 
-    def __iter__(self) -> Iterator[np.array]:
+    def __iter__(self) -> Iterator[Frame]:
         """
 
         Parameters
@@ -169,7 +169,7 @@ class XYZTrajectory(Trajectory):
 
         Returns
         -------
-
+        Frame
         """
 
 
