@@ -28,13 +28,16 @@ def test_mdlmc():
     xyz_traj = XYZTrajectory(script_path / filename, selection="O", repeat=True, time_step=0.4)
 
     jrf = partial(fermi, a=0.06, b=2.3, c=0.1)
-    lattice = KMCLattice(xyz_traj, atom_box=atombox, lattice_size=144, proton_number=96,
+    lattice = KMCLattice(xyz_traj, atom_box=atombox, lattice_size=144, proton_number=10,
                          jumprate_function=jrf, donor_atoms="O")
 
     for f, t, frame in lattice:
         print("Current frame:", f)
         print(t)
         print(frame.shape)
+        proton_pos, = np.where(lattice.lattice)
+        for pp in proton_pos:
+            print(f"Proton {lattice.lattice[pp]} sits at position {pp}")
 
 
 if __name__ == "__main__":
