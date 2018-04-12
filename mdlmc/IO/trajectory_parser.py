@@ -117,7 +117,6 @@ def filter_selection(f, s, frame_len):
 class XYZTrajectory(Trajectory):
     def __init__(self, filename: Union[str, IO],
                  *,
-                 time_step: float,
                  number_of_atoms: int = None,
                  selection: Union[Container, str, Tuple[str]] = None,
                  repeat: bool = False):
@@ -127,7 +126,6 @@ class XYZTrajectory(Trajectory):
         self.selection = selection
         self.repeat = repeat
         self._current_frame_number = 0
-        self.time_step = time_step
 
         # Check if atom number is specified
         # If not, try to read it from file
