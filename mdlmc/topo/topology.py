@@ -19,11 +19,16 @@ class NeighborTopology:
 
         Parameters
         ----------
-        trajectory
-        atombox
-        donor_atoms
-        cutoff
-        buffer
+        trajectory: Trajectory
+            Trajectory object from which the atomic positions are obtained
+        atombox: AtomBox
+            AtomBox object
+        donor_atoms: str
+            Name of the atom type of the donor / acceptor atoms
+        cutoff: float
+            Cutoff region for pairwise calculations
+        buffer: float
+            Buffer region which is considered before recalculating the topology of closest atoms
         """
 
         self.trajectory = trajectory
