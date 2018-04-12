@@ -44,6 +44,23 @@ def as_file(file_or_string):
         file.close()
 
 
+class Frame:
+    def __init__(self, array):
+        self._array = array
+
+    def get_selection(self, selection):
+        pass
+
+    def __getattr__(self, selection):
+        if isinstance(selection, str):
+            result = self._array["pos"][self._array["name"] == selection]
+        elif isinstance(selection, list):
+            result = self._array["pos"][selection]
+        else:
+            raise ValueError("Selection not understood")
+        return result
+
+
 class Trajectory(metaclass=ABCMeta):
     """Abstract Trajectory class which should be inherited when defining
     a custom trajectory class"""
@@ -153,7 +170,6 @@ class XYZTrajectory(Trajectory):
                 if isinstance(self.selection[0], str):
                     self.selection = get_xyz_selection_from_atomname(self.filename, *self.selection)
 
-        if self.selection is not None:
             def filter_(f):
                 yield from filter_selection(filter_lines(f, frame_len, no_of_frames=1),
                                             self.selection, self.number_of_atoms)
