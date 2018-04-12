@@ -104,6 +104,9 @@ class NeighborTopology:
             yield (*topology, full_frame)
             last_frame = frame
 
+    def __iter__(self):
+        for topo in self.topology_verlet_list_generator():
+            yield topo[:-1]
 
 class NeighborTopArray(NeighborTopology):
     """If the trajectory generator directly yields Numpy arrays,
