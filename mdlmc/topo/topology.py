@@ -63,9 +63,10 @@ class NeighborTopology:
         return connections.row, connections.col, connections.data
 
     def topology_bruteforce_generator(self):
-        for frame in self._get_selection(self.trajectory):
+        for full_frame in self.trajectory:
+            frame = full_frame[self.donor_atoms]
             topo = self.get_topology_bruteforce(frame)
-            yield topo
+            yield (*topo, full_frame)
 
     def topology_verlet_list_generator(self):
         """Keep track of the two maximum atom displacements.
@@ -74,10 +75,11 @@ class NeighborTopology:
 
         last_frame = None
         atombox = self.atombox
-        logger.debug("start verlet list")
+        logger.debug("Start Verlet list")
         displacement = 0
 
-        for frame in self._get_selection(self.trajectory):
+        for full_frame in self.trajectory:
+            frame = full_frame[self.donor_atoms]
             if last_frame is None:
                 logger.debug("First frame. Get topo by bruteforce")
                 topology = self.get_topology_bruteforce(frame)
@@ -99,7 +101,7 @@ class NeighborTopology:
                 dist = atombox.length(frame[topology[0]], frame[topology[1]])
                 topology = (*topology[:2], dist)
 
-            yield topology
+            yield (*topology, full_frame)
             last_frame = frame
 
 
