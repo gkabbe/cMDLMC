@@ -45,20 +45,32 @@ def as_file(file_or_string):
 
 
 class Frame:
-    def __init__(self, array):
+    """Wrapper around structured array to ease selection by name or index"""
+    def __init__(self, array: np.ndarray):
         self._array = array
 
     def get_selection(self, selection):
         pass
 
-    def __getattr__(self, selection):
+    def __getitem__(self, selection):
         if isinstance(selection, str):
+            logger.debug("Select atoms of type %s", selection)
             result = self._array["pos"][self._array["name"] == selection]
         elif isinstance(selection, list):
+            logger.debug("Select atoms with indices %s", selection)
             result = self._array["pos"][selection]
         else:
             raise ValueError("Selection not understood")
         return result
+
+    def __getattr__(self, item):
+        """Pass on attribute requests to numpy array."""
+        return getattr(self._array, item)
+
+    def __repr__(self):
+        repr = f"""Frame:
+        {self._array.__repr__()}"""
+        return repr
 
 
 class Trajectory(metaclass=ABCMeta):
