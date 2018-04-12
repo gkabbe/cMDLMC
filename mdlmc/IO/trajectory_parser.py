@@ -50,7 +50,7 @@ class Trajectory(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def current_frame(self):
+    def current_frame_number(self):
         """Return the current frame."""
         pass
 
@@ -109,7 +109,7 @@ class XYZTrajectory(Trajectory):
         self.number_of_atoms = number_of_atoms
         self.selection = selection
         self.repeat = repeat
-        self._current_frame = 0
+        self._current_frame_number = 0
         self.time_step = time_step
 
         # Check if atom number is specified
@@ -124,8 +124,8 @@ class XYZTrajectory(Trajectory):
                     raise
 
     @property
-    def current_frame(self):
-        return self._current_frame
+    def current_frame_number(self):
+        return self._current_frame_number
 
     def __iter__(self) -> Iterator[np.array]:
         """
@@ -164,14 +164,14 @@ class XYZTrajectory(Trajectory):
         while True:
             with warnings.catch_warnings(), as_file(self.filename) as f:
                 while True:
-                    logger.debug("Reading xyz frame %i", self._current_frame)
+                    logger.debug("Reading xyz frame %i", self._current_frame_number)
                     try:
                         data = np.genfromtxt(filter_(f), dtype=dtype_xyz_bytes)
                     except Warning:
                         logger.info("Reached end of file")
                         break
                     yield data
-                    self._current_frame += 1
+                    self._current_frame_number += 1
 
             if not self.repeat:
                 break
