@@ -46,27 +46,19 @@ class NeighborTopology:
         If it is below cutoff + buffer, add it to the list
         of connections."""
 
-        # List of possible start positions
-        start_indices = []
-        # List of possible destination positions
-        destination_indices = []
-        # List of collective variables which are necessary for the
-        # determination of the jump rate
-        collective_variables = []
-
         logger.debug("Determine topology")
-        # contains all collective variables in a numpy array
-        colvars = self.determine_colvars(frame)
-        for i in range(colvars.shape[0]):
-            for j in range(colvars.shape[1]):
+        topology_matrix = lil_matrix((frame.shape[0], frame.shape[0]), dtype=float)
+        for i, atom1 in enumerate(frame):
+            for j in range(i):
+                atom2 =  frame[j]
                 if i != j:
-                    dist = colvars[i, j, 0]
+                    dist = self.atombox.length(atom1, atom2)
                     if dist <= self.cutoff + self.buffer:
-                        start_indices.append(i)
-                        destination_indices.append(j)
-                        collective_variables.append((dist, *colvars[i, j]))
-        return (np.array(start_indices), np.array(destination_indices),
-                np.atleast_2d(collective_variables).T)
+                        topology_matrix[i, j] = dist
+                        topology_matrix[j, i] = dist
+        connections = topology_matrix.tocoo()
+        logger.debug("Topology matrix: %s", connections)
+        return connections.row, connections.col, connections.data
 
     def topology_bruteforce_generator(self):
         for frame in self._get_selection(self.trajectory):
