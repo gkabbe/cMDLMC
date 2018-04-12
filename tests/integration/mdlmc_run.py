@@ -12,7 +12,7 @@ from mdlmc.LMC.MDMC import KMCLattice
 
 
 logger = daiquiri.getLogger(__name__)
-daiquiri.getLogger("mdlmc.atoms").setLevel(daiquiri.logging.INFO)
+daiquiri.getLogger("mdlmc.topo").setLevel(daiquiri.logging.INFO)
 daiquiri.setup(level=daiquiri.logging.DEBUG)
 
 
