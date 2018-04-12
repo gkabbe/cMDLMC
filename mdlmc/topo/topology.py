@@ -35,6 +35,12 @@ class NeighborTopology:
         for frame in trajectory:
             yield frame["pos"][frame["name"] == self.donor_atoms]
 
+    def determine_colvars(self, frame):
+        """Method for the determination of all necessary collective variables.
+        Per convention, the first collective variable should always be the distance."""
+        dist_matrix = self.atombox.length_all_to_all(frame, frame)
+        return dist_matrix[..., None]
+
     def get_topology_bruteforce(self, frame):
         """Determine the distance for each atom pair.
         If it is below cutoff + buffer, add it to the list
