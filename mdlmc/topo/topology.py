@@ -108,9 +108,3 @@ class NeighborTopology:
         for topo in self.topology_verlet_list_generator():
             yield topo[:-1]
 
-class NeighborTopArray(NeighborTopology):
-    """If the trajectory generator directly yields Numpy arrays,
-    use this class"""
-    def _get_selection(self, trajectory):
-        for frame in trajectory:
-            yield frame
