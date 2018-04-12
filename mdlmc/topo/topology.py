@@ -13,7 +13,7 @@ class NeighborTopology:
     """Keeps track of the connections between donor/acceptor atoms.
     Given a cutoff distance, for each atom the atoms within this
     distance will be determined."""
-    def __init__(self, trajectory, atombox: AtomBox, *, donor_atoms: str, cutoff: float,
+    def __init__(self, trajectory: Trajectory, atombox: AtomBox, *, donor_atoms: str, cutoff: float,
                  buffer: float = 0.0) -> None:
         """
 
