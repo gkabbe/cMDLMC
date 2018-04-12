@@ -476,6 +476,7 @@ class KMCLattice:
             Difference between frame and the index at which the next event occurs
         kmc_time : float
             Time of the next event
+
         """
 
         sweep, kmc_time = 0, 0
@@ -510,8 +511,9 @@ class KMCLattice:
     def jumprate_generator(self, lattice, topology_iterator):
         jumprate_function = self._jumprate_function
 
-        for start, destination, distance in topology_iterator:
-            omega = jumprate_function(distance)
+        for start, destination, colvars in topology_iterator:
+            omega = jumprate_function(colvars)
+            logger.debug("Omega shape: %s", omega.shape)
             # select only jumprates from donors which are occupied
             lattice_is_occupied = lattice > 0
             occupied_sites, = np.where(lattice_is_occupied)
