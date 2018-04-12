@@ -54,7 +54,7 @@ class NeighborTopology:
         topology_matrix = lil_matrix((frame.shape[0], frame.shape[0]), dtype=float)
         for i, atom1 in enumerate(frame):
             for j in range(i):
-                atom2 =  frame[j]
+                atom2 = frame[j]
                 if i != j:
                     dist = self.atombox.length(atom1, atom2)
                     if dist <= self.cutoff + self.buffer:
