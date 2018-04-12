@@ -32,7 +32,7 @@ def test_NeighborTopology_get_topology_bruteforce():
 
     cutoff = 2.0
 
-    top = NeighborTopArray(iter(atoms), cutoff, atombox, buffer=0)
+    top = NeighborTopArray(iter(atoms), atombox, cutoff=cutoff, buffer=0, donor_atoms="O")
 
     conn = top.get_topology_bruteforce(atoms)
 
@@ -57,8 +57,8 @@ def test_NeighborTopology_get_topology_verlet_list():
     cut, buffer = 3, 10
 
     traj1, traj2 = tee(trajgen())
-    top1 = NeighborTopArray(traj1, cut, atombox, buffer=buffer)
-    top2 = NeighborTopArray(traj2, cut, atombox, buffer=buffer)
+    top1 = NeighborTopArray(traj1, atombox, cutoff=cut, buffer=buffer, donor_atoms="O")
+    top2 = NeighborTopArray(traj2, atombox, cutoff=cut, buffer=buffer, donor_atoms="O")
 
     for count, (neighbors1, neighbors2) in enumerate(zip(top1.topology_verlet_list_generator(),
                                                          top2.topology_bruteforce_generator())):
