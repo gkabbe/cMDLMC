@@ -37,13 +37,6 @@ class NeighborTopology:
         self.atombox = atombox
         self.donor_atoms = donor_atoms
 
-    def _get_selection(self, trajectory):
-        """Given a trajectory array with fields name and pos,
-        yield the array with the atom positions.
-        """
-        for frame in trajectory:
-            yield frame["pos"][frame["name"] == self.donor_atoms]
-
     def determine_colvars(self, frame):
         """Method for the determination of all necessary collective variables.
         Per convention, the first collective variable should always be the distance."""
