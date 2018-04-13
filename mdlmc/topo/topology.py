@@ -106,3 +106,49 @@ class NeighborTopology:
     def __iter__(self):
         for topo in self.topology_verlet_list_generator():
             yield (*topo[:-1], *self.determine_colvars(*topo[:2], topo[-1]))
+
+
+class AngleTopology(NeighborTopology):
+    """This topology class is used to calculate the POO angle as an additional collective variable.
+    Of course, other atom types are possible as well. In that case, the parameters for donor_atoms
+    and extra_atoms just need to be changed accordingly.
+
+                             O --- O
+                            /
+                           P
+
+    """
+    def __init__(self, trajectory: Trajectory, atombox: AtomBox, *, donor_atoms: str,
+                 extra_atoms: str, group_size: int, cutoff: float, buffer: float = 0.0) -> None:
+        super().__init__(trajectory, atombox, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
+
+        self.extra_atoms = extra_atoms
+        self.group_size = group_size
+        self.determine_groups()
+
+    def determine_groups(self):
+        """Find for each phosphorus atom the three closest oxygen atoms. This way, the donor atoms
+        belonging to one phosphonic group can be found."""
+        first_frame = next(iter(self.trajectory))
+        distances_PO = self.atombox.length_all_to_all(first_frame[self.extra_atoms],
+                                                      first_frame[self.donor_atoms])
+
+        closest_Os = np.argsort(distances_PO, axis=1)[:, :self.group_size]
+        logger.debug("Groups of donor atoms:\n%s", closest_Os)
+
+        self.map_O_to_P = {}
+        for P_index, Os in enumerate(closest_Os):
+            for O_index in Os:
+                self.map_O_to_P[O_index] = P_index
+        logger.debug("Mapping:\n%s", self.map_O_to_P)
+
+    def determine_colvars(self, start_indices, destination_indices, frame):
+        """Determine here the POO angles"""
+        angles = np.empty(start_indices.shape, dtype=float)
+        p_atoms = frame[self.extra_atoms]
+        o_atoms = frame[self.donor_atoms]
+        for i, (O_i, O_j) in enumerate(zip(start_indices, destination_indices)):
+            P_i = self.map_O_to_P[O_i]
+            angles[i] = self.atombox.angle(p_atoms[P_i], o_atoms[O_i], o_atoms[O_j])
+
+        return (angles,)
