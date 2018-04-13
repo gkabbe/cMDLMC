@@ -1,10 +1,12 @@
 from itertools import tee
+import pathlib
+
 import daiquiri
 import numpy as np
-import pytest
 
-from mdlmc.topo.topology import NeighborTopology
+from mdlmc.topo.topology import NeighborTopology, AngleTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
+from mdlmc.IO.trajectory_parser import XYZTrajectory
 
 
 logger = daiquiri.getLogger(__name__)
@@ -72,3 +74,15 @@ def test_NeighborTopology_get_topology_verlet_list():
 
         if count == 50:
             break
+
+
+def test_AngleTopology():
+    traj_filename = pathlib.Path(__file__).absolute().parents[1] / "integration" / "400Kbeginning.xyz"
+    pbc = [29.122, 25.354, 12.363]
+    atombox = AtomBoxCubic(pbc)
+    xyz_trajectory = XYZTrajectory(traj_filename, time_step=0.4)
+    topo = AngleTopology(xyz_trajectory, atombox, donor_atoms="O", extra_atoms="P", group_size=3,
+                         cutoff=3.0, buffer=0.5)
+
+    for x in topo:
+        print(x)
