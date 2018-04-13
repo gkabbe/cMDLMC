@@ -37,11 +37,10 @@ class NeighborTopology:
         self.atombox = atombox
         self.donor_atoms = donor_atoms
 
-    def determine_colvars(self, frame):
+    def determine_colvars(self, start_indices, destination_indices, frame):
         """Method for the determination of all necessary collective variables.
         Per convention, the first collective variable should always be the distance."""
-        dist_matrix = self.atombox.length_all_to_all(frame, frame)
-        return dist_matrix[..., None]
+        return ()
 
     def get_topology_bruteforce(self, frame):
         """Determine the distance for each atom pair.
@@ -106,5 +105,4 @@ class NeighborTopology:
 
     def __iter__(self):
         for topo in self.topology_verlet_list_generator():
-            yield topo[:-1]
-
+            yield (*topo[:-1], *self.determine_colvars(*topo[:2], topo[-1]))
