@@ -397,9 +397,8 @@ class KMCLattice:
         # for the output of the atomic structure
         self._trajectory = trajectory
         self._trajectory_iterator, topo_trajectory = tee(iter(trajectory))
-        topology = NeighborTopology(topo_trajectory, atom_box, donor_atoms=donor_atoms,
-                                    cutoff=topology_cutoff, buffer=topology_buffer)
-        self._topology_iterator, self._last_topo = remember_last_element(iter(topology))
+        self.topology = NeighborTopology(topo_trajectory, atom_box, donor_atoms=donor_atoms,
+                                         cutoff=topology_cutoff, buffer=topology_buffer)
         self._initialize_lattice(lattice_size, proton_number)
         self._jumprate_function = jumprate_function
         self._donor_atoms = donor_atoms
@@ -421,8 +420,9 @@ class KMCLattice:
         current_frame = 0
         trajectory = self._trajectory_iterator
 
+        topology_iterator, last_topo = remember_last_element(iter(self.topology))
         jumprate_iterator, last_jumprates = remember_last_element(
-            self.jumprate_generator(self.lattice, self._topology_iterator))
+            self.jumprate_generator(self.lattice, topology_iterator))
         sum_of_jumprates = (np.sum(jumpr) for _, _, jumpr in jumprate_iterator)
         kmc_routine = self.fastforward_to_next_jump(sum_of_jumprates,
                                                     self._trajectory.time_step)
