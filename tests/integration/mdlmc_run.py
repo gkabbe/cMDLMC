@@ -9,6 +9,7 @@ from mdlmc.IO.trajectory_parser import XYZTrajectory
 from mdlmc.topo.topology import NeighborTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from mdlmc.LMC.MDMC import KMCLattice
+from mdlmc.LMC.output import xyz_output
 
 
 logger = daiquiri.getLogger(__name__)
@@ -31,13 +32,8 @@ def test_mdlmc():
     lattice = KMCLattice(xyz_traj, atom_box=atombox, lattice_size=144, proton_number=10,
                          jumprate_function=jrf, donor_atoms="O")
 
-    for f, t, frame in lattice:
-        print("Current frame:", f)
-        print(t)
-        print(frame.shape)
-        proton_pos, = np.where(lattice.lattice)
-        for pp in proton_pos:
-            print(f"Proton {lattice.lattice[pp]} sits at position {pp}")
+    for frame in xyz_output(kmc=lattice):
+        print(frame)
 
 
 if __name__ == "__main__":
