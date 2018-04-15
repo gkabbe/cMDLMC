@@ -404,10 +404,6 @@ class KMCLattice:
         self._donor_atoms = donor_atoms
         self._extra_atoms = extra_atoms
 
-    @property
-    def lattice(self):
-        return self._lattice
-
     def _initialize_lattice(self, lattice_size, proton_number):
         self._lattice = np.zeros(lattice_size, dtype=np.int32)
         self._lattice[:proton_number] = range(1, proton_number + 1)
@@ -523,6 +519,18 @@ class KMCLattice:
             start_allowed = start[occupied_mask & unoccupied_mask]
             destination_allowed = destination[occupied_mask & unoccupied_mask]
             yield start_allowed, destination_allowed, omega_allowed
+
+    @property
+    def lattice(self):
+        return self._lattice
+
+    @property
+    def donor_atoms(self):
+        return self._donor_atoms
+
+    @property
+    def extra_atoms(self):
+        return self._extra_atoms
 
 
 if __name__ == "__main__":
