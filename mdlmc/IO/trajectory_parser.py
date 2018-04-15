@@ -68,8 +68,10 @@ class Frame:
         return getattr(self._array, item)
 
     def __repr__(self):
-        repr = f"""Frame:
-        {self._array.__repr__()}"""
+        lines = "\n".join([f"{atom['name']}    {atom['pos'][0]:20.10f} {atom['pos'][1]:20.10f} "
+                           f"{atom['pos'][2]:20.10f}"
+                           for atom in self._array])
+        repr = f"{self._array.size}\n\n{lines}"""
         return repr
 
 
