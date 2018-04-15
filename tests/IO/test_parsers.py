@@ -57,6 +57,16 @@ def test_frame(xyz_array):
     np.testing.assert_equal(frame.shape, (3,))
 
 
+def test_frame_append(xyz_array):
+    f1 = Frame(xyz_array)
+    f2 = Frame(xyz_array)
+
+    result = f1.append(f2)
+
+    assert result.shape == (6,)
+    np.testing.assert_array_equal(result.atom_names, ["O", "H", "H", "O", "H", "H"])
+
+
 def test_filter_lines(xyz_file):
     fl = filter_lines(xyz_file, frame_len=5)
     for line in fl:
