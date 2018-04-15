@@ -532,6 +532,10 @@ class KMCLattice:
     def extra_atoms(self):
         return self._extra_atoms
 
+    @property
+    def occupied_sites(self):
+        return np.where(self._lattice > 0)[0]
+
 
 if __name__ == "__main__":
     main()
