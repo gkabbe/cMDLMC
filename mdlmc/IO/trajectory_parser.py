@@ -94,6 +94,10 @@ class Frame:
     def atom_names(self):
         return self._array["name"]
 
+    @atom_names.setter
+    def atom_names(self, name):
+        self._array["name"] = name
+
 
 class Trajectory(metaclass=ABCMeta):
     """Abstract Trajectory class which should be inherited when defining
