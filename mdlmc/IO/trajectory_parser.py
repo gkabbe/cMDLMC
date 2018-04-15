@@ -86,6 +86,14 @@ class Frame:
         repr = f"{self._array.size}\n\n{lines}"""
         return repr
 
+    def append(self, f2: "Frame"):
+        new_frame = Frame(np.hstack([self._array, f2._array]))
+        return new_frame
+
+    @property
+    def atom_names(self):
+        return self._array["name"]
+
 
 class Trajectory(metaclass=ABCMeta):
     """Abstract Trajectory class which should be inherited when defining
