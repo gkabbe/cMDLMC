@@ -49,19 +49,31 @@ class Frame:
     def __init__(self, array: np.ndarray):
         self._array = array
 
-    def get_selection(self, selection):
-        pass
+    def select(self, selection: Union[str, list, np.ndarray], sel="pos"):
+        """
+        Parameters
+        ----------
+        selection:
+            Either indices of selected atoms, or string with desired atom type selection
 
-    def __getitem__(self, selection):
+        Returns
+        -------
+        result: np.ndarray
+        """
+
         if isinstance(selection, str):
             logger.debug("Select atoms of type %s", selection)
-            result = self._array["pos"][self._array["name"] == selection]
-        elif isinstance(selection, list):
+            result = self._array[sel][self._array["name"] == selection]
+        elif isinstance(selection, (list, np.ndarray)):
             logger.debug("Select atoms with indices %s", selection)
-            result = self._array["pos"][selection]
+            result = self._array[sel][selection]
         else:
-            raise ValueError("Selection not understood")
+            raise ValueError(f"Selection {selection} not understood")
         return result
+
+    def __getitem__(self, item):
+        result = self.select(item, sel=slice(None))
+        return Frame(result)
 
     def __getattr__(self, item):
         """Pass on attribute requests to numpy array."""

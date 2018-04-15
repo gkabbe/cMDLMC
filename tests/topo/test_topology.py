@@ -6,7 +6,8 @@ import numpy as np
 
 from mdlmc.topo.topology import NeighborTopology, AngleTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
-from mdlmc.IO.trajectory_parser import XYZTrajectory
+from mdlmc.IO.trajectory_parser import XYZTrajectory, Frame
+from mdlmc.atoms.numpy_atom import dtype_xyz
 
 
 logger = daiquiri.getLogger(__name__)
@@ -49,10 +50,13 @@ def test_NeighborTopology_get_topology_verlet_list():
     """Assert that the verlet list method yields the same results as the bruteforce
     method"""
     def trajgen():
-        atoms = np.random.uniform(0, 10, size=(5, 3))
+        atoms = np.zeros((5,), dtype=dtype_xyz)
+        pos = np.random.uniform(0, 10, size=(5, 3))
+        atoms["name"] = "H"
+        atoms["pos"] = pos
         while True:
-            atoms += np.random.normal(size=(5, 3), scale=1)
-            yield atoms.copy()
+            atoms["pos"] += np.random.normal(size=(5, 3), scale=1)
+            yield Frame(atoms.copy())
 
     pbc = [10, 10, 10]
     atombox = AtomBoxCubic(pbc)
@@ -60,8 +64,8 @@ def test_NeighborTopology_get_topology_verlet_list():
     cut, buffer = 3, 10
 
     traj1, traj2 = tee(trajgen())
-    top1 = NeighborTopology(traj1, atombox, cutoff=cut, buffer=buffer, donor_atoms=slice(None))
-    top2 = NeighborTopology(traj2, atombox, cutoff=cut, buffer=buffer, donor_atoms=slice(None))
+    top1 = NeighborTopology(traj1, atombox, cutoff=cut, buffer=buffer, donor_atoms="H")
+    top2 = NeighborTopology(traj2, atombox, cutoff=cut, buffer=buffer, donor_atoms="H")
 
     for count, (neighbors1, neighbors2) in enumerate(zip(top1.topology_verlet_list_generator(),
                                                          top2.topology_bruteforce_generator())):
