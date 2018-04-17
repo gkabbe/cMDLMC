@@ -49,7 +49,7 @@ class Frame:
     def __init__(self, array: np.ndarray):
         self._array = array
 
-    def select(self, selection: Union[str, list, np.ndarray], sel="pos"):
+    def select(self, selection: Union[str, list, np.ndarray], sel: Union[str, slice] = "pos"):
         """
         Parameters
         ----------
