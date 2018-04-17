@@ -183,21 +183,6 @@ class XYZTrajectory(Trajectory):
         return self._current_frame_number
 
     def __iter__(self) -> Iterator[Frame]:
-        """
-
-        Parameters
-        ----------
-        filename
-        number_of_atoms:
-            Number of atoms per frame
-        selection:
-            List of atom indices or string or tuple of strings
-
-        Returns
-        -------
-        Frame
-        """
-
 
         frame_len = self.number_of_atoms + 2
 
