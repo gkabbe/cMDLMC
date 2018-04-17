@@ -5,10 +5,10 @@ from ..LMC.MDMC import KMCLattice
 
 class CovalentAutocorrelation:
     def __init__(self, lattice):
-        self.update(lattice)
+        self.reset(lattice)
 
-    def update(self, lattice):
-        self.lattice = lattice
+    def reset(self, lattice):
+        self.lattice = lattice.copy()
 
     def calculate(self, lattice):
         return np.sum((lattice == self.lattice) & (lattice != 0))
