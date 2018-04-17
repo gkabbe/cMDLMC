@@ -521,6 +521,44 @@ class KMCLattice:
             destination_allowed = destination[occupied_mask & unoccupied_mask]
             yield start_allowed, destination_allowed, omega_allowed
 
+    def xyz_output(self, particle_type: str = "H"):
+        for f, t, frame in self:
+            particle_positions = frame[self.occupied_sites]
+            particle_positions.atom_names = particle_type
+            yield frame.append(particle_positions)
+
+    def observables_output(self, reset_frequency: int, print_frequency: int):
+        """
+
+        Parameters
+        ----------
+        reset_frequency: int
+        print_frequency: int
+
+        Returns
+        -------
+
+        """
+        kmc_iterator = iter(self)
+        donor_sites = self.donor_atoms
+        current_frame_number, current_time, frame = next(kmc_iterator)
+
+        autocorr = CovalentAutocorrelation(self.lattice)
+        msd = MeanSquareDisplacement(frame.select(donor_sites), self.lattice, self._atom_box)
+
+        for current_frame_number, current_time, frame in kmc_iterator:
+            if current_frame_number % reset_frequency == 0:
+                autocorr.reset(self.lattice)
+                msd.reset_displacement()
+
+            msd.update_displacement(frame.select(donor_sites), self.lattice)
+
+            if current_frame_number % print_frequency == 0:
+                auto = autocorr.calculate(self.lattice)
+                msd_result = msd.msd()
+                yield current_frame_number, current_time, msd_result, auto
+
+
     @property
     def lattice(self):
         return self._lattice
