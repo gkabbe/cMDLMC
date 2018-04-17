@@ -45,6 +45,9 @@ class MeanSquareDisplacement:
     def reset_displacement(self):
         self.displacement[:] = 0
 
+    def msd(self):
+        return np.sum(self.displacement**2, axis=0) / self.displacement.shape[0]
+
 
 def xyz_output(kmc: KMCLattice, particle_type: str = "H"):
     for f, t, frame in kmc:
