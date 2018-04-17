@@ -45,7 +45,7 @@ def get_acidic_protons(atoms, atom_box, verbose=False):
 
 
 def select_atoms(xyzatom_traj, *atomnames):
-    """Select atoms from a trajectory of dtype \"dtype_xyz\"."""
+    """Select atoms from a trajectory of dtype "dtype_xyz"."""
     selections = []
     frames = xyzatom_traj.shape[0]
     for atomname in atomnames:
@@ -81,11 +81,16 @@ def numpy_print(atoms, names=None, outfile=None):
                                    x["pos"][0], x["pos"][1], x["pos"][2]), file=outfile)
 
 
-def print_npz(*args):
+def print_npz():
+    filename = sys.argv[1]
     try:
-        npz_file = np.load(sys.argv[1])
-    except:
+        npz_file = np.load(filename)
+    except IndexError:
         print("Usage:", sys.argv[0], "<npz filename>")
+        raise
+    except FileNotFoundError:
+        logger.error("File %s not found", filename)
+        raise
     for frame in npz_file["trajectory"]:
         numpy_print(frame)
     npz_file.close()
