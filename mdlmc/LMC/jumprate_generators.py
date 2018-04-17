@@ -1,26 +1,22 @@
-from typing import Iterator
-
 import numpy as np
 
-from mdlmc.cython_exts.LMC.PBCHelper import AtomBox
 
+class Fermi:
+    def __init__(self, a: float, b: float, c: float):
+        """
+        Parameters
+        ----------
+        a:
+            Amplitude
+        b:
+            Location
+        c:
+            Width
+        """
+        self.a = a
+        self.b = b
+        self.c = c
 
-def jumprate_generator(trajectory_generator: Iterator[np.array], atombox: AtomBox,
-                       acceptor_atom: str ="O"):
-    """
-    Converts frames of a trajectory into arrays consisting of
-    donor index, acceptor index, and jump probability.
-    In this implementation the jump rate depends only on the donor-acceptor
-    distance.
-
-    Parameters
-    ----------
-    trajectory_generator: Iterator[np.array]
-        Trajectory of donor and acceptor positions
-
-    Returns
-    -------
-    out: Iterator[np.array]
-    """
-    first_frame = next(trajectory_generator)
+    def __call__(self, x):
+        return self.a / (1 + np.exp((x - self.b) / self.c))
 
