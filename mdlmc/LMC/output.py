@@ -56,4 +56,35 @@ def xyz_output(kmc: KMCLattice, particle_type: str = "H"):
         yield frame.append(particle_positions)
 
 
+def observables_output(kmc: KMCLattice, reset_frequency: int, print_frequency: int):
+    """
+
+    Parameters
+    ----------
+    kmc: KMCLattice
+    reset_frequency: int
+    print_frequency
+
+    Returns
+    -------
+
+    """
+    kmc_iterator = iter(kmc)
+    donor_sites = kmc.donor_atoms
+    _, _, first_frame = next(kmc_iterator)
+
+    autocorr = CovalentAutocorrelation(kmc.lattice)
+    msd = MeanSquareDisplacement(first_frame.select(donor_sites), kmc.lattice, kmc._atom_box)
+
+    for current_frame_number, current_time, frame in kmc_iterator:
+        if current_frame_number % reset_frequency == 0:
+            autocorr.reset(kmc.lattice)
+            msd.reset_displacement()
+
+        msd.update_displacement(frame.select(donor_sites), kmc.lattice)
+
+        if current_frame_number % print_frequency == 0:
+            auto = autocorr.calculate(kmc.lattice)
+            msd_result = msd.msd()
+            yield current_frame_number, current_time, msd_result, auto
 
