@@ -413,7 +413,7 @@ class KMCLattice:
         yield from self.continuous_output()
 
     def continuous_output(self):
-        current_frame = 0
+        current_frame_number = 0
         trajectory = self._trajectory_iterator
 
         topology_iterator, last_topo = remember_last_element(iter(self.topology))
@@ -430,8 +430,8 @@ class KMCLattice:
             logger.debug("Go to frame %s", f)
             for _ in range(df):
                 frame = next(trajectory)
-                yield current_frame, current_time, frame
-                current_frame += 1
+                yield current_frame_number, current_time, frame
+                current_frame_number += 1
 
             self.move_proton(*last_jumprates())
 
