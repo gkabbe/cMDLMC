@@ -400,6 +400,7 @@ class KMCLattice:
         self.topology = NeighborTopology(topo_trajectory, atom_box, donor_atoms=donor_atoms,
                                          cutoff=topology_cutoff, buffer=topology_buffer)
         self._initialize_lattice(lattice_size, proton_number)
+        self._atom_box = atom_box
         self._jumprate_function = jumprate_function
         self._donor_atoms = donor_atoms
         self._extra_atoms = extra_atoms
