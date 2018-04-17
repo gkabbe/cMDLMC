@@ -178,10 +178,6 @@ class XYZTrajectory(Trajectory):
                     logger.error("Could not read atom number from %s", self.filename)
                     raise
 
-    @property
-    def current_frame_number(self):
-        return self._current_frame_number
-
     def __iter__(self) -> Iterator[Frame]:
 
         frame_len = self.number_of_atoms + 2
@@ -214,6 +210,10 @@ class XYZTrajectory(Trajectory):
 
             if not self.repeat:
                 break
+
+    @property
+    def current_frame_number(self):
+        return self._current_frame_number
 
 
 def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
