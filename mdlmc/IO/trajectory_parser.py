@@ -49,7 +49,7 @@ class Frame:
     def __init__(self, array: np.ndarray):
         self._array = array
 
-    def select(self, selection: Union[str, list, np.ndarray], sel: Union[str, slice] = "pos"):
+    def extract_array(self, selection: Union[str, list, np.ndarray], sel: Union[str, slice] = "pos"):
         """
         Parameters
         ----------
@@ -72,7 +72,7 @@ class Frame:
         return result
 
     def __getitem__(self, item):
-        result = self.select(item, sel=slice(None))
+        result = self.extract_array(item, sel=slice(None))
         return Frame(result)
 
     def __getattr__(self, item):
@@ -254,14 +254,14 @@ def get_hdf5_selection_from_atomname(hdf5_filename, *atomnames):
     trajgen = mdtraj.iterload(hdf5_filename, chunk=1)
     frame = next(trajgen)
     if atomnames:
-        selections = [frame.topology.select("type {}".format(atomname)) for atomname in atomnames]
+        selections = [frame.topology.extract_array("type {}".format(atomname)) for atomname in atomnames]
         selection = np.sort(np.hstack(selections))
         name_array = np.zeros(frame.n_atoms, dtype=str)
         for name, indices in zip(atomnames, selections):
             name_array[indices] = name
         name_array = name_array[name_array != ""]
     else:
-        selection = frame.topology.select("all")
+        selection = frame.topology.extract_array("all")
         name_array = np.array([atom.name for r in frame.topology.residues for atom in r.atoms])
     return selection, name_array
 
@@ -369,7 +369,7 @@ def create_dataset_from_hdf5_trajectory(hdf5_file, trajectory_dataset, dataset_n
         returns tuples of data.
 
     selection: function or array_like
-        Will be used to select items from trajectory_dataset.
+        Will be used to extract_array items from trajectory_dataset.
         Can be an array of indices or a function that creates a new array out of
         trajectory_dataset
 

@@ -63,7 +63,7 @@ class NeighborTopology:
 
     def topology_bruteforce_generator(self):
         for full_frame in self.trajectory:
-            frame = full_frame.select(self.donor_atoms)
+            frame = full_frame.extract_array(self.donor_atoms)
             topo = self.get_topology_bruteforce(frame)
             yield (*topo, full_frame)
 
@@ -78,7 +78,7 @@ class NeighborTopology:
         displacement = 0
 
         for full_frame in self.trajectory:
-            frame = full_frame.select(self.donor_atoms)
+            frame = full_frame.extract_array(self.donor_atoms)
             if last_frame is None:
                 logger.debug("First frame. Get topo by bruteforce")
                 topology = self.get_topology_bruteforce(frame)
@@ -130,8 +130,8 @@ class AngleTopology(NeighborTopology):
         """Find for each phosphorus atom the three closest oxygen atoms. This way, the donor atoms
         belonging to one phosphonic group can be found."""
         first_frame = next(iter(self.trajectory))
-        distances_PO = self.atombox.length_all_to_all(first_frame.select(self.extra_atoms),
-                                                      first_frame.select(self.donor_atoms))
+        distances_PO = self.atombox.length_all_to_all(first_frame.extract_array(self.extra_atoms),
+                                                      first_frame.extract_array(self.donor_atoms))
 
         closest_Os = np.argsort(distances_PO, axis=1)[:, :self.group_size]
         logger.debug("Groups of donor atoms:\n%s", closest_Os)
@@ -145,8 +145,8 @@ class AngleTopology(NeighborTopology):
     def determine_colvars(self, start_indices, destination_indices, frame):
         """Determine here the POO angles"""
         angles = np.empty(start_indices.shape, dtype=float)
-        p_atoms = frame.select(self.extra_atoms)
-        o_atoms = frame.select(self.donor_atoms)
+        p_atoms = frame.extract_array(self.extra_atoms)
+        o_atoms = frame.extract_array(self.donor_atoms)
         for i, (O_i, O_j) in enumerate(zip(start_indices, destination_indices)):
             P_i = self.map_O_to_P[O_i]
             angles[i] = self.atombox.angle(p_atoms[P_i], o_atoms[O_i], o_atoms[O_j])
