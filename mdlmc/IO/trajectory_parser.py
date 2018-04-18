@@ -158,30 +158,27 @@ def filter_selection(f, s, frame_len):
 
 
 class XYZTrajectory(Trajectory):
+    """Class for processing xyz files."""
     def __init__(self, filename: Union[str, IO],
                  *,
                  time_step: float = None,
-                 number_of_atoms: int = None,
                  selection: Union[Container, str, Tuple[str]] = None,
                  repeat: bool = False):
 
         self.filename = filename
-        self.number_of_atoms = number_of_atoms
         self.selection = selection
         self.repeat = repeat
         self._current_frame_number = 0
         self.time_step = time_step
 
-        # Check if atom number is specified
-        # If not, try to read it from file
-        if not self.number_of_atoms:
-            logger.info("Number of atoms not specified. Will try to read it from xyz file")
-            with open(self.filename, "r") as f:
-                try:
-                    self.number_of_atoms = int(f.readline())
-                except(("ValueError", "TypeError")):
-                    logger.error("Could not read atom number from %s", self.filename)
-                    raise
+        # Read atom number from xyz file
+        logger.info("Number of atoms not specified. Will try to read it from xyz file")
+        with open(self.filename, "r") as f:
+            try:
+                self.number_of_atoms = int(f.readline())
+            except(("ValueError", "TypeError")):
+                logger.error("Could not read atom number from %s", self.filename)
+                raise
 
     def __iter__(self) -> Iterator[Frame]:
 
