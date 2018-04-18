@@ -103,6 +103,10 @@ class Trajectory(metaclass=ABCMeta):
     """Abstract Trajectory class which should be inherited when defining
     a custom trajectory class"""
 
+    @abstractmethod
+    def __iter__(self):
+        pass
+
     @property
     @abstractmethod
     def current_frame_number(self):
@@ -110,7 +114,8 @@ class Trajectory(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def __iter__(self):
+    def __len__(self):
+        """Return the length (i.e. number of frames) of the trajectory"""
         pass
 
 
