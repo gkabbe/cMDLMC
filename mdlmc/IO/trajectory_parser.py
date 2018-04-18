@@ -220,8 +220,22 @@ class XYZTrajectory(Trajectory):
     def current_frame_number(self):
         return self._current_frame_number
 
+    def __len__(self):
+        logger.info("Determining length (number of frames) of xyz trajectory")
+        logger.info("This may take a while")
+
+        counter = 0
+        with open(self.filename, "r") as f:
+            for _ in f:
+                counter += 1
+                if counter % 1000 == 0:
+                    logger.debug("Line %i", counter)
+
+        return counter // (self.number_of_atoms + 2)
+
 
 def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
+    """Determine the indices of a set of atom names in an xyz trajectory."""
     with as_file(xyz_filename) as f:
         frame_len = int(f.readline())
         selection = []
