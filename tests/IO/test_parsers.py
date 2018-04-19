@@ -46,7 +46,7 @@ def xyz_file():
 
 
 def test_frame(xyz_array):
-    frame = Frame(xyz_array)
+    frame = Frame.from_recarray(xyz_array)
 
     np.testing.assert_equal(frame["H"].atom_positions, xyz_array["pos"][xyz_array["name"] == "H"]), \
         "Frame did not select array of atoms properly by name"
@@ -54,16 +54,16 @@ def test_frame(xyz_array):
     np.testing.assert_equal(frame[[0, -1]].atom_positions, xyz_array["pos"][[0, -1]]), \
         "Frame did not select array of atoms properly by index selection"
 
-    np.testing.assert_equal(frame.shape, (3,))
+    np.testing.assert_equal(frame.atom_names.shape, (3,))
 
 
 def test_frame_append(xyz_array):
-    f1 = Frame(xyz_array)
-    f2 = Frame(xyz_array)
+    f1 = Frame.from_recarray(xyz_array)
+    f2 = Frame.from_recarray(xyz_array)
 
     result = f1.append(f2)
 
-    assert result.shape == (6,)
+    assert result.atom_names.shape == (6,)
     np.testing.assert_array_equal(result.atom_names, ["O", "H", "H", "O", "H", "H"])
 
 
@@ -80,7 +80,7 @@ def test_xyz_trajectory(xyz_file):
     frames = list(parser)
 
     for frame in frames:
-        assert frame.shape == (3,), "XYZ generator yielded wrong shape"
+        assert frame.atom_names.shape == (3,), "XYZ generator yielded wrong shape"
     assert len(frames) == 3, "XYZ generator did not yield all frames"
 
 
@@ -96,4 +96,4 @@ def test_xyz_selection(xyz_file, selection, expected_shape):
 
     frames = list(parser)
     logger.debug("Output of XYZTrajectory: %s", frames)
-    assert frames[0].shape == expected_shape
+    assert frames[0].atom_names.shape == expected_shape

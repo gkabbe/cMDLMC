@@ -56,7 +56,7 @@ def test_NeighborTopology_get_topology_verlet_list():
         atoms["pos"] = pos
         while True:
             atoms["pos"] += np.random.normal(size=(5, 3), scale=1)
-            yield Frame(atoms.copy())
+            yield Frame.from_recarray(atoms.copy())
 
     pbc = [10, 10, 10]
     atombox = AtomBoxCubic(pbc)
