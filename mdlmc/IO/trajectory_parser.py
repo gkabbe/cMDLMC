@@ -294,9 +294,34 @@ class HDF5Trajectory(Trajectory):
         self.time_step = time_step
         self.selection = selection
         self.repeat = repeat
+        self._current_frame_number = None
+
+        self._atomnames_key = "atom_names"
+        self._trajectory_key = "trajectory"
+
+        with h5py.File(hdf5_filename, "r") as f:
+            self.atom_names = f[self._atomnames_key][:].astype("<U2")
 
     def __iter__(self):
-        pass
+        atom_names = self.atom_names
+        with h5py.File(self.hdf5_filename, "r") as h5file:
+            traj = h5file[self._trajectory_key]
+
+            while True:
+                for frame in traj:
+                    yield Frame(atom_names, frame)
+
+                if not self.repeat:
+                    break
+
+    def __len__(self):
+        with h5py.File(self.hdf5_filename, "r") as h5file:
+            traj = h5file[self._trajectory_key]
+            return traj.shape[0]
+
+    @property
+    def current_frame_number(self):
+        return self._current_frame_number
 
 
 def get_hdf5_selection_from_atomname(hdf5_filename, *atomnames):
