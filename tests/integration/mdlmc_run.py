@@ -22,8 +22,7 @@ def test_mdlmc():
     pbc = [29.122, 25.354, 12.363]
     atombox = AtomBoxCubic(pbc)
     script_path = pathlib.Path(__file__).absolute().parent
-    filename = "/home/kabbe/trajectories/400K.xyz"
-    xyz_traj = XYZTrajectory(script_path / filename, selection="O", repeat=True, time_step=0.4)
+    xyz_traj = XYZTrajectory(script_path / "400Kbeginning.xyz", selection="O", repeat=True, time_step=0.4)
 
     jrf = Fermi(a=0.06, b=2.3, c=0.1)
     kmc = KMCLattice(xyz_traj, atom_box=atombox, lattice_size=144, proton_number=96,
