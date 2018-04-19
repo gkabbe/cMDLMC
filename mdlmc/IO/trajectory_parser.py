@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
-
 import argparse
 import logging
 import os
 import sys
 import time
 import types
-from abc import ABCMeta, abstractproperty, abstractmethod
+from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from functools import reduce
 from io import IOBase
 from typing import Iterator, Union, Tuple, IO, Container
 import warnings
 
+import tables
 import h5py
 import mdtraj
 import numpy as np
