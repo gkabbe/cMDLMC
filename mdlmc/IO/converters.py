@@ -60,9 +60,9 @@ def save_xyz_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movem
     logger.info("Determine length of xyz trajectory.")
     trajectory_length = len(xyz)
     first_frame = next(iter(xyz))
-    frame_shape = first_frame.array["pos"].shape
+    frame_shape = first_frame.atom_positions.shape
     frame_length = first_frame.size
-    atom_names = first_frame.array["name"].astype("S")
+    atom_names = first_frame.atom_names.astype("S")
     logger.info("Names: %s", atom_names)
 
     if not hdf5_fname:
@@ -78,7 +78,7 @@ def save_xyz_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movem
         for i, xyz_frame in enumerate(xyz):
             if remove_com_movement:
                 npa.remove_center_of_mass_movement(xyz_frame)
-            traj[i] = xyz_frame.array["pos"]
+            traj[i] = xyz_frame.atom_positions
 
 
 def main():
