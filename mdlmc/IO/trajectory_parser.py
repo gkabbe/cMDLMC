@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 @contextmanager
 def as_file(file_or_string):
+    """Allows handling of filenames or files in the same way."""
     need_to_close = False
     # If the input is no file, try to open it
     if not isinstance(file_or_string, IOBase):
@@ -51,6 +52,7 @@ class Frame:
 
     def extract_array(self, selection: Union[str, list, np.ndarray], sel: Union[str, slice] = "pos"):
         """
+        Extract a selection of the frame as numpy array.
         Parameters
         ----------
         selection:
