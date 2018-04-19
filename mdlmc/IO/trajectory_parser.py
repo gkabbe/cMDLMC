@@ -235,7 +235,8 @@ class XYZTrajectory(Trajectory):
             with warnings.catch_warnings(), as_file(self.filename) as f:
                 np.warnings.filterwarnings("error", message="genfromtxt: Empty input file")
                 while True:
-                    logger.debug("Reading xyz frame %i", self._current_frame_number)
+                    if self._current_frame_number % 100 == 0:
+                        logger.debug("Reading xyz frame %i", self._current_frame_number)
                     try:
                         data = np.genfromtxt(filter_(f), dtype=dtype_xyz)
                     except Warning as w:
