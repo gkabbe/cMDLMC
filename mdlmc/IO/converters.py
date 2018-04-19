@@ -17,38 +17,6 @@ from ..IO.trajectory_parser import XYZTrajectory
 logger = logging.getLogger(__name__)
 
 
-def xyz_to_hdf5(xyz_filename: str, hdf5_filename: str, *,
-               selection: Union[str, Iterable[str], Iterable[int]] = None) -> None:
-    """
-
-    Parameters
-    ----------
-    xyz_filename
-    hdf5_filename
-    selection
-
-    Returns
-    -------
-
-    """
-    xyz = XYZTrajectory(xyz_filename, selection=selection)
-    logger.info("Determine length of xyz trajectory.")
-    trajectory_length = len(xyz)
-    frame_length = next(iter(xyz)).size
-
-    if pathlib.Path(npy_filename).exists():
-        raise FileExistsError(f"There already exists a file {npy_filename}!")
-
-    npy = np.memmap(npy_filename, dtype=np.float32, mode="w+",
-                    shape=(trajectory_length, frame_length))
-
-    for i, (frame, npy_frame) in enumerate(zip(xyz, npy)):
-        if i % 1000 == 0:
-            logger.info("Writing frame %i", i)
-        npy_frame[:] = frame.extract_array(selection=slice(None))
-    npy.flush()
-
-
 def save_xyz_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movement=False,
                      verbose=False, dataset_name="trajectory",
                      selection=None):
