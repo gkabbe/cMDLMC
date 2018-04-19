@@ -11,7 +11,10 @@ from io import IOBase
 from typing import Iterator, Union, Tuple, IO, Container
 import warnings
 
-import tables
+try:
+    import tables
+except ImportError:
+    warnings.warn("Pytables and/or h5py were not found, but are needed for use of HDF5 files.")
 import h5py
 import mdtraj
 import numpy as np
