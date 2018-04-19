@@ -193,14 +193,14 @@ class KMCLattice:
         current_frame_number, current_time, frame = next(kmc_iterator)
 
         autocorr = CovalentAutocorrelation(self.lattice)
-        msd = MeanSquareDisplacement(frame.extract_array(donor_sites), self.lattice, self._atom_box)
+        msd = MeanSquareDisplacement(frame[donor_sites].atom_positions, self.lattice, self._atom_box)
 
         for current_frame_number, current_time, frame in kmc_iterator:
             if current_frame_number % reset_frequency == 0:
                 autocorr.reset(self.lattice)
                 msd.reset_displacement()
 
-            msd.update_displacement(frame.extract_array(donor_sites), self.lattice)
+            msd.update_displacement(frame[donor_sites].atom_positions, self.lattice)
 
             if current_frame_number % print_frequency == 0:
                 auto = autocorr.calculate(self.lattice)

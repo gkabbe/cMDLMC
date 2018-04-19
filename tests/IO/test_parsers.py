@@ -48,10 +48,10 @@ def xyz_file():
 def test_frame(xyz_array):
     frame = Frame(xyz_array)
 
-    np.testing.assert_equal(frame.extract_array("H"), xyz_array["pos"][xyz_array["name"] == "H"]), \
+    np.testing.assert_equal(frame["H"].atom_positions, xyz_array["pos"][xyz_array["name"] == "H"]), \
         "Frame did not select array of atoms properly by name"
 
-    np.testing.assert_equal(frame.extract_array([0, -1]), xyz_array["pos"][[0, -1]]), \
+    np.testing.assert_equal(frame[[0, -1]].atom_positions, xyz_array["pos"][[0, -1]]), \
         "Frame did not select array of atoms properly by index selection"
 
     np.testing.assert_equal(frame.shape, (3,))
