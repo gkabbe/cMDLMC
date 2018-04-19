@@ -46,8 +46,15 @@ def as_file(file_or_string):
 
 class Frame:
     """Wrapper around structured array to ease selection by name or index"""
-    def __init__(self, array: np.ndarray):
-        self._array = array
+    def __init__(self, names, positions):
+        self._names = names
+        self._positions = positions
+
+    @classmethod
+    def from_recarray(cls, array: np.ndarray):
+        names = array["name"]
+        positions = array["pos"]
+        return cls(names, positions)
 
     def _extract_array(self, selection: Union[str, list, np.ndarray]):
         """
@@ -64,44 +71,41 @@ class Frame:
 
         if isinstance(selection, str):
             logger.debug("Select atoms of type %s", selection)
-            result = self._array[self._array["name"] == selection]
+            result = self._names[self._names == selection], self._positions[self._names == selection]
         elif isinstance(selection, (list, np.ndarray)):
             logger.debug("Select atoms with indices %s", selection)
-            result = self._array[selection]
+            result = self._names[selection], self._positions[selection]
         else:
             raise ValueError(f"Selection {selection} not understood")
         return result
 
     def __getitem__(self, item):
         result = self._extract_array(item)
-        return Frame(result)
-
-    def __getattr__(self, item):
-        """Pass on attribute requests to numpy array."""
-        return getattr(self._array, item)
+        return Frame(*result)
 
     def __repr__(self):
-        lines = "\n".join([f"{atom['name']}    {atom['pos'][0]:20.10f} {atom['pos'][1]:20.10f} "
-                           f"{atom['pos'][2]:20.10f}"
-                           for atom in self._array])
-        repr = f"{self._array.size}\n\n{lines}"""
+        lines = "\n".join([f"{atomname}    {atompos[0]:20.10f} {atompos[1]:20.10f} "
+                           f"{atompos[2]:20.10f}"
+                           for atomname, atompos in zip(self.atom_names, self.atom_positions)])
+        repr = f"{self.atom_positions.size}\n\n{lines}"""
         return repr
 
     def append(self, f2: "Frame"):
-        new_frame = Frame(np.hstack([self._array, f2._array]))
+        new_frame = Frame(np.hstack([self.atom_names, f2.atom_names]),
+                          np.hstack([self.atom_positions, f2.atom_positions]))
         return new_frame
 
     @property
     def atom_names(self):
-        return self._array["name"]
+        return self._names
 
     @atom_names.setter
     def atom_names(self, name):
-        self._array["name"] = name
+        self._names[:] = name
 
     @property
     def atom_positions(self):
-        return np.ascontiguousarray(self._array["pos"])
+        return self._positions
 
 
 class HDF5Frame:
@@ -238,7 +242,7 @@ class XYZTrajectory(Trajectory):
                         logger.debug(w)
                         logger.info("Reached end of file")
                         break
-                    yield Frame(data)
+                    yield Frame.from_recarray(data)
                     self._current_frame_number += 1
 
             if not self.repeat:
