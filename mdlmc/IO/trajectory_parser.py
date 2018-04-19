@@ -46,7 +46,7 @@ class Frame:
     def __init__(self, array: np.ndarray):
         self._array = array
 
-    def extract_array(self, selection: Union[str, list, np.ndarray], sel: Union[str, slice] = "pos"):
+    def extract_array(self, selection: Union[str, list, np.ndarray], field: Union[str, slice] = "pos"):
         """
         Extract a selection of the frame as numpy array.
         Parameters
@@ -61,16 +61,16 @@ class Frame:
 
         if isinstance(selection, str):
             logger.debug("Select atoms of type %s", selection)
-            result = self._array[sel][self._array["name"] == selection]
+            result = self._array[field][self._array["name"] == selection]
         elif isinstance(selection, (list, np.ndarray)):
             logger.debug("Select atoms with indices %s", selection)
-            result = self._array[sel][selection]
+            result = self._array[field][selection]
         else:
             raise ValueError(f"Selection {selection} not understood")
         return result
 
     def __getitem__(self, item):
-        result = self.extract_array(item, sel=slice(None))
+        result = self.extract_array(item, field=slice(None))
         return Frame(result)
 
     def __getattr__(self, item):
