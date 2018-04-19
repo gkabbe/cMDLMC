@@ -152,3 +152,8 @@ class AngleTopology(NeighborTopology):
             angles[i] = self.atombox.angle(p_atoms[P_i], o_atoms[O_i], o_atoms[O_j])
 
         return (angles,)
+
+
+class HydroniumTopology(NeighborTopology):
+    """Mimics the neighbor topology of a H3O+ ion in water by only defining connections to the
+    three closest oxygen neighbors."""
