@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
-import argparse
 from itertools import tee
 import logging
-import sys
-import time
 from typing import Iterator
 
 
