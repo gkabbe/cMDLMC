@@ -108,13 +108,6 @@ class Frame:
         return self._positions
 
 
-class HDF5Frame:
-    def __init__(self, atom_names, atom_positions):
-        self._atom_names = atom_names
-        self._atom_positions = atom_positions
-
-
-
 class Trajectory(metaclass=ABCMeta):
     """Abstract Trajectory class which should be inherited when defining
     a custom trajectory class"""
