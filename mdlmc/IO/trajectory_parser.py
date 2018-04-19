@@ -277,6 +277,21 @@ def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
     return np.array(selection)
 
 
+class HDF5Trajectory(Trajectory):
+    def __init__(self,
+                 hdf5_filename: str,
+                 time_step: float,
+                 selection: Union[Container, str, Tuple[str]] = None,
+                 repeat: bool = False) -> None:
+        self.hdf5_filename = hdf5_filename
+        self.time_step = time_step
+        self.selection = selection
+        self.repeat = repeat
+
+    def __iter__(self):
+        pass
+
+
 def get_hdf5_selection_from_atomname(hdf5_filename, *atomnames):
     """Expects a hdf5 trajectory created with mdconvert (from package mdtraj)"""
     trajgen = mdtraj.iterload(hdf5_filename, chunk=1)
