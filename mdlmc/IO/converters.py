@@ -17,11 +17,9 @@ from ..IO.trajectory_parser import XYZTrajectory
 logger = logging.getLogger(__name__)
 
 
-def save_xyz_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movement=False,
-                     verbose=False, dataset_name="trajectory",
-                     selection=None):
+def save_xyz_to_hdf5(xyz_fname, hdf5_fname=None, *, remove_com_movement=False,
+                     dataset_name="trajectory", selection=None):
     """
-
     Note: HDF5 with Blosc compression currently only works if h5py and pytables are installed via
     conda!"""
     xyz = XYZTrajectory(xyz_fname, selection=selection)
@@ -29,7 +27,6 @@ def save_xyz_to_hdf5(xyz_fname, hdf5_fname=None, chunk=1000, *, remove_com_movem
     trajectory_length = len(xyz)
     first_frame = next(iter(xyz))
     frame_shape = first_frame.atom_positions.shape
-    frame_length = first_frame.size
     atom_names = first_frame.atom_names.astype("S")
     logger.info("Names: %s", atom_names)
 
