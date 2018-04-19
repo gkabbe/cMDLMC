@@ -22,9 +22,6 @@ from ..atoms.numpy_atom import dtype_xyz
 from ..misc.tools import argparse_compatible, chunk
 
 
-warnings.filterwarnings('error')
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -170,6 +167,20 @@ class XYZTrajectory(Trajectory):
                  number_of_atoms: int = None,
                  selection: Union[Container, str, Tuple[str]] = None,
                  repeat: bool = False):
+        """
+        Parameters
+        ----------
+        filename:
+            Path to the xyz file
+        time_step:
+            time between two frames
+        number_of_atoms:
+            total number of atoms in the xyz file
+        selection: str or array of indices
+            subset of atoms which should be selected
+        repeat: bool
+            repeat the trajectory when iterating
+        """
 
         self.filename = filename
         self.number_of_atoms = number_of_atoms
@@ -209,11 +220,13 @@ class XYZTrajectory(Trajectory):
 
         while True:
             with warnings.catch_warnings(), as_file(self.filename) as f:
+                np.warnings.filterwarnings("error", message="genfromtxt: Empty input file")
                 while True:
                     logger.debug("Reading xyz frame %i", self._current_frame_number)
                     try:
                         data = np.genfromtxt(filter_(f), dtype=dtype_xyz)
-                    except Warning:
+                    except Warning as w:
+                        logger.debug(w)
                         logger.info("Reached end of file")
                         break
                     yield Frame(data)
