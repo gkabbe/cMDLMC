@@ -97,8 +97,8 @@ class Frame:
         self._array["name"] = name
 
     @property
-    def array(self):
-        return self._array
+    def atom_positions(self):
+        return self._array["pos"]
 
 
 class Trajectory(metaclass=ABCMeta):
