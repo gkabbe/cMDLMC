@@ -172,7 +172,7 @@ class XYZTrajectory(Trajectory):
                  time_step: float = None,
                  number_of_atoms: int = None,
                  selection: Union[Container, str, Tuple[str]] = None,
-                 repeat: bool = False):
+                 repeat: bool = False) -> None:
         """
         Parameters
         ----------
