@@ -285,12 +285,12 @@ def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
 
 class HDF5Trajectory(Trajectory):
     def __init__(self,
-                 hdf5_filename: str,
+                 filename: str,
                  time_step: float,
                  selection: Union[Container, str, Tuple[str]] = None,
                  repeat: bool = False,
                  chunk_size: int = 1000) -> None:
-        self.hdf5_filename = hdf5_filename
+        self.filename = filename
         self.time_step = time_step
         # TODO: Implement selection
         self.selection = selection
@@ -301,13 +301,13 @@ class HDF5Trajectory(Trajectory):
         self._atomnames_key = "atom_names"
         self._trajectory_key = "trajectory"
 
-        with h5py.File(hdf5_filename, "r") as f:
+        with h5py.File(filename, "r") as f:
             self.atom_names = f[self._atomnames_key][:].astype("<U2")
 
     def __iter__(self):
         atom_names = self.atom_names
         chunk_size = self._chunk_size
-        with h5py.File(self.hdf5_filename, "r") as h5file:
+        with h5py.File(self.filename, "r") as h5file:
             traj = h5file[self._trajectory_key]
 
             while True:
@@ -319,7 +319,7 @@ class HDF5Trajectory(Trajectory):
                     break
 
     def __len__(self):
-        with h5py.File(self.hdf5_filename, "r") as h5file:
+        with h5py.File(self.filename, "r") as h5file:
             traj = h5file[self._trajectory_key]
             return traj.shape[0]
 
