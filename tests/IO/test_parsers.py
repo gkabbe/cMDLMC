@@ -54,7 +54,7 @@ def test_frame(xyz_array):
     np.testing.assert_equal(frame[[0, -1]].atom_positions, xyz_array["pos"][[0, -1]]), \
         "Frame did not select array of atoms properly by index selection"
 
-    np.testing.assert_equal(frame.atom_names.shape, (3,))
+    assert frame.atom_number == 3
 
 
 def test_frame_append(xyz_array):
@@ -63,7 +63,7 @@ def test_frame_append(xyz_array):
 
     result = f1.append(f2)
 
-    assert result.atom_names.shape == (6,)
+    assert result.atom_number == 6
     np.testing.assert_array_equal(result.atom_names, ["O", "H", "H", "O", "H", "H"])
 
 
