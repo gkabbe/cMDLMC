@@ -1,3 +1,4 @@
+from collections import deque
 from functools import wraps
 import time
 import argparse
@@ -238,3 +239,17 @@ def remember_last_element(iterator):
         return memory
     return new_iterator(iterator), mem
 
+
+def cache_last_elements(iterator):
+    cache = deque()
+
+    def new_iterator():
+        for val in iterator:
+            cache.append(val)
+            yield val
+
+    def empty_cache():
+        while cache:
+            yield cache.popleft()
+
+    return new_iterator(), empty_cache
