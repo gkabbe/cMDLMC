@@ -313,7 +313,7 @@ class HDF5Trajectory(Trajectory):
             while True:
                 for _, _, frames in chunk_trajectory(traj, chunk_size=chunk_size):
                     for frame in frames:
-                        yield Frame(atom_names, frame)
+                        yield Frame(atom_names, frame.astype(float))
 
                 if not self.repeat:
                     break
