@@ -48,20 +48,18 @@ def topology(request, trajectory, atombox):
     return Topo(trajectory, atombox, donor_atoms="O", cutoff=3.0, buffer=2.0, **extra_params)
 
 
-def test_blabla(buchstabe, zahl):
-    print(buchstabe, zahl)
-
-
-@pytest.mark.parametrize("output_type", ["xyz_output", "observables_output"])
-def test_mdlmc(topology, atombox, jumprate_function, output_type):
-    if (topology, jumprate_function) not in [(NeighborTopology, Fermi), AngleTopology, FermiAngle]:
+@pytest.mark.parametrize("output_type, output_params",
+                         [("xyz_output", {}), ("observables_output", {"reset_frequency": 100,
+                                                                      "print_frequency": 10})])
+def test_mdlmc(topology, atombox, jumprate_function, output_type, output_params):
+    if (type(topology), type(jumprate_function)) not in [(NeighborTopology, Fermi), AngleTopology, FermiAngle]:
         pytest.skip(f"{topology.__class__} and {jumprate_function.__class__} not compatible.")
 
     kmc = KMCLattice(topology, atom_box=atombox, lattice_size=144, proton_number=96,
                      jumprate_function=jumprate_function, donor_atoms="O", time_step=0.4)
 
-    for frame in getattr(kmc, output_type)():
-        print(frame)
+    for frame in getattr(kmc, output_type)(**output_params):
+            print(frame)
 
 
 if __name__ == "__main__":
