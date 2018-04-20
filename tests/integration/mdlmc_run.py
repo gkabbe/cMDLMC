@@ -4,12 +4,13 @@ from itertools import tee
 
 import daiquiri
 import numpy as np
+import pytest
 
 from mdlmc.IO.trajectory_parser import XYZTrajectory, HDF5Trajectory
-from mdlmc.topo.topology import NeighborTopology
+from mdlmc.topo.topology import NeighborTopology, AngleTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from mdlmc.LMC.MDMC import KMCLattice
-from mdlmc.LMC.jumprate_generators import Fermi
+from mdlmc.LMC.jumprate_generators import Fermi, FermiAngle
 
 
 logger = daiquiri.getLogger(__name__)
@@ -17,22 +18,49 @@ daiquiri.getLogger("mdlmc.topo").setLevel(daiquiri.logging.INFO)
 daiquiri.setup(level=daiquiri.logging.INFO)
 
 
-def test_mdlmc():
-    format = "{: 10d} {:10.2f} {:16.8f} {:16.8f} {:16.8f} {:d}"
+script_path = pathlib.Path(__file__).absolute().parent
+
+
+extensions = [(XYZTrajectory, ".xyz"), (HDF5Trajectory, ".hdf5")]
+@pytest.fixture(params=extensions)
+def trajectory(request):
+    Traj, ext = request.param
+    return Traj(str(script_path / "trajectory") + ext, time_step=0.4)
+
+
+@pytest.fixture
+def atombox():
     pbc = [29.122, 25.354, 12.363]
-    atombox = AtomBoxCubic(pbc)
-    script_path = pathlib.Path(__file__).absolute().parent
-    xyz_traj = XYZTrajectory(script_path / "400Kbeginning.xyz", selection="O", repeat=True, time_step=0.4)
-    #hdf5traj = HDF5Trajectory(script_path / "400K.hdf5", selection="O", repeat=True, time_step=0.4, chunk_size=10000)
-    topo = NeighborTopology(xyz_traj, atombox, donor_atoms="O", cutoff=3.0, buffer=2.0)
+    return AtomBoxCubic(pbc)
 
-    jrf = Fermi(a=0.06, b=2.3, c=0.1)
-    kmc = KMCLattice(topo, atom_box=atombox, lattice_size=144, proton_number=96,
-                     jumprate_function=jrf, donor_atoms="O", time_step=0.4)
 
-    #for frame_nr, time, msd, autocorr in kmc.continuous_output():
-    #    print(format.format(frame_nr, time, *msd, autocorr))
-    for frame in kmc.xyz_output():
+@pytest.fixture(params=[(Fermi, {"a": 0.06, "b": 2.3, "c": 0.1}),
+                        (FermiAngle, {"a": 0.06, "b": 2.3, "c": 0.1, "theta": np.pi/2})])
+def jumprate_function(request):
+    JumpRate, jumprate_parameters = request.param
+    return JumpRate(**jumprate_parameters)
+
+
+@pytest.fixture(params=[(NeighborTopology, {}),
+                        (AngleTopology, {"extra_atoms": "P", "group_size": 3})])
+def topology(request, trajectory, atombox):
+    Topo, extra_params = request.param
+    return Topo(trajectory, atombox, donor_atoms="O", cutoff=3.0, buffer=2.0, **extra_params)
+
+
+def test_blabla(buchstabe, zahl):
+    print(buchstabe, zahl)
+
+
+@pytest.mark.parametrize("output_type", ["xyz_output", "observables_output"])
+def test_mdlmc(topology, atombox, jumprate_function, output_type):
+    if (topology, jumprate_function) not in [(NeighborTopology, Fermi), AngleTopology, FermiAngle]:
+        pytest.skip(f"{topology.__class__} and {jumprate_function.__class__} not compatible.")
+
+    kmc = KMCLattice(topology, atom_box=atombox, lattice_size=144, proton_number=96,
+                     jumprate_function=jumprate_function, donor_atoms="O", time_step=0.4)
+
+    for frame in getattr(kmc, output_type)():
         print(frame)
 
 
