@@ -43,6 +43,8 @@ def save_xyz_to_hdf5(xyz_fname, hdf5_fname=None, *, remove_com_movement=False,
         for i, xyz_frame in enumerate(xyz):
             if remove_com_movement:
                 npa.remove_center_of_mass_movement(xyz_frame)
+            if i % 1000 == 0:
+                logger.info("Frame %i", i)
             traj[i] = xyz_frame.atom_positions
 
 
