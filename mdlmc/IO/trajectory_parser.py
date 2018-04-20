@@ -87,7 +87,7 @@ class Frame:
         lines = "\n".join([f"{atomname}    {atompos[0]:20.10f} {atompos[1]:20.10f} "
                            f"{atompos[2]:20.10f}"
                            for atomname, atompos in zip(self.atom_names, self.atom_positions)])
-        repr = f"{self.atom_positions.size}\n\n{lines}"""
+        repr = f"{self.atom_number}\n\n{lines}"""
         return repr
 
     def append(self, f2: "Frame"):
@@ -106,6 +106,10 @@ class Frame:
     @property
     def atom_positions(self):
         return self._positions
+
+    @property
+    def atom_number(self):
+        return self._names.size
 
 
 class Trajectory(metaclass=ABCMeta):
