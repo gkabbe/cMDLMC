@@ -21,6 +21,7 @@ import numpy as np
 
 from ..atoms import numpy_atom as npa
 from ..atoms.numpy_atom import dtype_xyz
+from ..misc.tools import chunk_trajectory
 from ..misc.tools import argparse_compatible, chunk
 
 
@@ -287,11 +288,14 @@ class HDF5Trajectory(Trajectory):
                  hdf5_filename: str,
                  time_step: float,
                  selection: Union[Container, str, Tuple[str]] = None,
-                 repeat: bool = False) -> None:
+                 repeat: bool = False,
+                 chunk_size: int = 1000) -> None:
         self.hdf5_filename = hdf5_filename
         self.time_step = time_step
+        # TODO: Implement selection
         self.selection = selection
         self.repeat = repeat
+        self._chunk_size = chunk_size
         self._current_frame_number = None
 
         self._atomnames_key = "atom_names"
@@ -302,12 +306,14 @@ class HDF5Trajectory(Trajectory):
 
     def __iter__(self):
         atom_names = self.atom_names
+        chunk_size = self._chunk_size
         with h5py.File(self.hdf5_filename, "r") as h5file:
             traj = h5file[self._trajectory_key]
 
             while True:
-                for frame in traj:
-                    yield Frame(atom_names, frame)
+                for _, _, frames in chunk_trajectory(traj, chunk_size=chunk_size):
+                    for frame in frames:
+                        yield Frame(atom_names, frame)
 
                 if not self.repeat:
                     break
