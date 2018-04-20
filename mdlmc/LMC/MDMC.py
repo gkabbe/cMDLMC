@@ -21,8 +21,8 @@ def get_git_version():
 
 
 class KMCLattice:
-    def __init__(self, trajectory, *, lattice_size, atom_box, proton_number, jumprate_function,
-                 donor_atoms, extra_atoms=None, topology_cutoff=3.0, topology_buffer=1.0):
+    def __init__(self, topology, *, lattice_size, atom_box, proton_number, jumprate_function,
+                 donor_atoms, time_step, extra_atoms=None):
         """
 
         Parameters
@@ -40,14 +40,12 @@ class KMCLattice:
         # make two copies of trajectory
         # one will be used from the topology object, and the other
         # for the output of the atomic structure
-        self._trajectory = trajectory
-        self._trajectory_iterator, topo_trajectory = tee(iter(trajectory))
-        self.topology = NeighborTopology(topo_trajectory, atom_box, donor_atoms=donor_atoms,
-                                         cutoff=topology_cutoff, buffer=topology_buffer)
+        self.topology = topology
         self._initialize_lattice(lattice_size, proton_number)
         self._atom_box = atom_box
         self._jumprate_function = jumprate_function
         self._donor_atoms = donor_atoms
+        self._time_step = time_step
         self._extra_atoms = extra_atoms
 
     def _initialize_lattice(self, lattice_size, proton_number):
@@ -60,22 +58,20 @@ class KMCLattice:
 
     def continuous_output(self):
         current_frame_number = 0
-        trajectory = self._trajectory_iterator
 
         topology_iterator, last_topo = remember_last_element(iter(self.topology))
         jumprate_iterator, last_jumprates = remember_last_element(
             self.jumprate_generator(self.lattice, topology_iterator))
         sum_of_jumprates = (np.sum(jumpr) for _, _, jumpr in jumprate_iterator)
         kmc_routine = self.fastforward_to_next_jump(sum_of_jumprates,
-                                                    self._trajectory.time_step)
+                                                    self._time_step)
 
         for f, df, kmc_time in kmc_routine:
             current_time = kmc_time
             logger.debug("Next jump at time %.2f", current_time)
             logger.debug("df = %s; dt = %s", df, kmc_time)
             logger.debug("Go to frame %s", f)
-            for _ in range(df):
-                frame = next(trajectory)
+            for frame in self.topology.get_cached_frames():
                 yield current_frame_number, current_time, frame
                 current_frame_number += 1
 

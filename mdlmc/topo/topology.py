@@ -3,6 +3,7 @@ import numpy as np
 from scipy.sparse import lil_matrix
 
 from ..IO.trajectory_parser import Trajectory
+from ..misc.tools import cache_last_elements
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBox
 
 
@@ -31,7 +32,7 @@ class NeighborTopology:
             Buffer region which is considered before recalculating the topology of closest atoms
         """
 
-        self.trajectory = trajectory
+        self.trajectory, self.get_cached_frames = cache_last_elements(trajectory)
         self.cutoff = cutoff
         self.buffer = buffer
         self.atombox = atombox
