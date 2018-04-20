@@ -81,7 +81,7 @@ def test_NeighborTopology_get_topology_verlet_list():
 
 
 def test_AngleTopology():
-    traj_filename = pathlib.Path(__file__).absolute().parents[1] / "integration" / "400Kbeginning.xyz"
+    traj_filename = pathlib.Path(__file__).absolute().parents[1] / "integration" / "trajectory.xyz"
     pbc = [29.122, 25.354, 12.363]
     atombox = AtomBoxCubic(pbc)
     xyz_trajectory = XYZTrajectory(traj_filename, time_step=0.4)
