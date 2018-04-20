@@ -93,7 +93,7 @@ class Frame:
 
     def append(self, f2: "Frame"):
         new_frame = Frame(np.hstack([self.atom_names, f2.atom_names]),
-                          np.hstack([self.atom_positions, f2.atom_positions]))
+                          np.vstack([self.atom_positions, f2.atom_positions]))
         return new_frame
 
     @property
