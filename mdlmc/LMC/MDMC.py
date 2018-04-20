@@ -168,7 +168,7 @@ class KMCLattice:
 
     def xyz_output(self, particle_type: str = "H"):
         for f, t, frame in self:
-            particle_positions = frame[self.occupied_sites]
+            particle_positions = frame[self.donor_atoms][self.occupied_sites]
             particle_positions.atom_names = particle_type
             yield frame.append(particle_positions)
 
