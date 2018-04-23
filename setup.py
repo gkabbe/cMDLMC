@@ -56,8 +56,8 @@ for ext_path in cython_exts:
         libraries=["m"] + cython_gsl.get_libraries(),
         extra_compile_args=["-O3", "-Wall", "-ffast-math"],
         language="c++",
-        library_dirs=[cython_gsl.get_library_dir()],
-        include_dirs=[".", numpy.get_include(), cython_gsl.get_cython_include_dir()]
+        library_dirs=[],
+        include_dirs=[".", numpy.get_include()]
     ))
 
 setup(name='mdlmc',
@@ -68,7 +68,7 @@ setup(name='mdlmc',
           'Development Status :: 3 - Alpha',
           'License :: OSI Approved :: GNU General Public License (GPL)',
           'Programming Language :: Python :: 3.5',
-          'Topic :: Molecular Dynamics :: Kinetic Monte Carlo',
+          'Topic :: Scientific/Engineering :: Chemistry',
       ],
       keywords='MD LMC KMC Chemistry',
       url='http://github.com/',
@@ -78,7 +78,8 @@ setup(name='mdlmc',
       packages=subpackages,
       install_requires=['numpy', 'ipdb', 'cythongsl>=0.2.1', 'gitpython', 'cython', 'pint>=0.7.2',
                         'scipy', 'matplotlib'],
-      dependency_links=['https://github.com/twiecki/CythonGSL/tarball/master#egg=cython_gsl-0.2.1'],
+      python_requires='~=3.6',
+      dependency_links=[],
       test_suite='nose.collector',
       tests_require=['nose'],
       entry_points={
