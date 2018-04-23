@@ -1,6 +1,4 @@
 import pathlib
-from functools import partial
-from itertools import tee
 
 import daiquiri
 import numpy as np
