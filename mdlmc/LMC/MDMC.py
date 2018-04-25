@@ -148,8 +148,8 @@ class KMCLattice:
     def jumprate_generator(self, lattice, topology_iterator):
         jumprate_function = self._jumprate_function
 
-        for start, destination, colvars in topology_iterator:
-            omega = jumprate_function(colvars)
+        for start, destination, *colvars in topology_iterator:
+            omega = jumprate_function(*colvars)
             logger.debug("Omega shape: %s", omega.shape)
             # select only jumprates from donors which are occupied
             lattice_is_occupied = lattice > 0
