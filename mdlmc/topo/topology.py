@@ -41,7 +41,7 @@ class NeighborTopology:
     def determine_colvars(self, start_indices, destination_indices, distances, frame):
         """Method for the determination of all necessary collective variables.
         Per convention, the first collective variable should always be the distance."""
-        return (distances,)
+        return start_indices, destination_indices, distances
 
     def get_topology_bruteforce(self, frame):
         """Determine the distance for each atom pair.
@@ -106,7 +106,7 @@ class NeighborTopology:
 
     def __iter__(self):
         for topo in self.topology_verlet_list_generator():
-            yield (*topo[:2], *self.determine_colvars(*topo))
+            yield self.determine_colvars(*topo)
 
 
 class AngleTopology(NeighborTopology):
@@ -152,9 +152,15 @@ class AngleTopology(NeighborTopology):
             P_i = self.map_O_to_P[O_i]
             angles[i] = self.atombox.angle(p_atoms[P_i], o_atoms[O_i], o_atoms[O_j])
 
-        return (distances, angles,)
+        return (start_indices, destination_indices, distances, angles)
 
 
 class HydroniumTopology(NeighborTopology):
     """Mimics the neighbor topology of a H3O+ ion in water by only defining connections to the
     three closest oxygen neighbors."""
+
+    def determine_colvars(self, start_indices, destination_indices, distances, frame):
+        """"""
+        import ipdb; ipdb.set_trace()
+        idx = np.argsort(distances)[:3]
+        return start_indices[idx], destination_indices[idx], distances[idx]
