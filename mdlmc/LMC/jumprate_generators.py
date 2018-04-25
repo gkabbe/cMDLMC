@@ -27,7 +27,5 @@ class FermiAngle(Fermi):
         self._theta = theta
 
     def __call__(self, x, theta):
-        if theta < np.pi / 2:
-            return 0
-        return super()(x)
+        return np.where(theta < self._theta, 0, super().__call__(x))
 
