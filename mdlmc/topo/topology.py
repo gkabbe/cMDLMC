@@ -164,16 +164,26 @@ class HydroniumTopology(NeighborTopology):
         KMCLattice will check if its topology object possesses this method and will call it
         in that case."""
         self._lattice = lattice
+        self._proton_number = (lattice != 0).sum()
 
     def determine_colvars(self, start_indices, destination_indices, distances, frame):
         """"""
-        hyd_idx, = np.where(self._lattice)
-        valid_idx = np.in1d(start_indices, hyd_idx)
-        for i in hyd_idx:
-            start_indices == i
+        n_atoms = 4
+        new_start_indices = np.zeros(n_atoms * self._proton_number, int)
+        new_destination_indices = np.zeros(n_atoms * self._proton_number, int)
+        new_distances = np.zeros(n_atoms * self._proton_number, float)
 
-        list_of_closest_four = np.array(
-            [np.argsort(distances[start_indices == i])[:4] for i in hyd_idx])
+        occupied_indices, = np.where(self._lattice)
+        for i, occ_idx in enumerate(occupied_indices):
+            mask = start_indices == occ_idx
+            dists = distances[mask]
+            destinations = destination_indices[mask]
+            sorted_idx = np.argsort(dists)[:n_atoms]
+            closest_indices = destinations[sorted_idx]
+            closest_distances = dists[sorted_idx]
 
-        import ipdb; ipdb.set_trace()
-        return start_indices[hyd_idx], destination_indices[hyd_idx], distances[hyd_idx]
+            new_start_indices[n_atoms * i: n_atoms * (i + 1)] = occ_idx
+            new_destination_indices[n_atoms * i: n_atoms * (i + 1)] = closest_indices
+            new_distances[n_atoms * i: n_atoms * (i + 1)] = closest_distances
+
+        return new_start_indices, new_destination_indices, new_distances
