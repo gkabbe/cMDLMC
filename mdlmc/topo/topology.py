@@ -159,8 +159,21 @@ class HydroniumTopology(NeighborTopology):
     """Mimics the neighbor topology of a H3O+ ion in water by only defining connections to the
     three closest oxygen neighbors."""
 
+    def take_lattice_reference(self, lattice):
+        """Takes the lattice from class KMCLattice as a parameter and stores a reference.
+        KMCLattice will check if its topology object possesses this method and will call it
+        in that case."""
+        self._lattice = lattice
+
     def determine_colvars(self, start_indices, destination_indices, distances, frame):
         """"""
+        hyd_idx, = np.where(self._lattice)
+        valid_idx = np.in1d(start_indices, hyd_idx)
+        for i in hyd_idx:
+            start_indices == i
+
+        list_of_closest_four = np.array(
+            [np.argsort(distances[start_indices == i])[:4] for i in hyd_idx])
+
         import ipdb; ipdb.set_trace()
-        idx = np.argsort(distances)[:3]
-        return start_indices[idx], destination_indices[idx], distances[idx]
+        return start_indices[hyd_idx], destination_indices[hyd_idx], distances[hyd_idx]
