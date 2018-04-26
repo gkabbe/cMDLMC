@@ -207,7 +207,7 @@ class XYZTrajectory(Trajectory):
             with open(self.filename, "r") as f:
                 try:
                     self.number_of_atoms = int(f.readline())
-                except(("ValueError", "TypeError")):
+                except((ValueError, TypeError)):
                     logger.error("Could not read atom number from %s", self.filename)
                     raise
 
