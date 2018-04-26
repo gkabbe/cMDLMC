@@ -37,9 +37,6 @@ class KMCLattice:
             extra atoms used for the determination of the jump rate
         """
 
-        # make two copies of trajectory
-        # one will be used from the topology object, and the other
-        # for the output of the atomic structure
         self.topology = topology
         self._lattice = self._initialize_lattice(lattice_size, proton_number)
         # Check whether the topology object has the method "take_lattice_reference
