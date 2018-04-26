@@ -41,7 +41,11 @@ class KMCLattice:
         # one will be used from the topology object, and the other
         # for the output of the atomic structure
         self.topology = topology
-        self._initialize_lattice(lattice_size, proton_number)
+        self._lattice = self._initialize_lattice(lattice_size, proton_number)
+        # Check whether the topology object has the method "take_lattice_reference
+        if hasattr(self.topology, "take_lattice_reference"):
+            logger.debug("topology has method take_lattice_reference")
+            self.topology.take_lattice_reference(self._lattice)
         self._atom_box = atom_box
         self._jumprate_function = jumprate_function
         self._donor_atoms = donor_atoms
@@ -49,9 +53,10 @@ class KMCLattice:
         self._extra_atoms = extra_atoms
 
     def _initialize_lattice(self, lattice_size, proton_number):
-        self._lattice = np.zeros(lattice_size, dtype=np.int32)
-        self._lattice[:proton_number] = range(1, proton_number + 1)
-        np.random.shuffle(self._lattice)
+        lattice = np.zeros(lattice_size, dtype=np.int32)
+        lattice[:proton_number] = range(1, proton_number + 1)
+        np.random.shuffle(lattice)
+        return lattice
 
     def __iter__(self) -> Iterator[np.ndarray]:
         yield from self.continuous_output()
