@@ -38,7 +38,7 @@ class NeighborTopology:
         self.atombox = atombox
         self.donor_atoms = donor_atoms
 
-    def determine_colvars(self, start_indices, destination_indices, distances, frame):
+    def _determine_colvars(self, start_indices, destination_indices, distances, frame):
         """Method for the determination of all necessary collective variables.
         Per convention, the first collective variable should always be the distance."""
         return start_indices, destination_indices, distances
@@ -106,7 +106,7 @@ class NeighborTopology:
 
     def __iter__(self):
         for topo in self.topology_verlet_list_generator():
-            yield self.determine_colvars(*topo)
+            yield self._determine_colvars(*topo)
 
 
 class AngleTopology(NeighborTopology):
@@ -125,9 +125,9 @@ class AngleTopology(NeighborTopology):
 
         self.extra_atoms = extra_atoms
         self.group_size = group_size
-        self.determine_groups()
+        self._determine_groups()
 
-    def determine_groups(self):
+    def _determine_groups(self):
         """Find for each phosphorus atom the three closest oxygen atoms. This way, the donor atoms
         belonging to one phosphonic group can be found."""
         first_frame = next(iter(self.trajectory))
@@ -143,7 +143,7 @@ class AngleTopology(NeighborTopology):
                 self.map_O_to_P[O_index] = P_index
         logger.debug("Mapping:\n%s", self.map_O_to_P)
 
-    def determine_colvars(self, start_indices, destination_indices, distances, frame):
+    def _determine_colvars(self, start_indices, destination_indices, distances, frame):
         """Determine here the POO angles"""
         angles = np.empty(start_indices.shape, dtype=float)
         p_atoms = frame[self.extra_atoms].atom_positions
@@ -166,7 +166,7 @@ class HydroniumTopology(NeighborTopology):
         self._lattice = lattice
         self._proton_number = (lattice != 0).sum()
 
-    def determine_colvars(self, start_indices, destination_indices, distances, frame):
+    def _determine_colvars(self, start_indices, destination_indices, distances, frame):
         """"""
         n_atoms = 4
         new_start_indices = np.zeros(n_atoms * self._proton_number, int)
