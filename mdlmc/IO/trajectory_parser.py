@@ -194,7 +194,7 @@ class XYZTrajectory(Trajectory):
         """
 
         self.filename = filename
-        self.number_of_atoms = number_of_atoms
+        self._number_of_atoms = number_of_atoms
         self.selection = selection
         self.repeat = repeat
         self._current_frame_number = 0
@@ -202,18 +202,18 @@ class XYZTrajectory(Trajectory):
 
         # Check if atom number is specified
         # If not, try to read it from file
-        if not self.number_of_atoms:
+        if not self._number_of_atoms:
             logger.info("Number of atoms not specified. Will try to read it from xyz file")
             with open(self.filename, "r") as f:
                 try:
-                    self.number_of_atoms = int(f.readline())
+                    self._number_of_atoms = int(f.readline())
                 except((ValueError, TypeError)):
                     logger.error("Could not read atom number from %s", self.filename)
                     raise
 
     def __iter__(self) -> Iterator[Frame]:
 
-        frame_len = self.number_of_atoms + 2
+        frame_len = self._number_of_atoms + 2
 
         if self.selection is not None:
             if isinstance(self.selection, str):
@@ -224,7 +224,7 @@ class XYZTrajectory(Trajectory):
 
             def filter_(f):
                 yield from filter_selection(filter_lines(f, frame_len, no_of_frames=1),
-                                            self.selection, self.number_of_atoms)
+                                            self.selection, self._number_of_atoms)
         else:
             def filter_(f):
                 yield from filter_lines(f, frame_len, no_of_frames=1)
@@ -262,7 +262,7 @@ class XYZTrajectory(Trajectory):
                 if counter % 1000 == 0:
                     logger.debug("Line %i", counter)
 
-        return counter // (self.number_of_atoms + 2)
+        return counter // (self._number_of_atoms + 2)
 
 
 def get_xyz_selection_from_atomname(xyz_filename, *atomnames):
