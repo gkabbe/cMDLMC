@@ -19,6 +19,9 @@ daiquiri.setup(level=daiquiri.logging.INFO)
 script_path = pathlib.Path(__file__).absolute().parent
 
 
+np.random.seed(0)
+
+
 extensions = [(XYZTrajectory, ".xyz"), (HDF5Trajectory, ".hdf5")]
 @pytest.fixture(params=extensions)
 def trajectory(request):
@@ -66,5 +69,14 @@ def test_mdlmc(topology, atombox, jumprate_function, output_type, output_params)
             print(frame)
 
 
-if __name__ == "__main__":
-    test_mdlmc()
+def test_hydronium(filename):
+    trajectory = XYZTrajectory(filename, time_step=0.5)
+    first_frame = next(iter(trajectory))["O"]
+    oxygen_number = first_frame["O"].atom_number
+    atombox = AtomBoxCubic([14.405] * 3)
+    topology = HydroniumTopology(trajectory, atombox, donor_atoms="O", cutoff=4.0, buffer=2.0)
+    kmc = KMCLattice(topology, atom_box=atombox, lattice_size=oxygen_number, proton_number=1,
+                     jumprate_function=Fermi(a=0.06, b=2.3, c=0.1), donor_atoms="O", time_step=0.5)
+
+    for frame in kmc.xyz_output():
+        print(frame)
