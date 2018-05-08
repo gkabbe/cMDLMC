@@ -159,12 +159,29 @@ class HydroniumTopology(NeighborTopology):
     """Mimics the neighbor topology of a H3O+ ion in water by only defining connections to the
     three closest oxygen neighbors."""
 
+    def __init__(self, trajectory: Trajectory, atombox: AtomBox, *, donor_atoms: str, cutoff: float,
+                 buffer: float = 0.0, distance_transformation_function) -> None:
+        super().__init__(trajectory, atombox, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
+        # attribute will be set when calling take_lattice_reference
+        self._time_of_last_jump_vec = None
+        self._distance_transformation_function = distance_transformation_function
+
     def take_lattice_reference(self, lattice):
         """Takes the lattice from class KMCLattice as a parameter and stores a reference.
         KMCLattice will check if its topology object possesses this method and will call it
         in that case."""
         self._lattice = lattice
         self._proton_number = (lattice != 0).sum()
+        # save the last jump time for each proton
+        # initialize with -1
+        self._time_of_last_jump_vec = -np.ones(self._proton_number)
+        logger.debug("Found %i protons", self._proton_number)
+
+    def transform_distances(self, occupied_indices, distances, time):
+        proton_indices = self._lattice[occupied_indices]
+        last_jump_times = self._time_of_last_jump_vec[proton_indices]
+        mask = last_jump_times >= 0
+        residence_time = time - last_jump_times
 
     def _determine_colvars(self, start_indices, destination_indices, distances, frame):
         """"""
@@ -185,5 +202,15 @@ class HydroniumTopology(NeighborTopology):
             new_start_indices[n_atoms * i: n_atoms * (i + 1)] = occ_idx
             new_destination_indices[n_atoms * i: n_atoms * (i + 1)] = closest_indices
             new_distances[n_atoms * i: n_atoms * (i + 1)] = closest_distances
+            new_distances = self.transform_distances(new_start_indices, new_distances, frame.time)
 
         return new_start_indices, new_destination_indices, new_distances
+
+
+class DistanceTransformation:
+    def __init__(self):
+        pass
+
+    def __call__(self, distances):
+        pass
+
