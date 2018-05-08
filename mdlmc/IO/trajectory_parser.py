@@ -199,6 +199,7 @@ class XYZTrajectory(Trajectory):
         self.repeat = repeat
         self._current_frame_number = 0
         self.time_step = time_step
+        self._first_frame = None
 
         # Check if atom number is specified
         # If not, try to read it from file
@@ -293,6 +294,8 @@ class HDF5Trajectory(Trajectory):
         self.filename = filename
         self.time_step = time_step
         # TODO: Implement selection
+        if selection:
+            warnings.warn("Selection is not implemented yet!")
         self.selection = selection
         self.repeat = repeat
         self._chunk_size = chunk_size
