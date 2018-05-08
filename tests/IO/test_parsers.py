@@ -46,7 +46,7 @@ def xyz_file():
 
 
 def test_frame(xyz_array):
-    frame = Frame.from_recarray(xyz_array)
+    frame = Frame.from_recarray(xyz_array, time=0.5)
 
     np.testing.assert_equal(frame["H"].atom_positions, xyz_array["pos"][xyz_array["name"] == "H"]), \
         "Frame did not select array of atoms properly by name"
@@ -75,7 +75,7 @@ def test_filter_lines(xyz_file):
 
 def test_xyz_trajectory(xyz_file):
     """Assert that the xyz generator yields three frames with three atoms each"""
-    parser = XYZTrajectory(xyz_file, number_of_atoms=3)
+    parser = XYZTrajectory(xyz_file, number_of_atoms=3, time_step=0.5)
 
     frames = list(parser)
 
@@ -92,7 +92,7 @@ def test_xyz_selection(xyz_file, selection, expected_shape):
     # Assert that a selection works
     # Select O and second H
     mock_file = StringIO(MOCK_XYZ)
-    parser = XYZTrajectory(mock_file, number_of_atoms=3, selection=selection)
+    parser = XYZTrajectory(mock_file, number_of_atoms=3, selection=selection, time_step=0.5)
 
     frames = list(parser)
     logger.debug("Output of XYZTrajectory: %s", frames)
