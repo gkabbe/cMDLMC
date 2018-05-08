@@ -175,7 +175,7 @@ def filter_selection(f, s, frame_len):
 class XYZTrajectory(Trajectory):
     def __init__(self, filename: Union[str, IO],
                  *,
-                 time_step: float = None,
+                 time_step: float,
                  number_of_atoms: int = None,
                  selection: Union[Container, str, Tuple[str]] = None,
                  repeat: bool = False) -> None:
