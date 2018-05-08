@@ -47,16 +47,16 @@ def as_file(file_or_string):
 
 class Frame:
     """Wrapper around structured array to ease selection by name or index"""
-    def __init__(self, names, positions, *, time):
+    def __init__(self, names, positions, *, time=None):
         self._names = names
         self._positions = positions
         self._time = time
 
     @classmethod
-    def from_recarray(cls, array: np.ndarray, *, time):
+    def from_recarray(cls, array: np.ndarray, *, time=None):
         names = array["name"]
         positions = array["pos"]
-        return cls(names, positions)
+        return cls(names, positions, time=time)
 
     def _extract_array(self, selection: Union[str, list, np.ndarray]):
         """
@@ -83,7 +83,7 @@ class Frame:
 
     def __getitem__(self, item):
         result = self._extract_array(item)
-        return Frame(*result)
+        return Frame(*result, time=self._time)
 
     def __repr__(self):
         lines = "\n".join([f"{atomname}    {atompos[0]:20.10f} {atompos[1]:20.10f} "
