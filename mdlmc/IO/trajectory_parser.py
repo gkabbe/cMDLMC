@@ -1,29 +1,19 @@
-import argparse
 import logging
-import os
-import sys
-import time
-import types
+import warnings
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
-from functools import reduce
 from io import IOBase
 from typing import Iterator, Union, Tuple, IO, Container
-import warnings
 
 try:
     import tables
 except ImportError:
     warnings.warn("Pytables and/or h5py were not found, but are needed for use of HDF5 files.")
 import h5py
-import mdtraj
 import numpy as np
 
-from ..atoms import numpy_atom as npa
 from ..atoms.numpy_atom import dtype_xyz
 from ..misc.tools import chunk_trajectory
-from ..misc.tools import argparse_compatible, chunk
-
 
 logger = logging.getLogger(__name__)
 
@@ -334,4 +324,3 @@ class HDF5Trajectory(Trajectory):
     @property
     def current_frame_number(self):
         return self._current_frame_number
-
