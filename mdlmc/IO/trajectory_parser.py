@@ -47,12 +47,13 @@ def as_file(file_or_string):
 
 class Frame:
     """Wrapper around structured array to ease selection by name or index"""
-    def __init__(self, names, positions):
+    def __init__(self, names, positions, *, time):
         self._names = names
         self._positions = positions
+        self._time = time
 
     @classmethod
-    def from_recarray(cls, array: np.ndarray):
+    def from_recarray(cls, array: np.ndarray, *, time):
         names = array["name"]
         positions = array["pos"]
         return cls(names, positions)
@@ -214,6 +215,7 @@ class XYZTrajectory(Trajectory):
 
     def __iter__(self) -> Iterator[Frame]:
 
+        time_step = self.time_step
         frame_len = self._number_of_atoms + 2
 
         if self.selection is not None:
@@ -242,7 +244,7 @@ class XYZTrajectory(Trajectory):
                         logger.debug(w)
                         logger.info("Reached end of file")
                         break
-                    yield Frame.from_recarray(data)
+                    yield Frame.from_recarray(data, time=self._current_frame_number*time_step)
                     self._current_frame_number += 1
 
             if not self.repeat:
@@ -308,15 +310,18 @@ class HDF5Trajectory(Trajectory):
             self.atom_names = f[self._atomnames_key][:].astype("<U2")
 
     def __iter__(self):
+        time_step = self.time_step
         atom_names = self.atom_names
         chunk_size = self._chunk_size
         with h5py.File(self.filename, "r") as h5file:
             traj = h5file[self._trajectory_key]
 
+            step = 0
             while True:
                 for _, _, frames in chunk_trajectory(traj, chunk_size=chunk_size):
                     for frame in frames:
-                        yield Frame(atom_names, frame.astype(float))
+                        yield Frame(atom_names, frame.astype(float), time=step*time_step)
+                step += 1
 
                 if not self.repeat:
                     break
