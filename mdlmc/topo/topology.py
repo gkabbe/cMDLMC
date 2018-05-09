@@ -164,13 +164,16 @@ class HydroniumTopology(NeighborTopology):
     three closest oxygen neighbors."""
 
     def __init__(self, trajectory: Trajectory, atombox: AtomBox, *, donor_atoms: str, cutoff: float,
-                 buffer: float = 0.0, distance_transformation_function) -> None:
+                 buffer: float = 0.0,
+                 distance_transformation_function: "DistanceTransformation",
+                 distance_interpolator: "DistanceInterpolator") -> None:
         super().__init__(trajectory, atombox, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
         # attribute will be set when calling take_lattice_reference
         # vector of length == number of protons
         # stores for each proton the time of the last jump
         self._time_of_last_jump_vec = None
         self._distance_transformation_function = distance_transformation_function
+        self._distance_interpolator = distance_interpolator
 
     def take_lattice_reference(self, lattice):
         """Takes the lattice from class KMCLattice as a parameter and stores a reference.
@@ -186,17 +189,15 @@ class HydroniumTopology(NeighborTopology):
     def transform_distances(self, occupied_indices, distances, time):
         proton_indices = self._lattice[occupied_indices]
         last_jump_times = self._time_of_last_jump_vec[proton_indices - 1]
-        mask = last_jump_times >= 0
         residence_times = np.where(last_jump_times >= 0, time - last_jump_times, np.inf)
-        offsets = residence_times % self.trajectory_time_step
 
         if logger.isEnabledFor(logging.DEBUG):
             for k, v in locals().items():
                 logger.debug("%s: %s", k, v)
 
         rescaled_dists = self._distance_transformation_function(distances)
-
-        import ipdb; ipdb.set_trace()
+        dists = self._distance_interpolator(residence_times, distances, rescaled_dists)
+        return dists
 
     def _determine_colvars(self, start_indices, destination_indices, distances, frame):
         """"""
@@ -236,7 +237,6 @@ class LinearTransformation(DistanceTransformation):
         self.right_bound = right_bound
 
     def __call__(self, distances):
-        logger.debug("%s called", self.__class__)
         rescaled = np.where(distances < self.d0, self.b, self.a * (distances - self.d0) + self.b)
         mask = (distances <= self.left_bound) | (self.right_bound <= distances)
         rescaled[mask] = distances[mask]
