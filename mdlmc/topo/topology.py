@@ -256,25 +256,12 @@ class InterpolatedTransformation(DistanceTransformation):
         rescaled[rescaled < self.x_min] = self.y_min
 
 
-class DistanceInterpolator
+class DistanceInterpolator:
     """Interpolates between neutral and relaxed distances"""
-
     def __init__(self, rescale_time):
         self.rescale_time = rescale_time
 
-    def linear_interpolation(self, t, time_of_last_jump):
-        mask = (time_of_last_jump < t) & (t < time_of_last_jump + self.rescale_time)
-        t_new = t[mask].astype(float)
-        t_new = np.hstack([time_of_last_jump, t_new, time_of_last_jump + self.rescale_time])
-
-        y = y[mask]
-        y = np.append(y, y[-1])
-
-        y_rescale = y - 1
-
-        ratio = (t_new - time_of_last_jump) / self.rescale_time
-        print(ratio)
-
-        y_new = (1 - ratio) * y + ratio * y_rescale
-
-        return t_new, y_new
+    def __call__(self, t, distance_neutral, distance_relaxed):
+        ratio = t / self.rescale_time
+        distance = (1 - ratio) * distance_neutral + ratio * distance_relaxed
+        return distance
