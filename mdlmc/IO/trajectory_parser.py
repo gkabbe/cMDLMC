@@ -103,6 +103,10 @@ class Frame:
     def atom_number(self):
         return self._names.size
 
+    @property
+    def time(self):
+        return self._time
+
 
 class Trajectory(metaclass=ABCMeta):
     """Abstract Trajectory class which should be inherited when defining
