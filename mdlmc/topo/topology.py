@@ -36,6 +36,7 @@ class NeighborTopology:
         """
 
         self.trajectory, self.get_cached_frames = cache_last_elements(trajectory)
+        self.trajectory_time_step = trajectory.time_step
         self.cutoff = cutoff
         self.buffer = buffer
         self.atombox = atombox
@@ -166,6 +167,8 @@ class HydroniumTopology(NeighborTopology):
                  buffer: float = 0.0, distance_transformation_function) -> None:
         super().__init__(trajectory, atombox, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
         # attribute will be set when calling take_lattice_reference
+        # vector of length == number of protons
+        # stores for each proton the time of the last jump
         self._time_of_last_jump_vec = None
         self._distance_transformation_function = distance_transformation_function
 
@@ -182,9 +185,18 @@ class HydroniumTopology(NeighborTopology):
 
     def transform_distances(self, occupied_indices, distances, time):
         proton_indices = self._lattice[occupied_indices]
-        last_jump_times = self._time_of_last_jump_vec[proton_indices]
+        last_jump_times = self._time_of_last_jump_vec[proton_indices - 1]
         mask = last_jump_times >= 0
-        residence_time = time - last_jump_times
+        residence_times = np.where(last_jump_times >= 0, time - last_jump_times, np.inf)
+        offsets = residence_times % self.trajectory_time_step
+
+        if logger.isEnabledFor(logging.DEBUG):
+            for k, v in locals().items():
+                logger.debug("%s: %s", k, v)
+
+        rescaled_dists = self._distance_transformation_function(distances)
+
+        import ipdb; ipdb.set_trace()
 
     def _determine_colvars(self, start_indices, destination_indices, distances, frame):
         """"""
