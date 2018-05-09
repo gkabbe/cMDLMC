@@ -1,6 +1,9 @@
+from abc import ABCMeta
 import logging
+
 import numpy as np
 from scipy.sparse import lil_matrix
+from scipy.interpolate import interp1d
 
 from ..IO.trajectory_parser import Trajectory
 from ..misc.tools import cache_last_elements
@@ -207,10 +210,59 @@ class HydroniumTopology(NeighborTopology):
         return new_start_indices, new_destination_indices, new_distances
 
 
-class DistanceTransformation:
-    def __init__(self):
-        pass
-
+class DistanceTransformation(metaclass=ABCMeta):
     def __call__(self, distances):
         pass
 
+
+class LinearTransformation(DistanceTransformation):
+    def __init__(self, a, b, d0, left_bound, right_bound):
+        self.a = a
+        self.b = b
+        self.d0 = d0
+        self.left_bound = left_bound
+        self.right_bound = right_bound
+
+    def __call__(self, distances):
+        logger.debug("%s called", self.__class__)
+        rescaled = np.where(distances < self.d0, self.b, self.a * (distances - self.d0) + self.b)
+        mask = (distances <= self.left_bound) | (self.right_bound <= distances)
+        rescaled[mask] = distances[mask]
+        return rescaled
+
+
+class InterpolatedTransformation(DistanceTransformation):
+    def __init__(self, dist_array, conversion_array):
+        self.interp = interp1d(dist_array, conversion_array, kind="linear")
+        self.x_min, self.x_max = self.interp.x[[0, -1]]
+        self.y_min = self.interp.y[0]
+
+    def __call__(self, distances):
+        inside_bounds = (self.x_min <= distances) & (distances <= self.x_max)
+        rescaled = np.copy(distances)
+        rescaled[inside_bounds] = self.interp(rescaled[inside_bounds])
+        rescaled[rescaled < self.x_min] = self.y_min
+
+
+class DistanceInterpolator
+    """Interpolates between neutral and relaxed distances"""
+
+    def __init__(self, rescale_time):
+        self.rescale_time = rescale_time
+
+    def linear_interpolation(self, t, time_of_last_jump):
+        mask = (time_of_last_jump < t) & (t < time_of_last_jump + self.rescale_time)
+        t_new = t[mask].astype(float)
+        t_new = np.hstack([time_of_last_jump, t_new, time_of_last_jump + self.rescale_time])
+
+        y = y[mask]
+        y = np.append(y, y[-1])
+
+        y_rescale = y - 1
+
+        ratio = (t_new - time_of_last_jump) / self.rescale_time
+        print(ratio)
+
+        y_new = (1 - ratio) * y + ratio * y_rescale
+
+        return t_new, y_new
