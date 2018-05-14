@@ -212,9 +212,10 @@ def jumprate_generator(jumprate_function, lattice, topology_iterator):
         unoccupied_sites, = np.where(~lattice_is_occupied)
         occupied_mask = np.in1d(start, occupied_sites)
         unoccupied_mask = np.in1d(destination, unoccupied_sites)
-        omega_allowed = omega[occupied_mask & unoccupied_mask]
-        start_allowed = start[occupied_mask & unoccupied_mask]
-        destination_allowed = destination[occupied_mask & unoccupied_mask]
+        start_occupied_destination_free = occupied_mask & unoccupied_mask
+        omega_allowed = omega[start_occupied_destination_free]
+        start_allowed = start[start_occupied_destination_free]
+        destination_allowed = destination[start_occupied_destination_free]
         yield start_allowed, destination_allowed, omega_allowed
 def main():
     pass
