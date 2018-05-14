@@ -63,7 +63,7 @@ class KMCLattice:
 
         topology_iterator, last_topo = remember_last_element(iter(self.topology))
         jumprate_iterator, last_jumprates = remember_last_element(
-            self.jumprate_generator(self.lattice, topology_iterator))
+            jumprate_generator(self._jumprate_function, self.lattice, topology_iterator))
         sum_of_jumprates = (np.sum(jumpr) for _, _, jumpr in jumprate_iterator)
         kmc_routine = self.fastforward_to_next_jump(sum_of_jumprates,
                                                     self._time_step)
@@ -147,23 +147,6 @@ class KMCLattice:
             sweep += delta_frame
             yield sweep, delta_frame, kmc_time
 
-    def jumprate_generator(self, lattice, topology_iterator):
-        jumprate_function = self._jumprate_function
-
-        for start, destination, *colvars in topology_iterator:
-            omega = jumprate_function(*colvars)
-            logger.debug("Omega shape: %s", omega.shape)
-            # select only jumprates from donors which are occupied
-            lattice_is_occupied = lattice > 0
-            occupied_sites, = np.where(lattice_is_occupied)
-            unoccupied_sites, = np.where(~lattice_is_occupied)
-            occupied_mask = np.in1d(start, occupied_sites)
-            unoccupied_mask = np.in1d(destination, unoccupied_sites)
-            omega_allowed = omega[occupied_mask & unoccupied_mask]
-            start_allowed = start[occupied_mask & unoccupied_mask]
-            destination_allowed = destination[occupied_mask & unoccupied_mask]
-            yield start_allowed, destination_allowed, omega_allowed
-
     def xyz_output(self, particle_type: str = "H"):
         for f, t, frame in self:
             particle_positions = frame[self.donor_atoms][self.occupied_sites]
@@ -219,6 +202,21 @@ class KMCLattice:
         return np.where(self._lattice > 0)[0]
 
 
+def jumprate_generator(jumprate_function, lattice, topology_iterator):
+
+    for start, destination, *colvars in topology_iterator:
+        omega = jumprate_function(*colvars)
+        logger.debug("Omega shape: %s", omega.shape)
+        # select only jumprates from donors which are occupied
+        lattice_is_occupied = lattice > 0
+        occupied_sites, = np.where(lattice_is_occupied)
+        unoccupied_sites, = np.where(~lattice_is_occupied)
+        occupied_mask = np.in1d(start, occupied_sites)
+        unoccupied_mask = np.in1d(destination, unoccupied_sites)
+        omega_allowed = omega[occupied_mask & unoccupied_mask]
+        start_allowed = start[occupied_mask & unoccupied_mask]
+        destination_allowed = destination[occupied_mask & unoccupied_mask]
+        yield start_allowed, destination_allowed, omega_allowed
 def main():
     pass
 
