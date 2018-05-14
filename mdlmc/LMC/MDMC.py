@@ -83,9 +83,6 @@ class KMCLattice:
         """Given the hopping rates between the acceptor atoms, choose a connection randomly and
         move the proton."""
 
-        # if needed, take last frame and determine jump rate based on some geometric
-        # criterion
-        #start_indices, destination_indices, _ = self._last_topo()
         cumsum = np.cumsum(jump_rates)
         random_draw = np.random.uniform(0, cumsum[-1])
         transition_idx = np.searchsorted(cumsum, random_draw)
@@ -95,6 +92,7 @@ class KMCLattice:
         logger.debug("Particle %s moves from %s to %s", proton_idx, start_idx, destination_idx)
         self._lattice[destination_idx] = proton_idx
         self._lattice[start_idx] = 0
+        return proton_idx
 
     def fastforward_to_next_jump(self, jumprates, dt):
         """Implements Kinetic Monte Carlo with time-dependent rates.
