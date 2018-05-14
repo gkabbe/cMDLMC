@@ -18,17 +18,33 @@ daiquiri.getLogger("mdlmc.atoms.numpy_atom").setLevel(daiquiri.logging.INFO)
 np.random.seed(0)
 
 
+class MockTrajectory:
+    def __init__(self, generator, time_step):
+        self.time_step = time_step
+        self.generator = generator
+
+    def __iter__(self):
+        yield from self.generator
+
+
 def test_NeighborTopology_get_topology_bruteforce():
     """Assert that NeighborTopology correctly identifies the connection between the
     atoms"""
     periodic_boundaries = [10, 10, 10]
     atombox = AtomBoxCubic(periodic_boundaries)
 
-    atoms = np.array([[0.0, 0, 0],
-                      [1.5, 0, 0],
-                      [3.0, 0, 0],
-                      [6.0, 0, 0],
-                      [9.0, 0, 0]])
+    atoms = np.zeros((5,), dtype=dtype_xyz)
+    atom_pos = np.array([[0.0, 0, 0],
+                         [1.5, 0, 0],
+                         [3.0, 0, 0],
+                         [6.0, 0, 0],
+                         [9.0, 0, 0]])
+
+    atoms["pos"] = atom_pos
+    atoms["name"] = "O"
+
+    def trajgen():
+        yield Frame.from_recarray(atoms)
 
     start       = [0,   0,   1,   1,   2,   4]
     destination = [1,   4,   0,   2,   1,   0]
@@ -36,9 +52,10 @@ def test_NeighborTopology_get_topology_bruteforce():
 
     cutoff = 2.0
 
-    top = NeighborTopology(iter(atoms), atombox, cutoff=cutoff, buffer=0, donor_atoms=slice(None))
+    top = NeighborTopology(MockTrajectory(trajgen(), 0.5), atombox, cutoff=cutoff, buffer=0,
+                           donor_atoms="O")
 
-    conn = top.get_topology_bruteforce(atoms)
+    conn = top.get_topology_bruteforce(atoms["pos"])
 
     for st_target, de_target, di_target, st, de, di in zip(start, destination, dist, *conn):
         assert st_target == st
@@ -64,8 +81,10 @@ def test_NeighborTopology_get_topology_verlet_list():
     cut, buffer = 3, 10
 
     traj1, traj2 = tee(trajgen())
-    top1 = NeighborTopology(traj1, atombox, cutoff=cut, buffer=buffer, donor_atoms="H")
-    top2 = NeighborTopology(traj2, atombox, cutoff=cut, buffer=buffer, donor_atoms="H")
+    top1 = NeighborTopology(MockTrajectory(traj1, 0.5), atombox, cutoff=cut, buffer=buffer,
+                            donor_atoms="H")
+    top2 = NeighborTopology(MockTrajectory(traj2, 0.5), atombox, cutoff=cut, buffer=buffer,
+                            donor_atoms="H")
 
     for count, (neighbors1, neighbors2) in enumerate(zip(top1.topology_verlet_list_generator(),
                                                          top2.topology_bruteforce_generator())):
