@@ -83,7 +83,7 @@ setup(name='mdlmc',
       test_suite='nose.collector',
       tests_require=['nose'],
       entry_points={
-          'console_scripts': ['mdmc=mdlmc.LMC.MDMC:main',
+          'console_scripts': ['mdmc=mdlmc.main:main',
                               'trajconv=mdlmc.IO.converters:main'
                               ],
       },
