@@ -217,9 +217,3 @@ def jumprate_generator(jumprate_function, lattice, topology_iterator):
         start_allowed = start[start_occupied_destination_free]
         destination_allowed = destination[start_occupied_destination_free]
         yield start_allowed, destination_allowed, omega_allowed
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()
