@@ -112,6 +112,9 @@ class NeighborTopology:
         for topo in self.topology_verlet_list_generator():
             yield self._determine_colvars(*topo)
 
+    def update_time_of_last_jump(self, proton_idx, new_time):
+        pass
+
 
 class AngleTopology(NeighborTopology):
     """This topology class is used to calculate the POO angle as an additional collective variable.
@@ -221,6 +224,9 @@ class HydroniumTopology(NeighborTopology):
             new_distances = self.transform_distances(new_start_indices, new_distances, frame.time)
 
         return new_start_indices, new_destination_indices, new_distances
+
+    def update_time_of_last_jump(self, proton_idx, new_time):
+        self._time_of_last_jump_vec[proton_idx - 1] = new_time
 
 
 class DistanceTransformation(metaclass=ABCMeta):
