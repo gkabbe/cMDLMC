@@ -61,6 +61,7 @@ class KMCLattice:
     def continuous_output(self):
         current_frame_number = 0
 
+        topo = self.topology
         topology_iterator, last_topo = remember_last_element(iter(self.topology))
         jumprate_iterator, last_jumprates = remember_last_element(
             jumprate_generator(self._jumprate_function, self.lattice, topology_iterator))
@@ -77,7 +78,8 @@ class KMCLattice:
                 yield current_frame_number, current_time, frame
                 current_frame_number += 1
 
-            self.move_proton(*last_jumprates())
+            proton_idx = self.move_proton(*last_jumprates())
+            topo.update_time_of_last_jump(proton_idx, kmc_time)
 
     def move_proton(self, start, dest, jump_rates):
         """Given the hopping rates between the acceptor atoms, choose a connection randomly and
