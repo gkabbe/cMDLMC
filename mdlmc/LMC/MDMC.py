@@ -94,7 +94,8 @@ class KMCLattice:
         self._lattice[start_idx] = 0
         return proton_idx
 
-    def fastforward_to_next_jump(self, jumprates, dt):
+    @staticmethod
+    def fastforward_to_next_jump(jumprates, dt):
         """Implements Kinetic Monte Carlo with time-dependent rates.
 
         Parameters
