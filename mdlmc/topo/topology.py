@@ -190,6 +190,8 @@ class HydroniumTopology(NeighborTopology):
         logger.debug("Found %i protons", self._proton_number)
 
     def transform_distances(self, occupied_indices, distances, time):
+        occupied_indices = np.unique(occupied_indices)
+        logger.debug("Occupied indices: %s", occupied_indices)
         proton_indices = self._lattice[occupied_indices]
         last_jump_times = self._time_of_last_jump_vec[proton_indices - 1]
         residence_times = np.where(last_jump_times >= 0, time - last_jump_times, np.inf)
