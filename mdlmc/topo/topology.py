@@ -285,13 +285,13 @@ class InterpolatedTransformation(DistanceTransformation):
 
 class DistanceInterpolator:
     """Interpolates between neutral and relaxed distances"""
-    def __init__(self, rescale_time):
-        self.rescale_time = rescale_time
+    def __init__(self, relaxation_time):
+        self.relaxation_time = relaxation_time
 
     def __call__(self, residence_time, distance_neutral, distance_relaxed):
         logger.debug("Distance neutral: %s", distance_neutral)
         logger.debug("Distance relaxed: %s", distance_relaxed)
-        ratio = np.minimum(residence_time / self.rescale_time, 1)
+        ratio = np.minimum(residence_time / self.relaxation_time, 1)
         distance = (1 - ratio) * distance_neutral + ratio * distance_relaxed
         logger.debug("Distance interpolated: %s", distance)
         return distance
