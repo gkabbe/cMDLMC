@@ -4,8 +4,11 @@ import pathlib
 import yaml
 
 from .IO.trajectory_parser import XYZTrajectory, HDF5Trajectory
-from .topo.topology import NeighborTopology, AngleTopology, HydroniumTopology
+from .topo.topology import (NeighborTopology, AngleTopology, HydroniumTopology, ReLUTransformation,
+                            InterpolatedTransformation, DistanceInterpolator)
 from .cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
+from .LMC.jumprate_generators import Fermi, FermiAngle
+from .LMC.MDMC import KMCLattice
 
 
 def main():
@@ -41,8 +44,24 @@ def main():
     atombox_options = options["AtomBox"]
     atombox_types = {"cubic": AtomBoxCubic,
                      "monoclinic": AtomBoxMonoclinic}
-    AtomBox = atombox_types[atombox_options[type]]
-    atombox = AtomBoxCubic(atombox_options["periodic_boundaries"])
+    AtomBox = atombox_types[atombox_options["type"]]
+    atombox = AtomBox(atombox_options["periodic_boundaries"])
+
+    # check if rescale options are specified
+    distance_transformation_types = {"ReLUTransformation": ReLUTransformation,
+                                     "InterpolatedTransformation": InterpolatedTransformation}
+    if "Rescale" in options.keys():
+        rescale_options = options["Rescale"]
+        if "distance_transformation" in rescale_options:
+            distance_transformation_options = rescale_options["distance_transformation"]
+            DistanceTransformation = distance_transformation_types[distance_transformation_options["type"]]
+            distance_transformation_parameters = distance_transformation_options["parameters"]
+            distance_transformation = DistanceTransformation(**distance_transformation_parameters)
+            relaxation_time = rescale_options["relaxation_time"]
+            if relaxation_time == 0:
+                distance_interpolator = None
+            else:
+                distance_interpolator = DistanceInterpolator(relaxation_time)
 
     # setup topology
     topology_options = options["Topology"]
@@ -51,9 +70,25 @@ def main():
                       "AngleTopology": AngleTopology}
     Topology = topology_types[topology_options["type"]]
     topology_parameters = topology_options["parameters"]
-    if topology_options["distance_transformation"]:
-        distance_transformation_options = topology_options["distance_transformation"]
-        transformation_types = {""}
+    topology = Topology(trajectory, atombox, **topology_parameters)
 
+    # setup jump rate
+    jumprate_options = options["JumpRate"]
+    jumprate_types = {"Fermi": Fermi, "FermiAngle": FermiAngle}
+    jumprate_parameters = jumprate_options["parameters"]
+    JumpRate = jumprate_types[jumprate_options["type"]]
+    jumprate = JumpRate(**jumprate_parameters)
 
-    topology = Topology()
+    # setup kmc
+    kmc_options = options["KMC"]
+    kmc_parameters = kmc_options["parameters"]
+    kmc = KMCLattice(topology, atom_box=atombox, **kmc_parameters)
+
+    # setup output
+    output_options = options["Output"]
+    output_type = output_options["type"]
+    output_parameters = output_options["parameters"]
+
+    for frame in getattr(kmc, output_type)(**output_parameters):
+        print(frame)
+
