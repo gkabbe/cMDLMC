@@ -168,15 +168,27 @@ class HydroniumTopology(NeighborTopology):
 
     def __init__(self, trajectory: Trajectory, atombox: AtomBox, *, donor_atoms: str, cutoff: float,
                  buffer: float = 0.0,
-                 distance_transformation_function: "DistanceTransformation",
-                 distance_interpolator: "DistanceInterpolator") -> None:
+                 distance_transformation_function: "DistanceTransformation" = None,
+                 distance_interpolator: "DistanceInterpolator" = None
+                 ) -> None:
         super().__init__(trajectory, atombox, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
         # attribute will be set when calling take_lattice_reference
         # vector of length == number of protons
         # stores for each proton the time of the last jump
         self._time_of_last_jump_vec = None
-        self._distance_transformation_function = distance_transformation_function
-        self._distance_interpolator = distance_interpolator
+        if distance_transformation_function:
+            self._distance_transformation_function = distance_transformation_function
+        else:
+            logger.info("Distance transformation function not specified."
+                        "Will not rescale distances.")
+            self._distance_transformation_function = lambda distance: distance
+
+        if distance_interpolator:
+            self._distance_interpolator = distance_interpolator
+        else:
+            logger.info("Distance interpolator not specified."
+                        "Will rescale distances without delay.")
+            self._distance_interpolator = lambda time, d_neutral, d_relaxed: d_relaxed
 
     def take_lattice_reference(self, lattice):
         """Takes the lattice from class KMCLattice as a parameter and stores a reference.
