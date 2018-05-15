@@ -236,7 +236,11 @@ class DistanceTransformation(metaclass=ABCMeta):
         pass
 
 
-class LinearTransformation(DistanceTransformation):
+class ReLUTransformation(DistanceTransformation):
+    """Rectified Linear Unit transformation.
+    Returns a constant value b for distances below d0.
+    Returns linear function for distances above d0"""
+
     def __init__(self, a, b, d0, left_bound, right_bound):
         self.a = a
         self.b = b

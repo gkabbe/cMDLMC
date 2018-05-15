@@ -5,7 +5,8 @@ import numpy as np
 import pytest
 
 from mdlmc.IO.trajectory_parser import XYZTrajectory, HDF5Trajectory
-from mdlmc.topo.topology import NeighborTopology, AngleTopology, HydroniumTopology
+from mdlmc.topo.topology import (NeighborTopology, AngleTopology, HydroniumTopology,
+                                 ReLUTransformation, DistanceInterpolator)
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from mdlmc.LMC.MDMC import KMCLattice
 from mdlmc.LMC.jumprate_generators import Fermi, FermiAngle
@@ -75,6 +76,7 @@ def test_hydronium(filename):
     oxygen_number = first_frame["O"].atom_number
     atombox = AtomBoxCubic([14.405] * 3)
     topology = HydroniumTopology(trajectory, atombox, donor_atoms="O", cutoff=4.0, buffer=2.0)
+    transformation = ReLUTransformation(**rescale_parameters)
     kmc = KMCLattice(topology, atom_box=atombox, lattice_size=oxygen_number, proton_number=1,
                      jumprate_function=Fermi(a=0.06, b=2.3, c=0.1), donor_atoms="O", time_step=0.5)
 
