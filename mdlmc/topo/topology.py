@@ -252,6 +252,8 @@ class LinearTransformation(DistanceTransformation):
 
 
 class InterpolatedTransformation(DistanceTransformation):
+    """Transform O-O distances using the Scipy interp1d routine."""
+
     def __init__(self, dist_array, conversion_array):
         self.interp = interp1d(dist_array, conversion_array, kind="linear")
         self.x_min, self.x_max = self.interp.x[[0, -1]]
@@ -262,6 +264,7 @@ class InterpolatedTransformation(DistanceTransformation):
         rescaled = np.copy(distances)
         rescaled[inside_bounds] = self.interp(rescaled[inside_bounds])
         rescaled[rescaled < self.x_min] = self.y_min
+        return rescaled
 
 
 class DistanceInterpolator:
