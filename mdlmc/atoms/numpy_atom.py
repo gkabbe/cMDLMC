@@ -1,6 +1,8 @@
+from abc import ABCMeta
 import sys
 import numpy as np
 import logging
+import typing
 
 logger = logging.getLogger(__name__)
 
@@ -119,3 +121,23 @@ def print_center_of_mass_commandline():
     trajectory = np.load(sys.argv[1])["trajectory"]
     print_center_of_mass(trajectory)
 
+
+
+# Used as a dummy for config file creation
+class AtomBox(metaclass=ABCMeta):
+    """The AtomBox class takes care of all distance and angle calculations.
+    Depending on the periodic boundary conditions of the system, either the subclass
+    AtomBoxCubic or AtomBoxMonoclinic need to be instantiated."""
+
+    __show_in_config__ = True
+
+    def __init__(self, periodic_boundaries: typing.Iterable, *, box_multiplier: typing.Tuple):
+        pass
+
+
+class AtomBoxCubic(AtomBox):
+    pass
+
+
+class AtomBoxMonoclinic(AtomBox):
+    pass
