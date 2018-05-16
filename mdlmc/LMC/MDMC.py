@@ -21,6 +21,11 @@ def get_git_version():
 
 
 class KMCLattice:
+    """Implementation of the time-dependent Kinetic Monte Carlo Scheme"""
+
+    __show_in_config__ = True
+    __no_config_parameter__ = ["topology", "atom_box", "jumprate_function"]
+
     def __init__(self, topology, *, lattice_size, atom_box, proton_number, jumprate_function,
                  donor_atoms, time_step, extra_atoms=None):
         """

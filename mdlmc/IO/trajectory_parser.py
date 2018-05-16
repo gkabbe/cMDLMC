@@ -112,6 +112,8 @@ class Trajectory(metaclass=ABCMeta):
     """Abstract Trajectory class which should be inherited when defining
     a custom trajectory class"""
 
+    __show_in_config__ = True
+
     @abstractmethod
     def __iter__(self):
         pass
