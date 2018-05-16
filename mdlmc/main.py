@@ -1,7 +1,7 @@
 import argparse
+import configparser
 import logging.config
 import pathlib
-import yaml
 
 from .IO.trajectory_parser import XYZTrajectory, HDF5Trajectory
 from .topo.topology import (NeighborTopology, AngleTopology, HydroniumTopology, ReLUTransformation,
@@ -16,29 +16,31 @@ def main():
     parser.add_argument("configfile", help="Text file containing the configuration for the cMD/LMC"
                                            "scheme")
     args = parser.parse_args()
+
+    cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
     with open(args.configfile, "r") as f:
-        options = yaml.load(f)
+        cp.read_file(f)
 
     # Check if logging config file exists in config file
-    if "Logging" in options:
-        logging_dict = options["Logging"]
-    else:
-        logfile_path = pathlib.Path(__file__).parents[1] / "logging.yaml"
-        with open(logfile_path, "r") as f:
-            logging_dict = yaml.load(f)
-    logging.config.dictConfig(logging_dict)
-    logger = logging.getLogger(__name__)
+    #if "Logging" in cp:
+    #    logging_dict = cp["Logging"]
+    #else:
+    #    logfile_path = pathlib.Path(__file__).parents[1] / "logging.yaml"
+    #    with open(logfile_path, "r") as f:
+    #        logging_dict = yaml.load(f)
+    #logging.config.dictConfig(logging_dict)
+    #logger = logging.getLogger(__name__)
 
-    logger.debug(options)
+    #logger.debug(options)
 
 
     # setup trajectory
     trajectory_types = {"xyz": XYZTrajectory,
                         "hdf5": HDF5Trajectory}
-    trajectory_options = options["Trajectory"]
-    Trajectory = trajectory_types[trajectory_options["type"]]
-    trajectory_parameters = trajectory_options["parameters"]
-    trajectory = Trajectory(**trajectory_parameters)
+    trajectory_options = dict(cp["Trajectory"])
+    import ipdb; ipdb.set_trace()
+    Trajectory = trajectory_types[trajectory_options.pop("type")]
+    trajectory = Trajectory(**trajectory_options)
 
     # setup atom box
     atombox_options = options["AtomBox"]
