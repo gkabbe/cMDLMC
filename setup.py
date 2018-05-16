@@ -84,7 +84,8 @@ setup(name='mdlmc',
       tests_require=['nose'],
       entry_points={
           'console_scripts': ['mdmc=mdlmc.main:main',
-                              'trajconv=mdlmc.IO.converters:main'
+                              'trajconv=mdlmc.IO.converters:main',
+                              'mdlmc_config=mdlmc.config:main'
                               ],
       },
       include_package_data=True,
