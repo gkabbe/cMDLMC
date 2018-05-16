@@ -32,7 +32,11 @@ def get_parameters(cls):
     exclude_from_config = getattr(cls, "__no_config_parameter__", [])
     param_dict = {p.name: p.default if p.default is not inspect._empty else "EMPTY"
                   for p in parameters.values() if p.name not in exclude_from_config}
-    annotation_dict = {name: parameters[name].annotation for name in param_dict}
+    annotation_dict = {}
+    for name in param_dict:
+        annotation = parameters[name].annotation
+        annotation_dict[name] = getattr(annotation, "__name__", annotation)
+
     return param_dict, annotation_dict
 
 
