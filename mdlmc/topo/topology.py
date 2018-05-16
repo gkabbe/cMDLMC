@@ -17,15 +17,21 @@ class NeighborTopology:
     """Keeps track of the connections between donor/acceptor atoms.
     Given a cutoff distance, for each atom the atoms within this
     distance will be determined."""
-    def __init__(self, trajectory: Trajectory, atombox: AtomBox, *, donor_atoms: str, cutoff: float,
-                 buffer: float = 0.0) -> None:
+
+
+    __show_in_config__ = True
+    __no_config_parameter__ = ["trajectory", "atom_box"]
+
+
+    def __init__(self, trajectory: Trajectory, atom_box: AtomBox, *, donor_atoms: str,
+                 cutoff: float, buffer: float = 0.0) -> None:
         """
 
         Parameters
         ----------
         trajectory: Trajectory
             Trajectory object from which the atomic positions are obtained
-        atombox: AtomBox
+        atom_box: AtomBox
             AtomBox object
         donor_atoms: str
             Name of the atom type of the donor / acceptor atoms
@@ -39,7 +45,7 @@ class NeighborTopology:
         self.trajectory_time_step = trajectory.time_step
         self.cutoff = cutoff
         self.buffer = buffer
-        self.atombox = atombox
+        self.atombox = atom_box
         self.donor_atoms = donor_atoms
 
     def _determine_colvars(self, start_indices, destination_indices, distances, frame):
@@ -126,9 +132,9 @@ class AngleTopology(NeighborTopology):
                            P
 
     """
-    def __init__(self, trajectory: Trajectory, atombox: AtomBox, *, donor_atoms: str,
+    def __init__(self, trajectory: Trajectory, atom_box: AtomBox, *, donor_atoms: str,
                  extra_atoms: str, group_size: int, cutoff: float, buffer: float = 0.0) -> None:
-        super().__init__(trajectory, atombox, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
+        super().__init__(trajectory, atom_box, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
 
         self.extra_atoms = extra_atoms
         self.group_size = group_size
@@ -166,12 +172,12 @@ class HydroniumTopology(NeighborTopology):
     """Mimics the neighbor topology of a H3O+ ion in water by only defining connections to the
     three closest oxygen neighbors."""
 
-    def __init__(self, trajectory: Trajectory, atombox: AtomBox, *, donor_atoms: str, cutoff: float,
+    def __init__(self, trajectory: Trajectory, atom_box: AtomBox, *, donor_atoms: str, cutoff: float,
                  buffer: float = 0.0,
                  distance_transformation_function: "DistanceTransformation" = None,
                  distance_interpolator: "DistanceInterpolator" = None
                  ) -> None:
-        super().__init__(trajectory, atombox, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
+        super().__init__(trajectory, atom_box, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
         # attribute will be set when calling take_lattice_reference
         # vector of length == number of protons
         # stores for each proton the time of the last jump
