@@ -26,6 +26,25 @@ def has_parent_class(cls):
     return cls.mro()[-2] is not cls
 
 
+def get_parameters(cls):
+    parameters = inspect.signature(cls).parameters
+    exclude_from_config = getattr(cls, "__no_config_parameter__", [])
+    param_dict = {p.name: p.default if p.default is not inspect._empty else "EMPTY"
+                  for p in parameters.values() if p.name not in exclude_from_config}
+    return param_dict
+
+
+def get_unique_parameters(cls):
+    top_cl = top_class(cls)
+    related_classes = {top_cl, *top_cl.__subclasses__()}.difference({cls})
+    print("related to", cls, ":", related_classes)
+    params = set(get_parameters(cls).keys())
+    for c in related_classes:
+        c_params = set(get_parameters(c).keys())
+        params -= c_params
+    return params
+
+
 def discover(mod):
     discoverable = defaultdict(dict)
     for importer, modname, ispkg in pkgutil.walk_packages(path=mod.__path__,
@@ -37,18 +56,26 @@ def discover(mod):
             configurable_classes = collect_classes(module)
             if configurable_classes:
                 for cls in configurable_classes:
-                    parameters = inspect.signature(cls).parameters
-                    exclude_from_config = getattr(cls, "__no_config_parameter__", [])
                     if is_abstract(cls):
                         continue
                     section_name = top_class(cls).__name__
-                    discoverable[section_name]["parameters"] = \
-                        {p.name: p.default if p.default is not inspect._empty else "EMPTY"
-                         for p in parameters.values() if p.name not in exclude_from_config}
-                    discoverable[section_name]["help"] = cls.__doc__
-                    if has_parent_class(cls):
+                    # Check if there exist inherited classes
+                    if top_class(cls).__subclasses__():
                         type_list = discoverable[section_name].setdefault("type", set())
                         type_list.add(cls)
+                        unique_params = get_unique_parameters(cls)
+                    else:
+                        unique_params = {}
+                    cls_name = cls.__name__
+                    param_dict = get_parameters(cls)
+                    if unique_params:
+                        for k, v in param_dict.items():
+                            if k in unique_params:
+                                param_dict[k] = f"{v}  # {cls_name}"
+                    section_params = discoverable[section_name].setdefault("parameters", {})
+                    section_params.update(param_dict)
+                    if cls.__doc__:
+                        discoverable[section_name]["help"] = cls.__doc__.replace("\n", "\n#")
             discoverable.update()
     #print(yaml.dump(dict(discoverable), default_flow_style=False))
     cp = configparser.ConfigParser(allow_no_value=True)
