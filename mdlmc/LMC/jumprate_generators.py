@@ -1,7 +1,18 @@
+from abc import ABCMeta
+
 import numpy as np
 
 
-class Fermi:
+class JumpRate(metaclass=ABCMeta):
+    """Calculates a proton hopping rate as a function of geometric parameters such as distance,
+    angle, etc."""
+    pass
+
+
+class Fermi(JumpRate):
+
+    __show_in_config__ = True
+
     def __init__(self, a: float, b: float, c: float):
         """
         Parameters
