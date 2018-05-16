@@ -56,6 +56,8 @@ def discover(mod):
             configurable_classes = collect_classes(module)
             if configurable_classes:
                 for cls in configurable_classes:
+                    if cls.__doc__:
+                        discoverable[section_name]["help"] = top_class(cls).__doc__.replace("\n", "\n#")
                     if is_abstract(cls):
                         continue
                     section_name = top_class(cls).__name__
@@ -77,8 +79,6 @@ def discover(mod):
                         param_dict[k] = f"{param_dict[k]:}  #  type {annotation_dict.get(k, 'None')} {cls_info.get(k, '')}"
                     section_params = discoverable[section_name].setdefault("parameters", {})
                     section_params.update(param_dict)
-                    if cls.__doc__:
-                        discoverable[section_name]["help"] = cls.__doc__.replace("\n", "\n#")
             discoverable.update()
     #print(yaml.dump(dict(discoverable), default_flow_style=False))
     cp = configparser.ConfigParser(allow_no_value=True)
