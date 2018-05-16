@@ -31,16 +31,16 @@ def get_parameters(cls):
     exclude_from_config = getattr(cls, "__no_config_parameter__", [])
     param_dict = {p.name: p.default if p.default is not inspect._empty else "EMPTY"
                   for p in parameters.values() if p.name not in exclude_from_config}
-    return param_dict
+    annotation_dict = {name: parameters[name].annotation for name in param_dict}
+    return param_dict, annotation_dict
 
 
 def get_unique_parameters(cls):
     top_cl = top_class(cls)
     related_classes = {top_cl, *top_cl.__subclasses__()}.difference({cls})
-    print("related to", cls, ":", related_classes)
-    params = set(get_parameters(cls).keys())
+    params = set(get_parameters(cls)[0].keys())
     for c in related_classes:
-        c_params = set(get_parameters(c).keys())
+        c_params = set(get_parameters(c)[0].keys())
         params -= c_params
     return params
 
@@ -50,7 +50,6 @@ def discover(mod):
     for importer, modname, ispkg in pkgutil.walk_packages(path=mod.__path__,
                                                           prefix=mod.__name__ + ".",
                                                           onerror=lambda x: None):
-        print(modname)
         if not ispkg:
             module = importlib.import_module(modname)
             configurable_classes = collect_classes(module)
@@ -67,11 +66,14 @@ def discover(mod):
                     else:
                         unique_params = {}
                     cls_name = cls.__name__
-                    param_dict = get_parameters(cls)
+                    param_dict, annotation_dict = get_parameters(cls)
+                    cls_info = {}
                     if unique_params:
                         for k, v in param_dict.items():
                             if k in unique_params:
-                                param_dict[k] = f"{v}  # {cls_name}"
+                                cls_info[k] = f"(only {cls_name})"
+                    for k in param_dict.keys():
+                        param_dict[k] = f"{v:}  #  type {annotation_dict.get(k, 'None')} {cls_info.get(k, '')}"
                     section_params = discoverable[section_name].setdefault("parameters", {})
                     section_params.update(param_dict)
                     if cls.__doc__:
@@ -100,7 +102,18 @@ def discover(mod):
     f = StringIO()
     cp.write(f)
     f.seek(0)
-    print(f.read())
+    cfg_str = f.read()
+    for line in cfg_str.splitlines():
+        try:
+            left, right = line.split("#")
+        except ValueError:
+            print(line)
+        else:
+            if "=" in left:
+                print(f"{left:30}  # {right}")
+            else:
+                print(line)
 
 
-discover(mdlmc)
+if __name__ == "__main__":
+    discover(mdlmc)
