@@ -1,5 +1,4 @@
 import sys
-import ipdb
 import numpy as np
 from collections import Counter
 import argparse
@@ -35,4 +34,3 @@ def main(*args):
     for a, f in zip(atom_types, atoms):
         frames[a] = f
 
-    ipdb.set_trace()
