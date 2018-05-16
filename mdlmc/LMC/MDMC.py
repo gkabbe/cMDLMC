@@ -8,6 +8,8 @@ import numpy as np
 from mdlmc.topo.topology import NeighborTopology
 from ..misc.tools import remember_last_element
 from ..LMC.output import CovalentAutocorrelation, MeanSquareDisplacement
+from ..cython_exts.LMC.PBCHelper import AtomBox
+from ..LMC.jumprate_generators import JumpRate
 
 
 logger = logging.getLogger(__name__)
@@ -26,8 +28,14 @@ class KMCLattice:
     __show_in_config__ = True
     __no_config_parameter__ = ["topology", "atom_box", "jumprate_function"]
 
-    def __init__(self, topology, *, lattice_size, atom_box, proton_number, jumprate_function,
-                 donor_atoms, time_step, extra_atoms=None):
+    def __init__(self, topology: "NeighborTopology", *,
+                 atom_box: "AtomBox",
+                 jumprate_function: "JumpRate",
+                 lattice_size: int,
+                 proton_number: int,
+                 donor_atoms: str,
+                 time_step: float,
+                 extra_atoms: str = None):
         """
 
         Parameters
