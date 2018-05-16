@@ -172,6 +172,9 @@ class HydroniumTopology(NeighborTopology):
     """Mimics the neighbor topology of a H3O+ ion in water by only defining connections to the
     three closest oxygen neighbors."""
 
+    __no_config_parameter__ = ["trajectory", "atom_box", "distance_transformation_function",
+                               "distance_interpolator"]
+
     def __init__(self, trajectory: Trajectory, atom_box: AtomBox, *, donor_atoms: str, cutoff: float,
                  buffer: float = 0.0,
                  distance_transformation_function: "DistanceTransformation" = None,
