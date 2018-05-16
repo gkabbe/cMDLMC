@@ -60,11 +60,11 @@ def discover(mod):
             configurable_classes = collect_classes(module)
             if configurable_classes:
                 for cls in configurable_classes:
+                    section_name = top_class(cls).__name__
                     if cls.__doc__:
                         discoverable[section_name]["help"] = top_class(cls).__doc__.replace("\n", "\n#")
                     if is_abstract(cls):
                         continue
-                    section_name = top_class(cls).__name__
                     # Check if there exist inherited classes
                     if top_class(cls).__subclasses__():
                         type_list = discoverable[section_name].setdefault("type", set())
@@ -117,7 +117,7 @@ def discover(mod):
             if "=" in left:
                 print(f"{left:30}  # {right}")
             else:
-                print(line)
+                print("#", right.strip())
 
 
 def main():
