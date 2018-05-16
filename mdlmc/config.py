@@ -4,6 +4,7 @@ import importlib
 import inspect
 import pkgutil
 import configparser
+import warnings
 
 import mdlmc
 
@@ -73,7 +74,7 @@ def discover(mod):
                             if k in unique_params:
                                 cls_info[k] = f"(only {cls_name})"
                     for k in param_dict.keys():
-                        param_dict[k] = f"{v:}  #  type {annotation_dict.get(k, 'None')} {cls_info.get(k, '')}"
+                        param_dict[k] = f"{param_dict[k]:}  #  type {annotation_dict.get(k, 'None')} {cls_info.get(k, '')}"
                     section_params = discoverable[section_name].setdefault("parameters", {})
                     section_params.update(param_dict)
                     if cls.__doc__:
@@ -115,5 +116,10 @@ def discover(mod):
                 print(line)
 
 
+def main():
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        discover(mdlmc)
+
 if __name__ == "__main__":
-    discover(mdlmc)
+    main()
