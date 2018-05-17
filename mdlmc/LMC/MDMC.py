@@ -1,4 +1,4 @@
-from itertools import tee
+from abc import ABCMeta
 import logging
 from typing import Iterator
 
@@ -232,3 +232,33 @@ def jumprate_generator(jumprate_function, lattice, topology_iterator):
         start_allowed = start[start_occupied_destination_free]
         destination_allowed = destination[start_occupied_destination_free]
         yield start_allowed, destination_allowed, omega_allowed
+
+
+
+class Output(metaclass=ABCMeta):
+    __show_in_config__ = True
+    __no_config_parameter__ = ["kmc"]
+
+
+class XYZOutput(Output):
+    def __init__(self,
+                 kmc: KMCLattice,
+                 particle_type: str) -> None:
+        self.kmc = kmc
+        self.atom_type = particle_type
+
+    def __iter__(self):
+        yield from self.kmc.xyz_output(self.particle_type)
+
+
+class ObservablesOutput(Output):
+    def __init__(self,
+                 kmc: KMCLattice,
+                 reset_frequency: int,
+                 print_frequency: int) -> None:
+        self.kmc = kmc
+        self.reset_frequency = reset_frequency
+        self.print_frequency = print_frequency
+
+    def __iter__(self):
+        yield from self.kmc.observables_output(self.reset_frequency, self.print_frequency)
