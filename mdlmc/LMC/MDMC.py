@@ -205,6 +205,7 @@ class KMCLattice:
 
     @property
     def donor_atoms(self):
+        # TODO: not needed (?)
         return self._donor_atoms
 
     @property
@@ -245,7 +246,7 @@ class XYZOutput(Output):
                  kmc: KMCLattice,
                  particle_type: str) -> None:
         self.kmc = kmc
-        self.atom_type = particle_type
+        self.particle_type = particle_type
 
     def __iter__(self):
         yield from self.kmc.xyz_output(self.particle_type)
