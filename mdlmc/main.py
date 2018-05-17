@@ -1,14 +1,32 @@
 import argparse
 import configparser
-import logging.config
-import pathlib
+import inspect
+
+import numpy as np
 
 from .IO.trajectory_parser import XYZTrajectory, HDF5Trajectory
 from .topo.topology import (NeighborTopology, AngleTopology, HydroniumTopology, ReLUTransformation,
                             InterpolatedTransformation, DistanceInterpolator)
 from .cython_exts.LMC.PBCHelper import AtomBoxCubic, AtomBoxMonoclinic
 from .LMC.jumprate_generators import Fermi, FermiAngle
-from .LMC.MDMC import KMCLattice
+from .LMC.MDMC import KMCLattice, XYZOutput, ObservablesOutput
+
+
+def convert_to_match_signature(cls, keywords):
+    keywords = dict(keywords)
+    parameters = inspect.signature(cls).parameters
+    for k in keywords:
+        print(f"Convert {k} to {parameters[k].annotation}")
+        keywords[k] = parameters[k].annotation(keywords[k])
+    return keywords
+
+
+def eval_config(config_dict):
+    for k in config_dict:
+        try:
+            config_dict[k] = eval(config_dict[k])
+        except NameError:
+            print("Skipping", k)
 
 
 def main():
@@ -35,62 +53,77 @@ def main():
 
 
     # setup trajectory
-    trajectory_types = {"xyz": XYZTrajectory,
-                        "hdf5": HDF5Trajectory}
+    trajectory_types = {"XYZTrajectory": XYZTrajectory,
+                        "HDF5Trajectory": HDF5Trajectory}
     trajectory_options = dict(cp["Trajectory"])
-    import ipdb; ipdb.set_trace()
     Trajectory = trajectory_types[trajectory_options.pop("type")]
     trajectory = Trajectory(**trajectory_options)
 
     # setup atom box
-    atombox_options = options["AtomBox"]
-    atombox_types = {"cubic": AtomBoxCubic,
-                     "monoclinic": AtomBoxMonoclinic}
-    AtomBox = atombox_types[atombox_options["type"]]
-    atombox = AtomBox(atombox_options["periodic_boundaries"])
+    atombox_options = dict(cp["AtomBox"])
+    atombox_types = {"AtomBoxCubic": AtomBoxCubic,
+                     "AtomBoxMonoclinic": AtomBoxMonoclinic}
+    AtomBox = atombox_types[atombox_options.pop("type")]
+    pbc = np.fromstring(atombox_options["periodic_boundaries"].strip("[]()"), dtype=float, sep=",")
+    atombox = AtomBox(pbc)
 
     # check if rescale options are specified
     distance_transformation_types = {"ReLUTransformation": ReLUTransformation,
                                      "InterpolatedTransformation": InterpolatedTransformation}
-    if "Rescale" in options.keys():
-        rescale_options = options["Rescale"]
-        if "distance_transformation" in rescale_options:
-            distance_transformation_options = rescale_options["distance_transformation"]
-            DistanceTransformation = distance_transformation_types[distance_transformation_options["type"]]
-            distance_transformation_parameters = distance_transformation_options["parameters"]
-            distance_transformation = DistanceTransformation(**distance_transformation_parameters)
-            relaxation_time = rescale_options["relaxation_time"]
-            if relaxation_time == 0:
-                distance_interpolator = None
-            else:
-                distance_interpolator = DistanceInterpolator(relaxation_time)
+
+    if "DistanceTransformation" in cp:
+        rescale_options = dict(cp["DistanceTransformation"])
+        transformation_type = rescale_options.pop("type")
+
+        distance_transformation_options = rescale_options["distance_transformation"]
+        DistanceTransformation = distance_transformation_types[distance_transformation_options["type"]]
+        distance_transformation_parameters = distance_transformation_options["parameters"]
+        distance_transformation = DistanceTransformation(**distance_transformation_parameters)
+        relaxation_time = rescale_options["relaxation_time"]
+        if relaxation_time == 0:
+            distance_interpolator = None
+        else:
+            distance_interpolator = DistanceInterpolator(relaxation_time)
+    else:
+        distance_transformation = None
+
 
     # setup topology
-    topology_options = options["Topology"]
+    topology_options = cp["NeighborTopology"]
     topology_types = {"HydroniumTopology": HydroniumTopology,
                       "NeighborTopology": NeighborTopology,
                       "AngleTopology": AngleTopology}
-    Topology = topology_types[topology_options["type"]]
-    topology_parameters = topology_options["parameters"]
-    topology = Topology(trajectory, atombox, **topology_parameters)
+    topology_type = topology_options.pop("type")
+    if topology_type == "HydroniumTopology":
+        if not distance_transformation:
+            raise NameError("Distance Transformation needs to be specified!")
+        topology_options["distance_transformation_function"] = distance_transformation
+
+    Topology = topology_types[topology_type]
+    topology_options = convert_to_match_signature(Topology, topology_options)
+    topology = Topology(trajectory, atombox, **topology_options)
 
     # setup jump rate
-    jumprate_options = options["JumpRate"]
+    jumprate_options = cp["JumpRate"]
     jumprate_types = {"Fermi": Fermi, "FermiAngle": FermiAngle}
-    jumprate_parameters = jumprate_options["parameters"]
-    JumpRate = jumprate_types[jumprate_options["type"]]
-    jumprate = JumpRate(**jumprate_parameters)
+    JumpRate = jumprate_types[jumprate_options.pop("type")]
+    jumprate_options = convert_to_match_signature(JumpRate, jumprate_options)
+    jumprate = JumpRate(**jumprate_options)
 
     # setup kmc
-    kmc_options = options["KMC"]
-    kmc_parameters = kmc_options["parameters"]
-    kmc = KMCLattice(topology, atom_box=atombox, **kmc_parameters)
+    kmc_options = cp["KMCLattice"]
+    kmc_options = convert_to_match_signature(KMCLattice, kmc_options)
+    kmc = KMCLattice(topology, jumprate_function=jumprate, atom_box=atombox, **kmc_options)
 
     # setup output
-    output_options = options["Output"]
-    output_type = output_options["type"]
-    output_parameters = output_options["parameters"]
+    output_options = cp["Output"]
+    output_types = {"XYZOutput": XYZOutput,
+                    "ObservablesOutput": ObservablesOutput}
+    output_type = output_options.pop("type")
+    Output = output_types[output_type]
 
-    for frame in getattr(kmc, output_type)(**output_parameters):
-        print(frame)
+    output = Output(kmc, **output_options)
+
+    for x in output:
+        print(x)
 
