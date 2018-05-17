@@ -126,7 +126,7 @@ def discover(mod):
             print(line)
         else:
             if "=" in left:
-                print(f"{left:30}  # {right}")
+                print(f"{left:40}  # {right}")
             else:
                 print("#", right.strip())
 
