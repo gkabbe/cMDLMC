@@ -61,8 +61,13 @@ def discover(mod):
             if configurable_classes:
                 for cls in configurable_classes:
                     section_name = top_class(cls).__name__
-                    if cls.__doc__:
-                        discoverable[section_name]["help"] = top_class(cls).__doc__.replace("\n", "\n#")
+                    section_help = ""
+                    if top_class(cls).__doc__:
+                        section_help += top_class(cls).__doc__.replace("\n", "\n#")
+                    if top_class(cls).__init__.__doc__:
+                        section_help += top_class(cls).__init__.__doc__.replace("\n", "\n#")
+                    discoverable[section_name]["help"] = section_help
+
                     if is_abstract(cls):
                         continue
                     # Check if there exist inherited classes
