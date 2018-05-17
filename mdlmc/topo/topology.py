@@ -253,6 +253,9 @@ class HydroniumTopology(NeighborTopology):
 
 
 class DistanceTransformation(metaclass=ABCMeta):
+
+    __show_in_config__ = True
+
     def __call__(self, distances):
         pass
 
