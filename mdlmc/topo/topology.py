@@ -287,10 +287,36 @@ class ReLUTransformation(DistanceTransformation):
 class InterpolatedTransformation(DistanceTransformation):
     """Transform O-O distances using the Scipy interp1d routine."""
 
+    __show_signature_of__ = "from_file"
+
     def __init__(self, dist_array, conversion_array):
         self.interp = interp1d(dist_array, conversion_array, kind="linear")
         self.x_min, self.x_max = self.interp.x[[0, -1]]
         self.y_min = self.interp.y[0]
+
+    @classmethod
+    def from_file(cls,
+                  dist_array_filename: str,
+                  conversion_array_filename: str
+                  ) -> "InterpolatedTransformation":
+        """
+
+        Parameters
+        ----------
+        dist_array_filename:
+            filename of array containing the unrescaled distances
+        conversion_array_filename:
+            filename of array containing the rescaled distance values
+
+        Returns
+        -------
+        InterpolatedTransformation object
+        """
+
+        dist_array = np.load(dist_array_filename)
+        conversion_array = np.load(conversion_array_filename)
+
+        return cls(dist_array, conversion_array)
 
     def __call__(self, distances):
         inside_bounds = (self.x_min <= distances) & (distances <= self.x_max)
