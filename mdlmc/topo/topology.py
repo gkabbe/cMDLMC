@@ -265,7 +265,12 @@ class ReLUTransformation(DistanceTransformation):
     Returns a constant value b for distances below d0.
     Returns linear function for distances above d0"""
 
-    def __init__(self, a, b, d0, left_bound, right_bound):
+    def __init__(self,
+                 a: float,
+                 b: float,
+                 d0: float,
+                 left_bound: float,
+                 right_bound: float) -> None:
         self.a = a
         self.b = b
         self.d0 = d0
