@@ -10,9 +10,13 @@ from io import StringIO
 import mdlmc
 
 
+def show_in_config(x):
+    return getattr(x, "__show_in_config__", False)
+
+
 def collect_classes(module):
     content = [getattr(module, name) for name in dir(module)]
-    configurable_classes = [x for x in content if hasattr(x, "__show_in_config__")]
+    configurable_classes = [x for x in content if show_in_config(x)]
     return configurable_classes
 
 
@@ -29,7 +33,9 @@ def has_parent_class(cls):
 
 
 def get_parameters(cls):
-    parameters = inspect.signature(cls).parameters
+    what_to_inspect = getattr(cls, "__show_signature_of__", None)
+    inspectable = getattr(cls, what_to_inspect) if what_to_inspect else cls
+    parameters = inspect.signature(inspectable).parameters
     exclude_from_config = getattr(cls, "__no_config_parameter__", [])
     param_dict = {p.name: p.default if p.default is not inspect._empty else "EMPTY"
                   for p in parameters.values() if p.name not in exclude_from_config}
@@ -90,7 +96,7 @@ def discover(mod):
                     section_params = discoverable[section_name].setdefault("parameters", {})
                     section_params.update(param_dict)
             discoverable.update()
-    #print(yaml.dump(dict(discoverable), default_flow_style=False))
+
     cp = configparser.ConfigParser(allow_no_value=True)
     for section in discoverable:
         cp.add_section(section)
