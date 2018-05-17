@@ -17,14 +17,11 @@ class NeighborTopology:
     """Keeps track of the connections between donor/acceptor atoms.
     Given a cutoff distance, for each atom the atoms within this
     distance will be determined."""
-
-
     __show_in_config__ = True
     __no_config_parameter__ = ["trajectory", "atom_box"]
 
-
     def __init__(self, trajectory: Trajectory, atom_box: AtomBox, *, donor_atoms: str,
-                 cutoff: float, buffer: float = 0.0) -> None:
+                 cutoff: float = 3.0, buffer: float = 2.0) -> None:
         """
 
         Parameters
@@ -133,7 +130,7 @@ class AngleTopology(NeighborTopology):
 
     """
     def __init__(self, trajectory: Trajectory, atom_box: AtomBox, *, donor_atoms: str,
-                 extra_atoms: str, group_size: int, cutoff: float, buffer: float = 0.0) -> None:
+                 extra_atoms: str, group_size: int, cutoff: float = 3.0, buffer: float = 2.0) -> None:
         super().__init__(trajectory, atom_box, donor_atoms=donor_atoms, cutoff=cutoff, buffer=buffer)
 
         self.extra_atoms = extra_atoms
@@ -253,6 +250,9 @@ class HydroniumTopology(NeighborTopology):
 
 
 class DistanceTransformation(metaclass=ABCMeta):
+    """If a topology which supports a transformation of the donor-acceptor distances is chosen
+    (for example HydroniumTopology), this class specifies how the donor-acceptor distances
+    are rescaled."""
 
     __show_in_config__ = True
 
@@ -327,7 +327,12 @@ class InterpolatedTransformation(DistanceTransformation):
 
 
 class DistanceInterpolator:
-    """Interpolates between neutral and relaxed distances"""
+    """Interpolates between neutral and relaxed distances.
+    Rescales linearly in time between neutral and rescaled donor-acceptor distances.
+    Only useful in combination with HydroniumTopology (or any other distance-rescaling topology class)"""
+
+    __show_in_config__ = True
+
     def __init__(self, relaxation_time):
         self.relaxation_time = relaxation_time
 
