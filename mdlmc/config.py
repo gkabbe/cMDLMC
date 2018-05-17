@@ -1,10 +1,11 @@
-from collections import defaultdict
-from abc import ABCMeta
+import configparser
 import importlib
 import inspect
 import pkgutil
-import configparser
 import warnings
+from abc import ABCMeta
+from collections import defaultdict
+from io import StringIO
 
 import mdlmc
 
@@ -108,7 +109,6 @@ def discover(mod):
             else:
                 cp.set(section, param, str(discoverable[section][param]))
 
-    from io import StringIO
     f = StringIO()
     cp.write(f)
     f.seek(0)
