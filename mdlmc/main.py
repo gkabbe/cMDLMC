@@ -57,6 +57,7 @@ def main():
                         "HDF5Trajectory": HDF5Trajectory}
     trajectory_options = dict(cp["Trajectory"])
     Trajectory = trajectory_types[trajectory_options.pop("type")]
+    trajectory_options = eval_config(trajectory_options)
     trajectory = Trajectory(**trajectory_options)
 
     # setup atom box
@@ -89,7 +90,7 @@ def main():
 
 
     # setup topology
-    topology_options = cp["NeighborTopology"]
+    topology_options = dict(cp["NeighborTopology"])
     topology_types = {"HydroniumTopology": HydroniumTopology,
                       "NeighborTopology": NeighborTopology,
                       "AngleTopology": AngleTopology}
@@ -100,23 +101,26 @@ def main():
         topology_options["distance_transformation_function"] = distance_transformation
 
     Topology = topology_types[topology_type]
-    topology_options = convert_to_match_signature(Topology, topology_options)
+    eval_config(topology_options)
+    # topology_options = convert_to_match_signature(Topology, topology_options)
     topology = Topology(trajectory, atombox, **topology_options)
 
     # setup jump rate
-    jumprate_options = cp["JumpRate"]
+    jumprate_options = dict(cp["JumpRate"])
     jumprate_types = {"Fermi": Fermi, "FermiAngle": FermiAngle}
     JumpRate = jumprate_types[jumprate_options.pop("type")]
-    jumprate_options = convert_to_match_signature(JumpRate, jumprate_options)
+    eval_config(jumprate_options)
+    #jumprate_options = convert_to_match_signature(JumpRate, jumprate_options)
     jumprate = JumpRate(**jumprate_options)
 
     # setup kmc
-    kmc_options = cp["KMCLattice"]
-    kmc_options = convert_to_match_signature(KMCLattice, kmc_options)
+    kmc_options = dict(cp["KMCLattice"])
+    eval_config(kmc_options)
+    #kmc_options = convert_to_match_signature(KMCLattice, kmc_options)
     kmc = KMCLattice(topology, jumprate_function=jumprate, atom_box=atombox, **kmc_options)
 
     # setup output
-    output_options = cp["Output"]
+    output_options = dict(cp["Output"])
     output_types = {"XYZOutput": XYZOutput,
                     "ObservablesOutput": ObservablesOutput}
     output_type = output_options.pop("type")
