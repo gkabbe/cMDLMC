@@ -1,6 +1,7 @@
 import argparse
 import configparser
 import inspect
+import typing
 
 import numpy as np
 
@@ -16,8 +17,25 @@ def convert_to_match_signature(cls, keywords):
     keywords = dict(keywords)
     parameters = inspect.signature(cls).parameters
     for k in keywords:
-        print(f"Convert {k} to {parameters[k].annotation}")
-        keywords[k] = parameters[k].annotation(keywords[k])
+        anno = parameters[k].annotation
+        print(f"Convert {k} to {anno}")
+        # Dirty hack to find out if the annotation is a union
+        if anno.__class__.__name__ == "_Union":
+            for type_ in anno.__args__:
+                try:
+                    keywords[k] = type_(keywords[k])
+                except (ValueError, TypeError):
+                    print(f"Could not convert {k} to {type_}")
+                else:
+                    print(f"Converted {k} to {type_}")
+                    break
+        elif keywords[k] == "EMPTY":
+            raise ValueError(f"Keyword {k} is EMPTY. Please specify a value in the config file.")
+        elif keywords[k] == "None":
+            print(f"Convert {k} to None type")
+            keywords[k] = None
+        else:
+            keywords[k] = parameters[k].annotation(keywords[k])
     return keywords
 
 
@@ -57,7 +75,7 @@ def main():
                         "HDF5Trajectory": HDF5Trajectory}
     trajectory_options = dict(cp["Trajectory"])
     Trajectory = trajectory_types[trajectory_options.pop("type")]
-    trajectory_options = eval_config(trajectory_options)
+    trajectory_options = convert_to_match_signature(Trajectory, trajectory_options)
     trajectory = Trajectory(**trajectory_options)
 
     # setup atom box
@@ -68,25 +86,31 @@ def main():
     pbc = np.fromstring(atombox_options["periodic_boundaries"].strip("[]()"), dtype=float, sep=",")
     atombox = AtomBox(pbc)
 
+    # check if distance interpolator is specified
+    if "DistanceInterpolator" in cp:
+        interpolator_options = cp["DistanceInterpolator"]
+        interpolator_options = convert_to_match_signature(DistanceInterpolator, interpolator_options)
+        relaxation_time = interpolator_options["relaxation_time"]
+    else:
+        relaxation_time = None
+
     # check if rescale options are specified
     distance_transformation_types = {"ReLUTransformation": ReLUTransformation,
                                      "InterpolatedTransformation": InterpolatedTransformation}
-
     if "DistanceTransformation" in cp:
-        rescale_options = dict(cp["DistanceTransformation"])
-        transformation_type = rescale_options.pop("type")
-
-        distance_transformation_options = rescale_options["distance_transformation"]
-        DistanceTransformation = distance_transformation_types[distance_transformation_options["type"]]
-        distance_transformation_parameters = distance_transformation_options["parameters"]
-        distance_transformation = DistanceTransformation(**distance_transformation_parameters)
-        relaxation_time = rescale_options["relaxation_time"]
-        if relaxation_time == 0:
-            distance_interpolator = None
-        else:
+        distance_transformation_options = dict(cp["DistanceTransformation"])
+        transformation_type = distance_transformation_options.pop("type")
+        DistanceTransformation = distance_transformation_types[transformation_type]
+        distance_transformation_options = convert_to_match_signature(DistanceTransformation,
+                                                                     distance_transformation_options)
+        distance_transformation = DistanceTransformation(**distance_transformation_options)
+        if relaxation_time:
             distance_interpolator = DistanceInterpolator(relaxation_time)
+        else:
+            distance_interpolator = None
     else:
         distance_transformation = None
+        distance_interpolator = None
 
 
     # setup topology
@@ -95,29 +119,31 @@ def main():
                       "NeighborTopology": NeighborTopology,
                       "AngleTopology": AngleTopology}
     topology_type = topology_options.pop("type")
+
+    Topology = topology_types[topology_type]
+    topology_options = convert_to_match_signature(Topology, topology_options)
     if topology_type == "HydroniumTopology":
         if not distance_transformation:
             raise NameError("Distance Transformation needs to be specified!")
+        topology_options["distance_interpolator"] = distance_interpolator
         topology_options["distance_transformation_function"] = distance_transformation
 
-    Topology = topology_types[topology_type]
-    eval_config(topology_options)
-    # topology_options = convert_to_match_signature(Topology, topology_options)
     topology = Topology(trajectory, atombox, **topology_options)
 
     # setup jump rate
     jumprate_options = dict(cp["JumpRate"])
     jumprate_types = {"Fermi": Fermi, "FermiAngle": FermiAngle}
     JumpRate = jumprate_types[jumprate_options.pop("type")]
-    eval_config(jumprate_options)
+    jumprate_options = convert_to_match_signature(JumpRate, jumprate_options)
     #jumprate_options = convert_to_match_signature(JumpRate, jumprate_options)
     jumprate = JumpRate(**jumprate_options)
 
     # setup kmc
     kmc_options = dict(cp["KMCLattice"])
-    eval_config(kmc_options)
+    kmc_options = convert_to_match_signature(KMCLattice, kmc_options)
     #kmc_options = convert_to_match_signature(KMCLattice, kmc_options)
     kmc = KMCLattice(topology, jumprate_function=jumprate, atom_box=atombox, **kmc_options)
+
 
     # setup output
     output_options = dict(cp["Output"])
