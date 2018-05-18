@@ -333,7 +333,7 @@ class DistanceInterpolator:
 
     __show_in_config__ = True
 
-    def __init__(self, relaxation_time):
+    def __init__(self, relaxation_time: float):
         self.relaxation_time = relaxation_time
 
     def __call__(self, residence_time, distance_neutral, distance_relaxed):
