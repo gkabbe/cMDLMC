@@ -1,6 +1,7 @@
 import argparse
 import configparser
 import inspect
+import logging.config
 import typing
 
 import numpy as np
@@ -13,26 +14,29 @@ from .LMC.jumprate_generators import Fermi, FermiAngle
 from .LMC.MDMC import KMCLattice, XYZOutput, ObservablesOutput
 
 
+logger = logging.getLogger(__name__)
+
+
 def convert_to_match_signature(cls, keywords):
     keywords = dict(keywords)
     parameters = inspect.signature(cls).parameters
     for k in keywords:
         anno = parameters[k].annotation
-        print(f"Convert {k} to {anno}")
+        logger.debug(f"Convert {k} to {anno}")
         # Dirty hack to find out if the annotation is a union
         if anno.__class__.__name__ == "_Union":
             for type_ in anno.__args__:
                 try:
                     keywords[k] = type_(keywords[k])
                 except (ValueError, TypeError):
-                    print(f"Could not convert {k} to {type_}")
+                    logger.warning(f"Could not convert {k} to {type_}")
                 else:
-                    print(f"Converted {k} to {type_}")
+                    logger.debug(f"Converted {k} to {type_}")
                     break
         elif keywords[k] == "EMPTY":
             raise ValueError(f"Keyword {k} is EMPTY. Please specify a value in the config file.")
         elif keywords[k] == "None":
-            print(f"Convert {k} to None type")
+            logger.debug(f"Convert {k} to None type")
             keywords[k] = None
         else:
             keywords[k] = parameters[k].annotation(keywords[k])
@@ -57,18 +61,11 @@ def main():
     with open(args.configfile, "r") as f:
         cp.read_file(f)
 
+
     # Check if logging config file exists in config file
-    #if "Logging" in cp:
-    #    logging_dict = cp["Logging"]
-    #else:
-    #    logfile_path = pathlib.Path(__file__).parents[1] / "logging.yaml"
-    #    with open(logfile_path, "r") as f:
-    #        logging_dict = yaml.load(f)
-    #logging.config.dictConfig(logging_dict)
-    #logger = logging.getLogger(__name__)
-
-    #logger.debug(options)
-
+    if "Logging" in cp:
+        logging_dict = cp["Logging"]
+        logging.basicConfig(level=logging_dict["level"])
 
     # setup trajectory
     trajectory_types = {"XYZTrajectory": XYZTrajectory,
@@ -151,6 +148,7 @@ def main():
                     "ObservablesOutput": ObservablesOutput}
     output_type = output_options.pop("type")
     Output = output_types[output_type]
+    output_options = convert_to_match_signature(Output, output_options)
 
     output = Output(kmc, **output_options)
 
