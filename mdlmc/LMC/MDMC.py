@@ -75,6 +75,7 @@ class KMCLattice:
         current_frame_number = 0
 
         topo = self.topology
+        lattice = self.lattice
         topology_iterator, last_topo = remember_last_element(iter(self.topology))
         jumprate_iterator, last_jumprates = remember_last_element(
             jumprate_generator(self._jumprate_function, self.lattice, topology_iterator))
@@ -91,13 +92,17 @@ class KMCLattice:
                 yield current_frame_number, current_time, frame
                 current_frame_number += 1
 
-            proton_idx = self.move_proton(*last_jumprates())
+            proton_idx = self.move_proton(*last_jumprates(), lattice)
             topo.update_time_of_last_jump(proton_idx, kmc_time)
 
-    def move_proton(self, start, dest, jump_rates):
+    def move_proton(self, start, dest, jump_rates, lattice):
         """Given the hopping rates between the acceptor atoms, choose a connection randomly and
         move the proton."""
 
+        start_occupied_destination_free = filter_allowed_transitions(start, dest, lattice)
+        start = start[start_occupied_destination_free]
+        dest = dest[start_occupied_destination_free]
+        jump_rates = jump_rates[start_occupied_destination_free]
         cumsum = np.cumsum(jump_rates)
         random_draw = np.random.uniform(0, cumsum[-1])
         transition_idx = np.searchsorted(cumsum, random_draw)
@@ -105,6 +110,7 @@ class KMCLattice:
         destination_idx = dest[transition_idx]
         proton_idx = self._lattice[start_idx]
         logger.debug("Particle %s moves from %s to %s", proton_idx, start_idx, destination_idx)
+        logger.debug("lattice[%s] = %s", destination_idx, self._lattice[destination_idx])
         self._lattice[destination_idx] = proton_idx
         self._lattice[start_idx] = 0
         return proton_idx
@@ -221,19 +227,22 @@ def jumprate_generator(jumprate_function, lattice, topology_iterator):
 
     for start, destination, *colvars in topology_iterator:
         omega = jumprate_function(*colvars)
-        logger.debug("Omega shape: %s", omega.shape)
         # select only jumprates from donors which are occupied
-        lattice_is_occupied = lattice > 0
-        occupied_sites, = np.where(lattice_is_occupied)
-        unoccupied_sites, = np.where(~lattice_is_occupied)
-        occupied_mask = np.in1d(start, occupied_sites)
-        unoccupied_mask = np.in1d(destination, unoccupied_sites)
-        start_occupied_destination_free = occupied_mask & unoccupied_mask
+        start_occupied_destination_free = filter_allowed_transitions(start, destination, lattice)
         omega_allowed = omega[start_occupied_destination_free]
         start_allowed = start[start_occupied_destination_free]
         destination_allowed = destination[start_occupied_destination_free]
         yield start_allowed, destination_allowed, omega_allowed
 
+
+def filter_allowed_transitions(start, destination, lattice):
+    lattice_is_occupied = lattice > 0
+    occupied_sites, = np.where(lattice_is_occupied)
+    unoccupied_sites, = np.where(~lattice_is_occupied)
+    occupied_mask = np.in1d(start, occupied_sites)
+    unoccupied_mask = np.in1d(destination, unoccupied_sites)
+    start_occupied_destination_free = occupied_mask & unoccupied_mask
+    return start_occupied_destination_free
 
 
 class Output(metaclass=ABCMeta):
