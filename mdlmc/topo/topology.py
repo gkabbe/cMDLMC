@@ -124,7 +124,7 @@ class AngleTopology(NeighborTopology):
     Of course, other atom types are possible as well. In that case, the parameters for donor_atoms
     and extra_atoms just need to be changed accordingly.
 
-                             O --- O
+                             O -- O
                             /
                            P
 
@@ -200,7 +200,9 @@ class HydroniumTopology(NeighborTopology):
         """Takes the lattice from class KMCLattice as a parameter and stores a reference.
         KMCLattice will check if its topology object possesses this method and will call it
         in that case."""
-        self._lattice = lattice
+        self._lattice = lattice.view()
+        # Make array view read-only
+        self._lattice.flags.writeable = False
         self._proton_number = (lattice != 0).sum()
         # save the last jump time for each proton
         # initialize with -1
@@ -219,18 +221,22 @@ class HydroniumTopology(NeighborTopology):
                 logger.debug("%s: %s", k, v)
 
         rescaled_dists = self._distance_transformation_function(distances)
-        dists = self._distance_interpolator(residence_times, distances, rescaled_dists)
+        try:
+            dists = self._distance_interpolator(residence_times, distances, rescaled_dists)
+        except:
+            import ipdb; ipdb.set_trace()
         return dists
 
     def _determine_colvars(self, start_indices, destination_indices, distances, frame):
         """"""
         n_atoms = 4
-        new_start_indices = np.zeros(n_atoms * self._proton_number, int)
-        new_destination_indices = np.zeros(n_atoms * self._proton_number, int)
-        new_distances = np.zeros(n_atoms * self._proton_number, float)
+        donor_nr = len(self._lattice)
+        new_start_indices = np.zeros((donor_nr, n_atoms), int)
+        new_destination_indices = np.zeros((donor_nr, n_atoms), int)
+        new_distances = np.zeros((donor_nr, n_atoms), float)
 
-        occupied_indices, = np.where(self._lattice)
-        for i, occ_idx in enumerate(occupied_indices):
+        # get the donor indices which are occupied
+        for occ_idx in range(donor_nr):
             mask = start_indices == occ_idx
             dists = distances[mask]
             destinations = destination_indices[mask]
@@ -238,12 +244,12 @@ class HydroniumTopology(NeighborTopology):
             closest_indices = destinations[sorted_idx]
             closest_distances = dists[sorted_idx]
 
-            new_start_indices[n_atoms * i: n_atoms * (i + 1)] = occ_idx
-            new_destination_indices[n_atoms * i: n_atoms * (i + 1)] = closest_indices
-            new_distances[n_atoms * i: n_atoms * (i + 1)] = closest_distances
-            new_distances = self.transform_distances(new_start_indices, new_distances, frame.time)
+            new_start_indices[occ_idx] = occ_idx
+            new_destination_indices[occ_idx] = closest_indices
+            new_distances[occ_idx] = closest_distances
+        new_distances = self.transform_distances(new_start_indices, new_distances, frame.time)
 
-        return new_start_indices, new_destination_indices, new_distances
+        return new_start_indices.flatten(), new_destination_indices.flatten(), new_distances.flatten()
 
     def update_time_of_last_jump(self, proton_idx, new_time):
         self._time_of_last_jump_vec[proton_idx - 1] = new_time
@@ -339,7 +345,7 @@ class DistanceInterpolator:
     def __call__(self, residence_time, distance_neutral, distance_relaxed):
         logger.debug("Distance neutral: %s", distance_neutral)
         logger.debug("Distance relaxed: %s", distance_relaxed)
-        ratio = np.minimum(residence_time / self.relaxation_time, 1)
+        ratio = np.minimum(residence_time / self.relaxation_time, 1)[:, None]
         distance = (1 - ratio) * distance_neutral + ratio * distance_relaxed
         logger.debug("Distance interpolated: %s", distance)
         return distance
