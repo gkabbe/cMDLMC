@@ -4,7 +4,7 @@ import pathlib
 import daiquiri
 import numpy as np
 
-from mdlmc.topo.topology import NeighborTopology, AngleTopology
+from mdlmc.topo.topology import NeighborTopology, AngleTopology, HydroniumTopology
 from mdlmc.cython_exts.LMC.PBCHelper import AtomBoxCubic
 from mdlmc.IO.trajectory_parser import XYZTrajectory, Frame
 from mdlmc.atoms.numpy_atom import dtype_xyz
@@ -108,4 +108,33 @@ def test_AngleTopology():
                          cutoff=3.0, buffer=0.5)
 
     for x in topo:
+        print(x)
+
+
+def test_HydroniumTopology():
+    def trajgen():
+        atoms = np.zeros((8,), dtype=dtype_xyz)
+        atoms["name"] = "H"
+        atoms["pos"][0] = 0, 0, 0
+        atoms["pos"][1] = 0, 0, 1
+        atoms["pos"][2] = 0, 1, 0
+        atoms["pos"][3] = 0, 1, 1
+        atoms["pos"][4] = 1, 0, 0
+        atoms["pos"][5] = 1, 0, 1
+        atoms["pos"][6] = 1, 1, 0
+        atoms["pos"][7] = 1, 1, 1
+
+        while True:
+            yield Frame.from_recarray(atoms)
+
+    atombox = AtomBoxCubic([10, 10, 10])
+
+    hydtop = HydroniumTopology(MockTrajectory(trajgen(), 0.5), atombox, cutoff=1.1, buffer=0,
+                               donor_atoms="H")
+    lattice = np.zeros(8, np.int)
+    lattice[:-1] = np.arange(1, 8)
+    hydtop.take_lattice_reference(lattice)
+
+
+    for x in hydtop:
         print(x)
