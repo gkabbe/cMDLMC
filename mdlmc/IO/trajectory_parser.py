@@ -1,3 +1,8 @@
+# coding=utf-8
+
+"""All functions and classes which are used to process trajectory files should go here.
+A trajectory class must contain an __iter__ method which yields Frame objects."""
+
 import logging
 import warnings
 from abc import ABCMeta, abstractmethod
