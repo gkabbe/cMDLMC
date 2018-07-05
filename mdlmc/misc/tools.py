@@ -1,5 +1,6 @@
 from collections import deque
 from functools import wraps
+import logging
 import time
 import argparse
 import inspect
@@ -7,6 +8,9 @@ import pickle
 import os
 
 import numpy as np
+
+
+logger = logging.getLogger(__name__)
 
 
 def online_variance_generator(data_size=1, use_mask=False):
