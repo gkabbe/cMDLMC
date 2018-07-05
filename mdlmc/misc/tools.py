@@ -1,3 +1,5 @@
+# coding=utf-8
+
 from collections import deque
 from functools import wraps
 import logging

@@ -1,3 +1,5 @@
+# coding=utf-8
+
 from collections import OrderedDict
 from math import pi as PI
 import re

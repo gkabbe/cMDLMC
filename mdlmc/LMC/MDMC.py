@@ -1,3 +1,5 @@
+# coding=utf-8
+
 from abc import ABCMeta
 import logging
 from typing import Iterator
