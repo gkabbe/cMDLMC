@@ -13,6 +13,7 @@ from ..LMC.jumprate_generators import JumpRate
 
 
 logger = logging.getLogger(__name__)
+logging.getLogger("matplotlib").setLevel(logging.WARN)
 
 
 def get_git_version():
